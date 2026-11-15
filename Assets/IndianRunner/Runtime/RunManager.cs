@@ -19,6 +19,7 @@ namespace IndianRunner
         private GUIStyle title, subtitle, text, button, badge, footnote;
         private string hudScore = "0 pts    0 coins", hudStatus = "Rajasthan";
         private float nextHudUpdate;
+        private string runEndMessage = "Try the open lane for a safe route.";
         public int CurrentScore => RunRules.Score(distance, coins);
 
         private void Awake()
@@ -46,6 +47,7 @@ namespace IndianRunner
         {
             distance = x = height = verticalSpeed = slideUntil = clock = 0;
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
+            runEndMessage = "Try the open lane for a safe route.";
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
             world.Reset(seed); world.Position(0, seed, 0, reduced); state = State.Running;
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.identity;
@@ -90,7 +92,7 @@ namespace IndianRunner
             distance += RunRules.Speed(distance) * dt;
             int gained = world.CollectAndCollide(previous, new Vector3(x, height, distance), sliding ? .82f : 2.05f, out bool hit);
             coins += gained; if (gained > 0) audioPlayer.Coin();
-            if (hit) { EndRun(); }
+            if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced);
             runner.Root.localPosition = new Vector3(x, height, 0);
             runner.Animate(clock, state == State.Running, sliding, height, reduced);
@@ -121,7 +123,12 @@ namespace IndianRunner
         }
         private void Pause() { state = State.Paused; SaveBest(); input.ResetGesture(); audioPlayer.Paused(true); }
         private void Resume() { state = State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
-        private void EndRun() { state = State.GameOver; SaveBest(); audioPlayer.Stumble(); }
+        private void EndRun(bool camelContact)
+        {
+            state = State.GameOver;
+            runEndMessage = camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
+            SaveBest(); audioPlayer.Stumble();
+        }
         private void SaveBest()
         {
             if (CurrentScore > best) { best = CurrentScore; PlayerPrefs.SetInt("runner.best", best); PlayerPrefs.Save(); }
@@ -164,6 +171,13 @@ namespace IndianRunner
             GUI.Label(new Rect(left + 18, top + 38, safeWidth - 30, 28), hudStatus, text);
             if (state == State.Running)
             {
+                if (!string.IsNullOrEmpty(world.WarningMessage))
+                {
+                    GUI.Box(new Rect(center - 217, top + 80, 434, 40), GUIContent.none);
+                    Color previousColor = GUI.color; GUI.color = new Color(1, .85f, .25f);
+                    GUI.Label(new Rect(center - 210, top + 82, 420, 36), world.WarningMessage, subtitle);
+                    GUI.color = previousColor;
+                }
                 if (GUI.Button(new Rect(left + safeWidth - 105, top + 9, 88, 44), "Pause", button)) Pause();
                 GUI.Label(new Rect(center - 210, fullHeight - safe.yMin / scale - 52, 420, 40), "SWIPE: change lane / jump / slide", subtitle);
             }
@@ -174,7 +188,7 @@ namespace IndianRunner
                 GUI.Box(new Rect(panelX, panelY, panelWidth, 585), GUIContent.none);
                 GUI.Label(new Rect(panelX + 10, panelY + 12, panelWidth - 20, 92), state == State.Menu ? "RANG ROUTE\nRUNNER" : state == State.Paused ? "RUN PAUSED" : "NICE RUN!", title);
                 GUI.Label(new Rect(panelX + 12, panelY + 108, panelWidth - 24, 32), $"Rajasthan prototype  /  Best: {best}", subtitle);
-                GUI.Label(new Rect(panelX + 14, panelY + 145, panelWidth - 28, 82), state == State.GameOver ? $"Distance: {(int)distance} m   Coins: {coins}\nScore: {CurrentScore}\nTry the open lane for a safe route." : "Swipe left/right to switch lanes.\nSwipe up to jump low crates; down to slide under high barriers. Avoid tall barricades.", text);
+                GUI.Label(new Rect(panelX + 14, panelY + 145, panelWidth - 28, 82), state == State.GameOver ? $"Distance: {(int)distance} m   Coins: {coins}\nScore: {CurrentScore}\n{runEndMessage}" : "Swipe left/right to change lanes.\nJump pots/cloth; slide under awnings.\nDodge carts. Follow camel warnings.", text);
                 float bx = panelX + 22, bw = panelWidth - 44;
                 if (Button(bx, panelY + 238, bw, state == State.Paused ? "RESUME" : state == State.GameOver ? "RUN AGAIN" : "START RUN"))
                 { if (state == State.Paused) Resume(); else { runner.Root.localRotation = Quaternion.identity; StartRun(); } }

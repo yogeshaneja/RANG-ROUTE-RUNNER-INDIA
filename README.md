@@ -39,8 +39,9 @@ Build And Run requires your licensed local Unity Editor and compatible Android t
 - A real three-lane 3D runner with automatic forward movement, swipe/keyboard input, eased lane changes, gentle camera follow, jump and slide.
 - Original bundled Rajasthan illustrations: a distant Thar-dune/fort panorama and haveli/bazaar frontages beside both sides of the road, plus chhatri pavilions, pots, shrubs and sandstone walls.
 - Seven reusable track segments: scenery meshes combined per material, pooled obstacle rows and coins.
-- Three colour-coded obstacle types: yellow low crate (jump), teal overhead barrier (slide), coral tall barricade (avoid).
-- A guaranteed empty lane per row, 26 m row separation, capped speed, and swept collision checks to reduce tunnelling.
+- Rajasthan-themed obstacles: painted matka stacks and colourful fabric bundles to jump, wooden market carts to dodge, cloth awnings to slide under, and decorated camel crossings with directional warnings.
+- Flying festival kites above the road; kites have no collider and never hide a lane hazard.
+- A guaranteed empty lane per row, 28 m row separation, capped speed, and swept collision checks to reduce tunnelling.
 - Distance + ten points per coin, best-score persistence, restart, manual/lifecycle pause and explicit resume.
 - Original primitive character in a teal kurta and orange scarf, with procedural limb motion; no imported rig yet.
 - Sandstone-inspired houses, market awnings, scenic camels, peacocks and birds. Animals are scenery, not collision targets.
@@ -62,7 +63,7 @@ There are no cloud calls, backend, accounts, ads, purchases, analytics SDKs or P
 
 ## Validation
 
-Run **Indian Runner > 3 - Run core rule checks** in Unity for deterministic safe-lane, row-spacing, speed, score, jump-recovery and swept-collision assertions. It reports PASS only if executed successfully in your Editor.
+Run **Indian Runner > 3 - Run core rule checks** in Unity for deterministic safe-lane, camel-envelope, row-spacing, speed, score, jump-recovery and swept-collision assertions. It reports PASS only if executed successfully in your Editor.
 
 See [Documentation/VALIDATION.md](Documentation/VALIDATION.md) for the exact checks performed here and the remaining phone checklist. Source parsing is not a substitute for a Unity compile or playtest.
 
@@ -71,7 +72,8 @@ See [Documentation/VALIDATION.md](Documentation/VALIDATION.md) for the exact che
 - `Assets/IndianRunner/Runtime/RunManager.cs`: run state, HUD, lifecycle, settings and score orchestration.
 - `RunRules.cs`: deterministic layout and numeric gameplay rules.
 - `RunnerInput.cs`: touch, mouse and keyboard adapter; supports either Unity input backend.
-- `TrackWorld.cs`: segment recycling, obstacle layout, coins and swept AABB collision.
+- `TrackWorld.cs`: segment recycling, obstacle layout, camel warnings/motion, coins and swept AABB collision.
+- `RajasthanObstacles.cs`: original shared-mesh pottery, textile bundles, cart, awning and decorated camel models. No obstacle geometry is instantiated when track rows recycle.
 - `RunnerModel.cs` / `PrimitiveArt.cs`: original procedural model, geometry and mesh combination.
 - `WeatherController.cs` / `RunnerAudio.cs`: pooled weather and generated audio.
 - `Assets/IndianRunner/Editor/RunnerSetup.cs`: setup, Android configuration and focused checks.
@@ -81,3 +83,9 @@ The illustrated frontages use reusable flat panels; they add detail without clai
 For this scenery pass, lane easing is capped at the prior maximum lateral speed, camera follow uses delta-time-based damping, HUD text refreshes at 10 Hz, and inactive/distant coins and birds skip transform animation. These are implementation optimizations, not a measured frame-rate improvement; profile your actual phone.
 
 All world motion is relative to the runner, keeping rendered coordinates near the origin. Distance and score are session state; best score and settings use PlayerPrefs. Progress deletion can be performed by clearing Android app data. PlayerPrefs is appropriate for this prototype; it is not secure competitive scoring.
+
+## Rajasthan obstacle update
+
+Jump the pottery and fabric bundles; dodge wooden carts. Slide through the middle of a cloth awning: its hanging cloth and its two support posts have separate collision bounds. Follow LEFT/RIGHT warnings for camels; camel contact causes a gentle stop with no injury. Crossing rows reserve an outer escape lane and contain no competing static obstacles. The warning begins 45 metres ahead (2.5 seconds at maximum speed). Row spacing increased to 28 metres for the larger models.
+
+This pass uses original low-poly geometry, with existing original generated images retained for background/side scenery. A CC0 wood source was verified but could not be downloaded in this environment; no stock texture or model from that source is bundled. See Documentation/RAJASTHAN_OBSTACLES.md for checks and provenance.

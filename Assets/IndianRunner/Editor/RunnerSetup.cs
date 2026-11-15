@@ -99,7 +99,7 @@ namespace IndianRunner.Editor
             }
             int checkedRows = 0;
             float maxLaneTravel = RunRules.LaneTravelTime(RunRules.LaneWidth * 2);
-            float betweenRows = (RunRules.RowSpacing - 1.88f) / RunRules.MaxSpeed;
+            float betweenRows = (RunRules.RowSpacing - 2 * (RunRules.ObstacleHalfDepth + RunRules.PlayerHalfWidth)) / RunRules.MaxSpeed;
             // Safe lane changes need at least .7 seconds of human reaction allowance.
             Require(betweenRows > maxLaneTravel + .7f, "Insufficient safe-route reaction allowance");
             for (int seed = 0; seed < 32; seed++) for (int row = 0; row < 1000; row++)
@@ -109,10 +109,21 @@ namespace IndianRunner.Editor
                 for (int lane = 0; lane < 3; lane++)
                 {
                     if (!RunRules.IsBlocked(row, lane, seed)) clear++;
-                    int kind = RunRules.Kind(row, lane, seed);
-                    Require(kind >= 1 && kind <= 3, "Unknown obstacle kind");
+                    int kind = RunRules.ObstacleFor(row, lane, seed);
+                    Require(kind >= 0 && kind <= RajasthanObstacles.Camel, "Unknown obstacle kind");
                 }
-                Require(clear == 1, "Every generated obstacle row needs one safe lane"); checkedRows++;
+                Require(clear >= 1 && !RunRules.IsBlocked(row, safe, seed), "Every generated obstacle row needs a reserved safe lane");
+                if (RunRules.HasCamel(row, seed))
+                {
+                    Require(safe != 1, "Camel must never cross the middle escape lane");
+                    for (int sample = 0; sample <= 20; sample++)
+                    {
+                        float ahead = RunRules.CamelWarningDistance - sample * (RunRules.CamelWarningDistance + 12) / 20;
+                        float gap = Mathf.Abs(RunRules.CamelX(safe, ahead) - RunRules.LaneX(safe));
+                        Require(gap > RunRules.CamelHalfWidth + RunRules.PlayerHalfWidth, "Camel sweep blocks the reserved lane");
+                    }
+                }
+                checkedRows++;
             }
             Require(RunRules.Speed(0) == 9 && RunRules.Speed(100000) == RunRules.MaxSpeed, "Speed bounds");
             Require(RunRules.Score(100.5f, 3) == 130 && RunRules.Score(0, 0) == 0, "Score calculation");
@@ -123,6 +134,7 @@ namespace IndianRunner.Editor
             Require(!TrackWorld.SegmentBox(new Vector3(3, 0, -5), new Vector3(3, 0, 5), new Vector3(-1, -1, -1), Vector3.one), "Safe lane falsely collided");
             Require(!TrackWorld.SegmentBox(new Vector3(0, 1.2f, -5), new Vector3(0, 1.2f, 5), new Vector3(-1, -2, -1), new Vector3(1, .93f, 1)), "Jump incorrectly hit low obstacle");
             Require(!TrackWorld.SegmentBox(new Vector3(0, 0, -5), new Vector3(0, 0, 5), new Vector3(-1, .45f, -1), new Vector3(1, 3, 1)), "Slide incorrectly hit high barrier");
+            Require(RunRules.CamelWarningDistance / RunRules.MaxSpeed >= 2, "Camel warning must allow at least two seconds at maximum speed");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
         private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

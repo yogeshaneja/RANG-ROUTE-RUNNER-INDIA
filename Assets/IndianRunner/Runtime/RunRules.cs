@@ -8,9 +8,15 @@ namespace IndianRunner
         public const float LaneWidth = 2.65f;
         public const float LaneSpeed = 14f;
         public const float MaxSpeed = 18f;
-        public const float RowSpacing = 26f;
+        public const float RowSpacing = 28f;
         public const float JumpVelocity = 9f;
         public const float Gravity = 24f;
+        public const float PlayerHalfWidth = .34f;
+        public const float ObstacleHalfDepth = 1.1f;
+        public const float CamelHalfWidth = 1.4f;
+        public const float CamelHalfDepth = .55f;
+        public const float CamelWarningDistance = 45f;
+        public const int ObstacleKinds = 4;
         // Cubic easing has peak derivative 1.5; this duration preserves LaneSpeed.
         public static float LaneTravelTime(float distance) => Math.Max(.09f, 1.5f * Math.Abs(distance) / LaneSpeed);
         public static float LaneProgress(float progress)
@@ -22,8 +28,21 @@ namespace IndianRunner
         public static int Score(float distance, int coins) => (int)Math.Max(0, distance) + coins * 10;
         public static float LaneX(int lane) => (Math.Max(0, Math.Min(2, lane)) - 1) * LaneWidth;
         public static int SafeLane(int row, int seed) => (int)(Mix((uint)row ^ (uint)seed) % 3);
-        public static int Kind(int row, int lane, int seed) => 1 + (int)(Mix((uint)(row * 7 + lane + 71) ^ (uint)seed) % 3);
-        public static bool IsBlocked(int row, int lane, int seed) => lane != SafeLane(row, seed);
+        public static int Kind(int row, int lane, int seed) => 1 + (int)(Mix((uint)(row * 7 + lane + 71) ^ (uint)seed) % ObstacleKinds);
+        public static bool HasCamel(int row, int seed) => row >= 2 && row % 4 == 2 && SafeLane(row, seed) != 1;
+        public static float CamelX(int safeLane, float distanceAhead)
+        {
+            if (safeLane != 0 && safeLane != 2) throw new ArgumentOutOfRangeException(nameof(safeLane));
+            float progress = Math.Max(0, Math.Min(1, (CamelWarningDistance - distanceAhead) / (CamelWarningDistance + 12)));
+            return (safeLane == 0 ? 1 : -1) * LaneWidth * 2 * (1 - progress);
+        }
+        public static int ObstacleFor(int row, int lane, int seed)
+        {
+            if (row < 2 || lane == SafeLane(row, seed)) return 0;
+            if (HasCamel(row, seed)) return lane == 1 ? 5 : 0;
+            return Kind(row, lane, seed);
+        }
+        public static bool IsBlocked(int row, int lane, int seed) => ObstacleFor(row, lane, seed) != 0;
         public static bool Overlaps(float aMin, float aMax, float bMin, float bMax) => aMin < bMax && aMax > bMin;
         private static uint Mix(uint x)
         {

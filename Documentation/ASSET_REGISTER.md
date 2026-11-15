@@ -3,6 +3,8 @@
 | Asset | Origin | Status |
 | --- | --- | --- |
 | Runner, scarf, houses, stalls, animals, birds, coins, obstacles | Original geometric arrangements in this repository, using Unity built-in primitive meshes | Temporary prototype art |
+| Matka stacks, textile bundles, wooden cart, fabric awning, decorated crossing camel | Original shared-mesh geometry in RajasthanObstacles.cs, built from Unity primitives | Gameplay models; not downloaded stock |
+| Flying kites | Original native geometry in TrackWorld.cs | Decorative only; no collider |
 | Character motion | Original C# transform animation | No production rig or animation clips |
 | Colour palettes | Original numeric material colours | Regional art direction requires review |
 | Coin/jump/stumble cues | Original synthesized sine-wave audio generated in RunnerAudio.cs | Prototype audio |
@@ -16,3 +18,7 @@
 No stock photographs, downloaded models, Bollywood recordings, branded characters, logos or third-party fonts are included. Unity's own engine assets remain subject to Unity's terms. Do not add paid or external assets without recording source, license and approval.
 
 Rajasthan references are stylised placeholders, not a claim of exhaustive cultural or wildlife accuracy. Research each additional region before final art production.
+
+## Freely reusable web assets assessed for the obstacle pass
+
+ambientCG Wood Floor 001: https://ambientcg.com/view?id=WoodFloor001 . Its official license page, https://docs.ambientcg.com/license/ , states CC0 1.0 Universal and permits commercial use and redistribution of the asset files. The 1K JPG archive download returned HTTP 403 in this execution environment. The asset was not imported, copied, redistributed or made a runtime dependency. All obstacle artwork in this pass remains original native geometry. This is a source assessment, not a claim that a stock texture is included.

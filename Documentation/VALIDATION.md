@@ -2,13 +2,13 @@
 
 ## Performed in the implementation workspace
 
-- C# grammar parsing: all ten runtime/editor files passed without syntax errors using tree-sitter C#.
+- C# grammar parsing: all eleven runtime/editor files passed without syntax errors using tree-sitter C#.
 - JSON manifest parsed successfully.
 - All asset/folder metadata exists; GUIDs are unique; scene references resolve to the included RunManager script and enabled build scene.
 - Analytical timing bounds checked using constants extracted from RunRules.cs:
-  - maximum-speed clear distance between obstacle rows: 1.340 seconds;
+  - maximum-speed clear interval between obstacle envelopes: 1.396 seconds;
   - worst-case eased two-lane traversal: 0.568 seconds;
-  - remaining reaction allowance: 0.772 seconds;
+  - remaining reaction allowance: 0.828 seconds;
   - jump flight time: 0.750 seconds;
   - jump apex: 1.688 metres, above the 0.95-metre low obstacle.
 - Manual source review covered segment recycling, relative coordinates, collision sweep, coin reset, pause/resume, settings, shader references and source asset provenance.
@@ -26,7 +26,9 @@ Record Editor patch, phone model, Android version, build ID, duration and actual
 - [ ] Project imports and compiles with zero Console errors in the selected Unity 6.3 LTS patch.
 - [ ] Rajasthan scene launches with readable materials, original runner and route geometry.
 - [ ] Keyboard, mouse swipe and phone swipe work in both directions; one gesture produces one action.
-- [ ] Yellow crates can be jumped; teal barriers can be slid under; coral barricades require lane avoidance.
+- [ ] Pots/fabric can be jumped; awning centres can be slid under; awning posts and wooden carts require avoidance.
+- [ ] Camel warnings appear at 45 metres; the indicated escape lane stays clear throughout movement; contact produces a gentle stop with no injury.
+- [ ] Kites are above the route, decorative only, and respect reduced effects.
 - [ ] Following each open lane remains feasible at maximum speed during a sustained run.
 - [ ] First and last coins in each five-coin group can be collected, only once per coin.
 - [ ] Restart resets coins, distance, slide/jump state and character pose; prior runs do not continue scoring.
@@ -66,3 +68,9 @@ The core-check menu also validates scenery resources/shader availability and eas
 - [ ] Compare frame-time and memory captures before/after on the target phone; no frame-rate improvement is claimed without profiling.
 
 This pass does not change Android export, add paid/downloaded stock assets, add regions, replace the runner rig or publish the application.
+
+## Themed obstacles and camel-crossing pass
+
+Source checks performed: all eleven C# files parse. An independent numerical audit of 32,000 deterministic row layouts found at least one reserved open lane in every row, all five obstacle types, and no static obstacle sharing a camel row. Sampled crossing envelopes stayed at least 0.910 metres away from the player's reserved-lane envelope. With 28-metre spacing and a conservative 1.1-metre obstacle half-depth, the maximum-speed interval is 1.396 seconds; the eased two-lane move takes 0.568 seconds, leaving 0.828 seconds of reaction allowance. Camel warnings start 45 metres ahead, giving 2.5 seconds at maximum speed. These are independent mathematical/source checks, not a Unity runtime result.
+
+Editor rule checks were updated for the five types, open-lane reservation and camel sweep envelope; they remain unexecuted here. Manual local checks must cover sliding between awning posts, jumping both low objects, cart avoidance, warning direction, moving-camel relative collision, row recycling, no duplicate models after restart, offline behaviour, and sustained phone performance. See RAJASTHAN_OBSTACLES.md.
