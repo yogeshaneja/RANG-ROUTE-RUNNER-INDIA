@@ -45,10 +45,8 @@ namespace IndianRunner
             yellow = PrimitiveArt.Mat(new Color(1f, .75f, .05f));
             coral = PrimitiveArt.Mat(new Color(.91f, .23f, .14f));
             teal = PrimitiveArt.Mat(new Color(.04f, .43f, .50f));
-            var sand = PrimitiveArt.Mat(new Color(.94f, .67f, .34f));
-            var road = PrimitiveArt.Mat(new Color(.29f, .25f, .30f));
-            var white = PrimitiveArt.Mat(new Color(1f, .9f, .66f));
-            var pink = PrimitiveArt.Mat(new Color(.94f, .40f, .42f));
+            var road = scenery.RoadSurface;
+            var white = PrimitiveArt.Mat(new Color(.68f,.57f,.41f));
             var camel = PrimitiveArt.Mat(new Color(.66f, .40f, .19f));
             var blue = PrimitiveArt.Mat(new Color(.03f, .27f, .8f));
             var green = PrimitiveArt.Mat(new Color(.08f, .56f, .28f));
@@ -56,27 +54,12 @@ namespace IndianRunner
             {
                 var tile = new Tile { Root = new GameObject("Pooled Rajasthan segment " + i).transform };
                 tile.Root.SetParent(parent, false); tiles[i] = tile;
-                PrimitiveArt.Box(tile.Root, "Sand", new Vector3(0, -.18f, TileLength / 2), new Vector3(85, .25f, TileLength), sand);
+                scenery.AddGround(tile.Root,i,TileLength);
                 PrimitiveArt.Box(tile.Root, "Road", new Vector3(0, -.045f, TileLength / 2), new Vector3(8.5f, .12f, TileLength), road);
-                foreach (float x in new[] { -4.45f, 4.45f })
-                    PrimitiveArt.Box(tile.Root, "Road edge", new Vector3(x, .04f, TileLength / 2), new Vector3(.2f, .1f, TileLength), white);
                 for (int dash = 0; dash < 8; dash++) foreach (float x in new[] { -RunRules.LaneWidth / 2, RunRules.LaneWidth / 2 })
                     PrimitiveArt.Box(tile.Root, "Lane dash", new Vector3(x, .025f, dash * 6.5f + 2), new Vector3(.11f, .03f, 2.4f), white);
-                for (int house = 0; house < 4; house++)
-                {
-                    float side = house % 2 == 0 ? -1 : 1, z = house * 12 + 7;
-                    float x = side * (9 + (i + house) % 3);
-                    var walls = (i + house) % 2 == 0 ? pink : sand;
-                    float h = 3 + (i + house) % 3;
-                    PrimitiveArt.Box(tile.Root, "Sandstone village", new Vector3(x, h / 2, z), new Vector3(4.3f, h, 6), walls);
-                    PrimitiveArt.Box(tile.Root, "Flat roof", new Vector3(x, h + .1f, z), new Vector3(4.7f, .25f, 6.4f), white);
-                    PrimitiveArt.Box(tile.Root, "Door", new Vector3(x - side * 2.16f, 1, z), new Vector3(.04f, 2, 1), teal);
-                    PrimitiveArt.Box(tile.Root, "Colourful market awning", new Vector3(side * 6.8f, 2.3f, z + 2), new Vector3(2.5f, .13f, 3), (house % 2 == 0 ? yellow : teal));
-                    foreach (float dz in new[] { .8f, 3.2f })
-                        PrimitiveArt.Box(tile.Root, "Market post", new Vector3(side * 5.7f, 1.1f, z + dz), new Vector3(.1f, 2.2f, .1f), camel);
-                }
-                PrimitiveArt.Camel(tile.Root, -6.4f, 22, camel);
-                PrimitiveArt.Peacock(tile.Root, 5.9f, 41, blue, green);
+                if (i%3 == 1) PrimitiveArt.Camel(tile.Root,-7.7f,17+i*2,camel,RajasthanScenery.GroundY(i,-7.7f,17+i*2,TileLength));
+                if (i%3 == 2) PrimitiveArt.Peacock(tile.Root,6.3f,29+i,blue,green,RajasthanScenery.GroundY(i,6.3f,29+i,TileLength));
                 scenery.AddGeometry(tile.Root, i);
                 PrimitiveArt.CombineScenery(tile.Root);
                 scenery.AddPanels(tile.Root, i);
@@ -88,7 +71,7 @@ namespace IndianRunner
                     PrimitiveArt.Box(bird, "Right wing", new Vector3(.3f, 0, 0), new Vector3(.7f, .06f, .16f), teal).localRotation = Quaternion.Euler(0, 0, 15);
                     birds.Add(bird);
                 }
-                for (int k = 0; k < 2; k++)
+                for (int k = 0; k < (i%2 == 0 ? 2 : 0); k++)
                 {
                     var kiteRoot = new GameObject("Flying Rajasthan festival kite").transform; kiteRoot.SetParent(tile.Root, false);
                     var position = new Vector3(k == 0 ? -3.9f : 3.9f, 6.6f + k, 8 + k * 28);

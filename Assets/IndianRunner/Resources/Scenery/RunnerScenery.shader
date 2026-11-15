@@ -4,6 +4,7 @@ Shader "IndianRunner/SceneryUnlit"
     {
         _MainTex ("Artwork", 2D) = "white" {}
         _Tint ("Tint", Color) = (1,1,1,1)
+        _Saturation ("Natural colour saturation", Range(0,1)) = 0.82
         _CutSky ("Cut blue sky from upper facade", Float) = 0
         _Cloudiness ("Weather tint", Range(0,1)) = 0
         _ZWrite ("Write depth", Float) = 1
@@ -32,7 +33,7 @@ Shader "IndianRunner/SceneryUnlit"
             sampler2D _MainTex;
             float4 _MainTex_ST;
             fixed4 _Tint;
-            float _CutSky, _Cloudiness;
+            float _CutSky, _Cloudiness, _Saturation;
             v2f vert(appdata v)
             {
                 UNITY_SETUP_INSTANCE_ID(v);
@@ -47,6 +48,8 @@ Shader "IndianRunner/SceneryUnlit"
                 // The generated frontage has blue sky above its roofline. Trim
                 // only that upper blue region; turquoise shop fabric stays intact.
                 if (_CutSky > .5 && i.uv.y > .72 && c.b > c.r * 1.18 && c.g > c.r * 1.08) discard;
+                float luminance = dot(c.rgb,fixed3(.2126,.7152,.0722));
+                c.rgb = lerp(luminance.xxx,c.rgb,_Saturation);
                 c.rgb *= _Tint.rgb;
                 c.rgb = lerp(c.rgb, c.rgb * fixed3(.77,.84,.91), _Cloudiness * .55);
                 return fixed4(c.rgb, 1);

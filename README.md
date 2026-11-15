@@ -43,15 +43,15 @@ Build And Run requires your licensed local Unity Editor and compatible Android t
 - Flying festival kites above the road; kites have no collider and never hide a lane hazard.
 - A guaranteed empty lane per row, 28 m row separation, capped speed, and swept collision checks to reduce tunnelling.
 - Distance + ten points per coin, best-score persistence, restart, manual/lifecycle pause and explicit resume.
-- Original primitive character in a teal kurta and orange scarf, with procedural limb motion; no imported rig yet.
-- Sandstone-inspired houses, market awnings, scenic camels, peacocks and birds. Animals are scenery, not collision targets.
+- Original articulated Indian male runner with smooth shaped geometry, facial/hair details, tailored teal kurta, saffron scarf and brown shoes. Hip/knee/ankle and shoulder/elbow articulation drives sprint, jump and crouched slide poses; a soft contact shadow grounds the figure. This is an original procedural character, not an imported production skinned model.
+- Varied three-dimensional sandstone courtyard houses, recessed archways/jharokha windows, market awnings, acacia trees, uneven sandy shoulders, scenic camels, peacocks and birds. Animals are scenery, not collision targets.
 - Gradual sunny/cloudy/light-rain cycle, weather preview selector, and reduced effects.
 - Separate music/sound controls, locally saved preferences and original synthesized placeholder cues/music.
 - Portrait-safe-area HUD and temporary English prototype menu.
 
 ## Deliberately later stages
 
-- A rigged production character and polished run/jump/slide/stumble animation clips.
+- An artist-authored production character, skinned clothing and polished animation clips; current articulation/foot placement is procedural.
 - Hindi localization with a licensed Devanagari font and verified shaping. **Hindi is not implemented or verified.**
 - Punjab, Kerala, Tamil Nadu, West Bengal, Assam, forests, region selection and Journey mode.
 - Region ScriptableObjects, separate Bootstrap/Menu/Game scenes, and reusable authored prefabs. Current Stage 1 geometry is generated in one scene.
@@ -89,3 +89,11 @@ All world motion is relative to the runner, keeping rendered coordinates near th
 Jump the pottery and fabric bundles; dodge wooden carts. Slide through the middle of a cloth awning: its hanging cloth and its two support posts have separate collision bounds. Follow LEFT/RIGHT warnings for camels; camel contact causes a gentle stop with no injury. Crossing rows reserve an outer escape lane and contain no competing static obstacles. The warning begins 45 metres ahead (2.5 seconds at maximum speed). Row spacing increased to 28 metres for the larger models.
 
 This pass uses original low-poly geometry, with existing original generated images retained for background/side scenery. A CC0 wood source was verified but could not be downloaded in this environment; no stock texture or model from that source is bundled. See Documentation/RAJASTHAN_OBSTACLES.md for checks and provenance.
+
+## Natural scene and avatar pass
+
+The roadside now alternates open and denser village layouts, with varied setbacks, building dimensions, rooflines and small rotations. Recessed arched doors, lattice windows, projecting sills and angled shop shades replace repeated plain houses. Distant illustration panels appear sparsely. Acacias, stones, natural ground grain, subtle off-road height variation, layered clouds and warmer lighting reduce the repeated geometric appearance. The playable road stays flat and collision/spawn rules stay unchanged.
+
+The runner has rounded custom meshes, richer outfit/face/hair details, articulated limbs and inverse-kinematic foot placement. A short sprint stance moves feet backwards at road speed, with a longer knee-lift recovery. Sliding uses a crouched/back-leaning pose instead of scaling the whole body. The camera is closer and narrower (62 degrees), with stronger damped horizontal follow; the menu initially faces the character towards the camera. Built-in rendering requests 2x MSAA; URP keeps its project AA settings. No performance result is implied.
+
+See Documentation/NATURAL_VISUALS.md for scope, source verification and local checks. Unity rendering, shader compilation, clipping during movement and phone frame/memory measurements still require local testing.

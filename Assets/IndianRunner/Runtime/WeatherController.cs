@@ -24,7 +24,14 @@ namespace IndianRunner
                 drops[i].gameObject.SetActive(false);
             }
             for (int i = 0; i < clouds.Length; i++)
-                clouds[i] = PrimitiveArt.Shape(parent, "Cloud", PrimitiveType.Sphere, new Vector3((i % 2 == 0 ? -1 : 1) * (9 + i), 20 + i % 3 * 2, 20 + i * 17), new Vector3(12, 2, 5), cloudMat);
+            {
+                var cloud = new GameObject("Irregular layered cloud").transform; cloud.SetParent(parent,false);
+                cloud.localPosition = new Vector3((i%2 == 0 ? -1 : 1)*(9+i),20+i%3*2,20+i*17);
+                NaturalMesh.Oval(cloud,"Cloud main lobe",Vector3.zero,new Vector3(9+i%3,2.1f,4.8f),cloudMat,11);
+                NaturalMesh.Oval(cloud,"Cloud upper lobe",new Vector3(-1.5f,.8f,.3f),new Vector3(5.4f,2.7f,4.1f),cloudMat,11);
+                NaturalMesh.Oval(cloud,"Cloud trailing lobe",new Vector3(3,-.2f,-.2f),new Vector3(5.6f,1.6f,3.5f),cloudMat,11);
+                PrimitiveArt.CombineScenery(cloud); clouds[i] = cloud;
+            }
             RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogStartDistance = 100; RenderSettings.fogEndDistance = 210;
         }
@@ -36,10 +43,11 @@ namespace IndianRunner
             Description = target == Mode.Rain ? "Light rain" : target == Mode.Cloudy ? "Cloudy" : "Sunny";
             shade = Mathf.MoveTowards(shade, target == Mode.Sunny ? 0 : .6f, dt * .08f);
             rain = Mathf.MoveTowards(rain, target == Mode.Rain ? 1 : 0, dt * .12f);
-            camera.backgroundColor = Color.Lerp(new Color(.18f, .69f, .94f), new Color(.45f, .60f, .70f), shade);
+            camera.backgroundColor = Color.Lerp(new Color(.48f,.72f,.86f), new Color(.61f,.67f,.71f), shade);
             RenderSettings.fogColor = camera.backgroundColor;
             sun.intensity = 1.2f - shade * .55f;
-            RenderSettings.ambientLight = Color.Lerp(new Color(.74f, .76f, .83f), new Color(.63f, .67f, .76f), shade);
+            sun.color = Color.Lerp(new Color(1,.91f,.79f),new Color(.93f,.96f,1),shade);
+            RenderSettings.ambientLight = Color.Lerp(new Color(.76f,.72f,.65f), new Color(.64f,.67f,.72f), shade);
             for (int i = 0; i < drops.Length; i++)
             {
                 bool visible = rain > .08f && i < rain * (reduced ? 10 : drops.Length);

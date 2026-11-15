@@ -5,7 +5,10 @@
 | Runner, scarf, houses, stalls, animals, birds, coins, obstacles | Original geometric arrangements in this repository, using Unity built-in primitive meshes | Temporary prototype art |
 | Matka stacks, textile bundles, wooden cart, fabric awning, decorated crossing camel | Original shared-mesh geometry in RajasthanObstacles.cs, built from Unity primitives | Gameplay models; not downloaded stock |
 | Flying kites | Original native geometry in TrackWorld.cs | Decorative only; no collider |
-| Character motion | Original C# transform animation | No production rig or animation clips |
+| Character body/face/clothing/shoes | Original rounded custom meshes in RunnerModel.cs and NaturalMesh.cs | Procedural articulated avatar, not a downloaded/skinned production asset |
+| Character motion | Original two-bone inverse kinematics, sprint stance/recovery, shoulder/elbow and crouched slide poses | No imported animation clips |
+| Natural terrain, arches, trees and cloud forms | Original NaturalMesh/C# geometry and deterministic grain textures | Generated once and batched where rigid |
+| Runner contact shadow | Original analytic radial-alpha shader | Shader must be validated in the local rendering pipeline |
 | Colour palettes | Original numeric material colours | Regional art direction requires review |
 | Coin/jump/stumble cues | Original synthesized sine-wave audio generated in RunnerAudio.cs | Prototype audio |
 | Background motif | Original 16-note synthesized sequence in RunnerAudio.cs | Placeholder; not presented as traditional regional music |

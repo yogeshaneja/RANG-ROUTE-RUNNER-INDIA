@@ -2,7 +2,7 @@
 
 ## Performed in the implementation workspace
 
-- C# grammar parsing: all eleven runtime/editor files passed without syntax errors using tree-sitter C#.
+- C# grammar parsing: all twelve runtime/editor files passed without syntax errors using tree-sitter C#.
 - JSON manifest parsed successfully.
 - All asset/folder metadata exists; GUIDs are unique; scene references resolve to the included RunManager script and enabled build scene.
 - Analytical timing bounds checked using constants extracted from RunRules.cs:
@@ -74,3 +74,11 @@ This pass does not change Android export, add paid/downloaded stock assets, add 
 Source checks performed: all eleven C# files parse. An independent numerical audit of 32,000 deterministic row layouts found at least one reserved open lane in every row, all five obstacle types, and no static obstacle sharing a camel row. Sampled crossing envelopes stayed at least 0.910 metres away from the player's reserved-lane envelope. With 28-metre spacing and a conservative 1.1-metre obstacle half-depth, the maximum-speed interval is 1.396 seconds; the eased two-lane move takes 0.568 seconds, leaving 0.828 seconds of reaction allowance. Camel warnings start 45 metres ahead, giving 2.5 seconds at maximum speed. These are independent mathematical/source checks, not a Unity runtime result.
 
 Editor rule checks were updated for the five types, open-lane reservation and camel sweep envelope; they remain unexecuted here. Manual local checks must cover sliding between awning posts, jumping both low objects, cart avoidance, warning direction, moving-camel relative collision, row recycling, no duplicate models after restart, offline behaviour, and sustained phone performance. See RAJASTHAN_OBSTACLES.md.
+
+## Natural environment and articulated-avatar pass
+
+Completed source checks: all twelve C# files parse. An independent mathematical audit sampled 8,000 sprint foot targets across speeds 9/12/15/18; all stayed within the 0.880 m two-bone leg length (maximum sampled reach approximately 0.869 m), and forward reconstruction of the solved joints matched targets to numerical precision. The new decorative terrain remains flat across the playable road, and its elevation/first derivative return to the same baseline at tile ends. New shader source blocks balance and asset metadata/GUID checks pass. None of these checks execute Unity or certify shader compilation.
+
+The update replaces rigid avatar limbs with rounded original meshes, hip/knee/ankle placement, bent elbows and a crouched slide; it introduces a soft analytic contact shadow. Environment changes reduce regularity through differing house counts/setbacks/heights/rotations, recessed arches/lattice details, acacias, sparse illustration panels, deterministic ground grain, off-road height variation and layered cloud meshes. Startup-generated texture/material/mesh ownership is explicitly cleaned up. Existing obstacle spawn/collision rules remain unchanged.
+
+Before acceptance, locally verify: model materials/normals and contact shadow; no foot/road penetration or excessive sliding; jump and slide transitions; pause/restart pose reset; outer-lane and slide framing in 9:16; no terrain seams; no decorative object masking a hazard; preserved obstacle collisions/escape warnings; and frame-time/memory behaviour on the target phone. This is still original stylised procedural art, not a photorealistic or artist-authored production asset. No Unity screenshot, visual approval or FPS measurement is claimed here.

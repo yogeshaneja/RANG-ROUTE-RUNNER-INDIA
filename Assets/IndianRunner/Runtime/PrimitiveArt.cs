@@ -41,6 +41,7 @@ namespace IndianRunner
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", .12f);
             if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", .12f);
         }
+        public static void OwnMesh(Mesh mesh) { CombinedMeshes.Add(mesh); }
         public static void Clear()
         {
             foreach (var mat in Materials.Values) if (mat != null) Object.Destroy(mat);
@@ -83,9 +84,9 @@ namespace IndianRunner
             }
             foreach (var filter in filters) Object.Destroy(filter.gameObject);
         }
-        public static void Camel(Transform parent, float x, float z, Material sand)
+        public static void Camel(Transform parent, float x, float z, Material sand, float groundHeight = 0)
         {
-            var root = new GameObject("Scenic camel").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, 0, z);
+            var root = new GameObject("Scenic camel").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z);
             Box(root, "Body", new Vector3(0, 1.35f, 0), new Vector3(.85f, .7f, 1.6f), sand);
             Shape(root, "Hump", PrimitiveType.Sphere, new Vector3(0, 1.82f, -.15f), new Vector3(.75f, .85f, .8f), sand);
             Box(root, "Neck", new Vector3(0, 1.9f, .85f), new Vector3(.32f, 1.35f, .35f), sand);
@@ -93,9 +94,9 @@ namespace IndianRunner
             foreach (float side in new[] { -.29f, .29f }) foreach (float end in new[] { -.5f, .5f })
                 Box(root, "Leg", new Vector3(side, .56f, end), new Vector3(.16f, 1.1f, .17f), sand);
         }
-        public static void Peacock(Transform parent, float x, float z, Material blue, Material green)
+        public static void Peacock(Transform parent, float x, float z, Material blue, Material green, float groundHeight = 0)
         {
-            var root = new GameObject("Scenic peacock").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, 0, z);
+            var root = new GameObject("Scenic peacock").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z);
             Shape(root, "Body", PrimitiveType.Sphere, new Vector3(0, .55f, 0), new Vector3(.42f, .55f, .65f), blue);
             Shape(root, "Neck", PrimitiveType.Capsule, new Vector3(0, .95f, .22f), new Vector3(.16f, .35f, .16f), blue);
             for (int i = -3; i <= 3; i++)

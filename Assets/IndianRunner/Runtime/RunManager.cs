@@ -32,7 +32,9 @@ namespace IndianRunner
             sound = PlayerPrefs.GetInt("runner.sound", 1) == 1;
             var cameraObject = new GameObject("Runner Camera"); cameraObject.transform.SetParent(transform, false);
             gameCamera = cameraObject.AddComponent<Camera>(); gameCamera.clearFlags = CameraClearFlags.SolidColor;
-            gameCamera.fieldOfView = 68; gameCamera.nearClipPlane = .15f; gameCamera.farClipPlane = 210;
+            gameCamera.fieldOfView = 62; gameCamera.allowMSAA = true; gameCamera.nearClipPlane = .15f; gameCamera.farClipPlane = 210;
+            if (QualitySettings.renderPipeline == null && UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline == null)
+                QualitySettings.antiAliasing = 2;
             cameraObject.AddComponent<AudioListener>();
             var lightObject = new GameObject("Rajasthan sunlight"); lightObject.transform.SetParent(transform, false);
             var sunlight = lightObject.AddComponent<Light>(); sunlight.type = LightType.Directional;
@@ -41,7 +43,7 @@ namespace IndianRunner
             runner = new RunnerModel(transform);
             weather = new WeatherController(transform, gameCamera, sunlight);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
-            state = State.Menu; PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced);
+            state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced);
         }
         private void StartRun()
         {
@@ -95,7 +97,7 @@ namespace IndianRunner
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced);
             runner.Root.localPosition = new Vector3(x, height, 0);
-            runner.Animate(clock, state == State.Running, sliding, height, reduced);
+            runner.Animate(clock, state == State.Running, sliding, height, reduced, RunRules.Speed(distance));
             if (hit) runner.Root.localRotation = Quaternion.Euler(0, 0, -12);
             else
             {
@@ -116,10 +118,10 @@ namespace IndianRunner
         }
         private void PositionCamera(float dt = 0)
         {
-            float targetX = x * .18f;
+            float targetX = x * .35f;
             cameraX = dt <= 0 ? targetX : Mathf.Lerp(cameraX, targetX, 1 - Mathf.Exp(-10 * dt));
-            gameCamera.transform.position = transform.position + new Vector3(cameraX, 5.2f, -8.5f);
-            gameCamera.transform.LookAt(transform.position + new Vector3(cameraX, 1.4f, 14));
+            gameCamera.transform.position = transform.position + new Vector3(cameraX, 4.7f, -7.8f);
+            gameCamera.transform.LookAt(transform.position + new Vector3(cameraX, 1.15f, 12.5f));
         }
         private void Pause() { state = State.Paused; SaveBest(); input.ResetGesture(); audioPlayer.Paused(true); }
         private void Resume() { state = State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
@@ -142,7 +144,7 @@ namespace IndianRunner
         private void OnApplicationPause(bool paused) { if (paused && state == State.Running) Pause(); }
         private void OnApplicationFocus(bool focus) { if (!focus && state == State.Running) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void OnDestroy() { runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
         private void Styles()
         {
             if (title != null) return;
