@@ -13,7 +13,16 @@ An original offline Android 3D endless runner. **Stage 1 source implementation**
 
 The route and character appear at runtime; the scene is intentionally an empty setup object outside Play Mode. If no image appears, check Console errors and confirm `Rajasthan.unity` is the open scene.
 
-The starter uses the built-in render pipeline with no third-party packages. A material preparation menu supports moving these assets into a URP project later; URP conversion is not validated here. Use the included project first.
+The starter uses the built-in render pipeline with no third-party packages. The material resolver uses the configured pipeline (including Quality overrides) and assigns its default shader to every generated material. Imported Standard templates cannot override that shader in a URP project. Runtime rendering in each pipeline still requires local verification.
+
+### If surfaces appear bright pink
+
+1. Stop Play Mode and pull the latest feature branch.
+2. Wait for Unity to finish recompiling.
+3. Select **Indian Runner > Repair runner materials**. This updates the saved shader dependency for your current pipeline, including Android builds.
+4. Choose **9:16 / portrait** in the Game view aspect dropdown, then press Play again.
+
+The runtime also repairs cloned material shaders automatically. If surfaces remain pink, copy the first shader-related Console error and the Editor version; do not convert unrelated project materials or delete your project settings.
 
 ## Android phone
 

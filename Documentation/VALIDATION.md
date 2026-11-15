@@ -40,3 +40,11 @@ Record Editor patch, phone model, Android version, build ID, duration and actual
 - [ ] Phone logs show no runtime exceptions.
 
 Hindi rendering, additional regions, a production character rig and polished production UI are Stage 2/3 work, not completed acceptance items.
+
+## Material compatibility regression
+
+A user screenshot showed magenta surfaces in Play Mode. Source review found that runtime clones inherited the saved RunnerBase shader even when a different pipeline shader had been selected. Pipeline detection also relied on currentRenderPipeline during Awake.
+
+The repair explicitly rebinds the selected pipeline's default shader, using the Quality override then the Graphics default before the runtime pipeline. It clears stale keywords and writes both supported colour properties. The repair menu persists that shader in the Resources material for build inclusion.
+
+C# syntax checks passed after the repair. The Unity core-check menu now includes shader/tint assertions, but these have not been run here. Required local regression: import a Standard RunnerBase material into a URP project, stop/play without first repairing the asset and verify colours; then run Repair runner materials and verify the saved dependency and Android build. Also confirm built-in rendering still works. No visual verification is claimed from this workspace.

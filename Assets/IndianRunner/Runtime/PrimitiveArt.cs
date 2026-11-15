@@ -11,12 +11,35 @@ namespace IndianRunner
         {
             if (Materials.TryGetValue(color, out var existing)) return existing;
             var template = Resources.Load<Material>("RunnerBase");
-            Shader shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null
-                ? Shader.Find("Universal Render Pipeline/Lit") : Shader.Find("Standard");
-            if (template == null && shader == null) throw new System.InvalidOperationException("Run Indian Runner > Create or open Rajasthan scene to prepare the render material.");
+            // A saved template can still use Standard after import into URP.
+            // Always bind the selected pipeline's shader on the runtime clone.
+            var shader = ResolveShader();
             var mat = template != null ? new Material(template) : new Material(shader);
-            mat.color = color; mat.name = "Runner colour " + color;
+            ConfigureMaterial(mat, shader, color);
+            mat.name = "Runner colour " + color;
             Materials[color] = mat; return mat;
+        }
+        public static Shader ResolveShader()
+        {
+            // currentRenderPipeline may not be initialized during the first Awake.
+            // Quality overrides take precedence over the project-wide pipeline.
+            var pipeline = UnityEngine.QualitySettings.renderPipeline;
+            if (pipeline == null) pipeline = UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline;
+            if (pipeline == null) pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            Shader shader = pipeline != null ? pipeline.defaultShader : Shader.Find("Standard");
+            if (shader == null || !shader.isSupported)
+                throw new System.InvalidOperationException("No supported runner shader for the selected render pipeline. Check Graphics/Quality settings and shader errors in the Console.");
+            return shader;
+        }
+        public static void ConfigureMaterial(Material material, Shader shader, Color color)
+        {
+            material.shader = shader;
+            material.shaderKeywords = System.Array.Empty<string>();
+            material.renderQueue = -1;
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", .12f);
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", .12f);
         }
         public static void Clear()
         {

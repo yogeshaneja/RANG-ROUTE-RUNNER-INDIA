@@ -16,14 +16,7 @@ namespace IndianRunner.Editor
         {
             if (Application.isPlaying) { Debug.LogWarning("Stop Play Mode before setting up the scene."); return; }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            Directory.CreateDirectory("Assets/IndianRunner/Resources");
-            const string materialPath = "Assets/IndianRunner/Resources/RunnerBase.mat";
-            var shader = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null
-                ? Shader.Find("Universal Render Pipeline/Lit") : Shader.Find("Standard");
-            var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
-            if (material == null) { material = new Material(shader); AssetDatabase.CreateAsset(material, materialPath); }
-            else material.shader = shader;
-            AssetDatabase.SaveAssets();
+            RepairMaterials();
             if (File.Exists(ScenePath))
             {
                 EditorSceneManager.OpenScene(ScenePath);
@@ -36,6 +29,24 @@ namespace IndianRunner.Editor
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.Refresh(); Debug.Log("Rajasthan scene ready. Select portrait Game view and press Play.");
+        }
+        [MenuItem("Indian Runner/Repair runner materials")]
+        public static void RepairMaterials()
+        {
+            if (Application.isPlaying) { Debug.LogWarning("Stop Play Mode before repairing material assets."); return; }
+            Directory.CreateDirectory("Assets/IndianRunner/Resources");
+            const string path = "Assets/IndianRunner/Resources/RunnerBase.mat";
+            var shader = PrimitiveArt.ResolveShader();
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            PrimitiveArt.ConfigureMaterial(material, shader, Color.white);
+            EditorUtility.SetDirty(material);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Runner material prepared with " + shader.name + ". Press Play to regenerate scene colours.");
         }
         [MenuItem("Indian Runner/2 - Configure Android prototype")]
         public static void ConfigureAndroid()
@@ -59,6 +70,21 @@ namespace IndianRunner.Editor
         [MenuItem("Indian Runner/3 - Run core rule checks")]
         public static void CheckRules()
         {
+            // Regression: an imported template must not retain an incompatible shader
+            // or lose its tint when materials use _BaseColor instead of _Color.
+            var shader = PrimitiveArt.ResolveShader();
+            var probe = new Material(shader);
+            try
+            {
+                var tint = new Color(.1f, .6f, .8f, 1);
+                PrimitiveArt.ConfigureMaterial(probe, shader, tint);
+                Require(probe.shader == shader && probe.shader.isSupported, "Unsupported material shader");
+                bool tinted = false;
+                if (probe.HasProperty("_BaseColor")) { Require(probe.GetColor("_BaseColor") == tint, "Base colour lost"); tinted = true; }
+                if (probe.HasProperty("_Color")) { Require(probe.GetColor("_Color") == tint, "Legacy colour lost"); tinted = true; }
+                Require(tinted, "Pipeline shader has no supported tint property");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(probe); }
             int checkedRows = 0;
             float maxLaneTravel = RunRules.LaneWidth * 2 / RunRules.LaneSpeed;
             float betweenRows = (RunRules.RowSpacing - 1.88f) / RunRules.MaxSpeed;
