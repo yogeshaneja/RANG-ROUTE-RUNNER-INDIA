@@ -2,13 +2,13 @@
 
 ## Performed in the implementation workspace
 
-- C# grammar parsing: all nine runtime/editor files passed without syntax errors using tree-sitter C#.
+- C# grammar parsing: all ten runtime/editor files passed without syntax errors using tree-sitter C#.
 - JSON manifest parsed successfully.
 - All asset/folder metadata exists; GUIDs are unique; scene references resolve to the included RunManager script and enabled build scene.
 - Analytical timing bounds checked using constants extracted from RunRules.cs:
   - maximum-speed clear distance between obstacle rows: 1.340 seconds;
-  - worst-case two-lane traversal: 0.379 seconds;
-  - remaining reaction allowance: 0.961 seconds;
+  - worst-case eased two-lane traversal: 0.568 seconds;
+  - remaining reaction allowance: 0.772 seconds;
   - jump flight time: 0.750 seconds;
   - jump apex: 1.688 metres, above the 0.95-metre low obstacle.
 - Manual source review covered segment recycling, relative coordinates, collision sweep, coin reset, pause/resume, settings, shader references and source asset provenance.
@@ -48,3 +48,21 @@ A user screenshot showed magenta surfaces in Play Mode. Source review found that
 The repair explicitly rebinds the selected pipeline's default shader, using the Quality override then the Graphics default before the runtime pipeline. It clears stale keywords and writes both supported colour properties. The repair menu persists that shader in the Resources material for build inclusion.
 
 C# syntax checks passed after the repair. The Unity core-check menu now includes shader/tint assertions, but these have not been run here. Required local regression: import a Standard RunnerBase material into a URP project, stop/play without first repairing the asset and verify colours; then run Repair runner materials and verify the saved dependency and Android build. Also confirm built-in rendering still works. No visual verification is claimed from this workspace.
+
+## Rajasthan scenery and smoothing pass
+
+Performed here: C# syntax parsing for all ten files; complete/unique asset metadata checks; both JPEGs decoded successfully. Numerical easing bounds at 20/30/60/90/120 Hz confirm endpoint arrival, no overshoot and lateral speed no greater than 14 m/s for one- and two-lane moves. Row spacing still leaves approximately 0.772 seconds after worst-case eased lane traversal, above the configured 0.7-second allowance. These are mathematical checks, not execution of Unity's player loop.
+
+Implemented: original bundled panorama and haveli/bazaar image panels; reusable side details; one shared material per illustration; compressed/mipmapped 1024-pixel texture imports; eased lane changes and delta-time-based camera damping. Coin/bird transform updates skip distant objects, coin rotation is calculated once per frame, HUD strings update at 10 Hz and GUI styles are reused.
+
+The core-check menu also validates scenery resources/shader availability and easing endpoints/monotonicity. These Editor assertions remain unexecuted here. Local checks required before accepting this pass:
+
+- [ ] Both illustrations render in portrait without pink shader errors; frontages sit outside the playable road and their skyline trim leaves turquoise shop details readable.
+- [ ] Background fort/dunes remain behind road and obstacles, without depth clipping in the active pipeline.
+- [ ] Side panels are reused with track tiles, and restart does not duplicate scenery or materials.
+- [ ] New scenery shader compiles for the active built-in/URP pipeline and Android graphics API.
+- [ ] Lane changes and rapid reversals feel responsive; no overshoot or unfair collision appears at maximum speed.
+- [ ] Pause freezes the camera, lean and lane transition; restart clears easing state.
+- [ ] Compare frame-time and memory captures before/after on the target phone; no frame-rate improvement is claimed without profiling.
+
+This pass does not change Android export, add paid/downloaded stock assets, add regions, replace the runner rig or publish the application.

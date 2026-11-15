@@ -11,6 +11,13 @@ namespace IndianRunner
         public const float RowSpacing = 26f;
         public const float JumpVelocity = 9f;
         public const float Gravity = 24f;
+        // Cubic easing has peak derivative 1.5; this duration preserves LaneSpeed.
+        public static float LaneTravelTime(float distance) => Math.Max(.09f, 1.5f * Math.Abs(distance) / LaneSpeed);
+        public static float LaneProgress(float progress)
+        {
+            float t = Math.Max(0, Math.Min(1, progress));
+            return t * t * (3 - 2 * t);
+        }
         public static float Speed(float distance) => Math.Min(MaxSpeed, 9f + distance / 180f);
         public static int Score(float distance, int coins) => (int)Math.Max(0, distance) + coins * 10;
         public static float LaneX(int lane) => (Math.Max(0, Math.Min(2, lane)) - 1) * LaneWidth;

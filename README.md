@@ -36,7 +36,8 @@ Build And Run requires your licensed local Unity Editor and compatible Android t
 
 ## Included
 
-- A real three-lane 3D runner with automatic forward movement, swipe/keyboard input, jump and slide.
+- A real three-lane 3D runner with automatic forward movement, swipe/keyboard input, eased lane changes, gentle camera follow, jump and slide.
+- Original bundled Rajasthan illustrations: a distant Thar-dune/fort panorama and haveli/bazaar frontages beside both sides of the road, plus chhatri pavilions, pots, shrubs and sandstone walls.
 - Seven reusable track segments: scenery meshes combined per material, pooled obstacle rows and coins.
 - Three colour-coded obstacle types: yellow low crate (jump), teal overhead barrier (slide), coral tall barricade (avoid).
 - A guaranteed empty lane per row, 26 m row separation, capped speed, and swept collision checks to reduce tunnelling.
@@ -74,5 +75,9 @@ See [Documentation/VALIDATION.md](Documentation/VALIDATION.md) for the exact che
 - `RunnerModel.cs` / `PrimitiveArt.cs`: original procedural model, geometry and mesh combination.
 - `WeatherController.cs` / `RunnerAudio.cs`: pooled weather and generated audio.
 - `Assets/IndianRunner/Editor/RunnerSetup.cs`: setup, Android configuration and focused checks.
+
+The illustrated frontages use reusable flat panels; they add detail without claiming full 3D building models. Both images and the small unlit scenery shader are bundled in Resources, so no network is used during play. Texture import is capped at 1024 pixels with mipmaps and compression. There is no new package dependency. See [Documentation/ARTWORK.md](Documentation/ARTWORK.md) for provenance and prompts.
+
+For this scenery pass, lane easing is capped at the prior maximum lateral speed, camera follow uses delta-time-based damping, HUD text refreshes at 10 Hz, and inactive/distant coins and birds skip transform animation. These are implementation optimizations, not a measured frame-rate improvement; profile your actual phone.
 
 All world motion is relative to the runner, keeping rendered coordinates near the origin. Distance and score are session state; best score and settings use PlayerPrefs. Progress deletion can be performed by clearing Android app data. PlayerPrefs is appropriate for this prototype; it is not secure competitive scoring.

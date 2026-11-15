@@ -12,6 +12,7 @@ namespace IndianRunner
         private readonly Transform[] drops = new Transform[48];
         private readonly Transform[] clouds = new Transform[8];
         private float rain, shade;
+        public float Cloudiness => shade;
         public WeatherController(Transform parent, Camera cam, Light light)
         {
             camera = cam; sun = light;
@@ -32,7 +33,7 @@ namespace IndianRunner
             // Mostly sunny Rajasthan cycle; long clear intervals, occasional light rain.
             float cycle = time % 180f;
             Mode target = Selection == Mode.Auto ? (cycle < 95 ? Mode.Sunny : cycle < 145 ? Mode.Cloudy : Mode.Rain) : Selection;
-            Description = target == Mode.Rain ? "Light rain" : target.ToString();
+            Description = target == Mode.Rain ? "Light rain" : target == Mode.Cloudy ? "Cloudy" : "Sunny";
             shade = Mathf.MoveTowards(shade, target == Mode.Sunny ? 0 : .6f, dt * .08f);
             rain = Mathf.MoveTowards(rain, target == Mode.Rain ? 1 : 0, dt * .12f);
             camera.backgroundColor = Color.Lerp(new Color(.18f, .69f, .94f), new Color(.45f, .60f, .70f), shade);

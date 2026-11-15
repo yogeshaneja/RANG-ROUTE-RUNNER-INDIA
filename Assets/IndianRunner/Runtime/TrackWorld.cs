@@ -26,8 +26,10 @@ namespace IndianRunner
         private readonly List<Transform> birds = new List<Transform>();
         private readonly Material yellow, coral, teal;
         private int nextIndex;
+        private readonly RajasthanScenery scenery;
         public TrackWorld(Transform parent)
         {
+            scenery = new RajasthanScenery(parent);
             yellow = PrimitiveArt.Mat(new Color(1f, .75f, .05f));
             coral = PrimitiveArt.Mat(new Color(.91f, .23f, .14f));
             teal = PrimitiveArt.Mat(new Color(.04f, .43f, .50f));
@@ -63,7 +65,9 @@ namespace IndianRunner
                 }
                 PrimitiveArt.Camel(tile.Root, -6.4f, 22, camel);
                 PrimitiveArt.Peacock(tile.Root, 5.9f, 41, blue, green);
+                scenery.AddGeometry(tile.Root, i);
                 PrimitiveArt.CombineScenery(tile.Root);
+                scenery.AddPanels(tile.Root, i);
                 for (int b = 0; b < 2; b++)
                 {
                     var bird = new GameObject("Scenic bird").transform; bird.SetParent(tile.Root, false);
@@ -119,14 +123,19 @@ namespace IndianRunner
         // Relative-world movement avoids unbounded runner/world coordinates.
         public void Position(float distance, int seed, float clock, bool reduced)
         {
+            Quaternion coinRotation = Quaternion.Euler(90, reduced ? 0 : clock * 100, 0);
             foreach (var tile in tiles)
             {
                 if ((tile.Index + 1) * TileLength - distance < -18) Configure(tile, nextIndex++, seed);
                 tile.Root.localPosition = new Vector3(0, 0, tile.Index * TileLength - distance);
+                // Do not update coin transforms on segments outside the playable view.
+                if (tile.Root.localPosition.z < -52 || tile.Root.localPosition.z > 115) continue;
                 foreach (var row in tile.Rows) foreach (var coin in row.Coins)
-                    coin.localRotation = Quaternion.Euler(90, reduced ? 0 : clock * 100, 0);
+                    if (coin.gameObject.activeSelf) coin.localRotation = coinRotation;
             }
-            foreach (var bird in birds) bird.localRotation = Quaternion.Euler(0, 0, reduced ? 0 : Mathf.Sin(clock * 4) * 12);
+            Quaternion birdRotation = Quaternion.Euler(0, 0, reduced ? 0 : Mathf.Sin(clock * 4) * 12);
+            foreach (var bird in birds)
+                if (bird.position.z > -10 && bird.position.z < 125) bird.localRotation = birdRotation;
         }
         public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit)
         {
@@ -155,6 +164,8 @@ namespace IndianRunner
             }
             return collected;
         }
+        public void SetWeather(float cloudiness) => scenery.SetWeather(cloudiness);
+        public void Dispose() => scenery.Dispose();
         public static bool SegmentBox(Vector3 a, Vector3 b, Vector3 min, Vector3 max)
         {
             float near = 0, far = 1;

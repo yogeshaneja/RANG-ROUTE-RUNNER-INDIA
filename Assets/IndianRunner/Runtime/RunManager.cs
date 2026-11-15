@@ -13,9 +13,12 @@ namespace IndianRunner
         private readonly RunnerInput input = new RunnerInput();
         private Camera gameCamera;
         private float distance, x, height, verticalSpeed, slideUntil, clock;
+        private float laneStartX, laneTargetX, laneElapsed, laneDuration, cameraX;
         private int lane = 1, coins, best, seed = 7301;
         private bool reduced, music, sound;
-        private GUIStyle title, subtitle, text, button, badge;
+        private GUIStyle title, subtitle, text, button, badge, footnote;
+        private string hudScore = "0 pts    0 coins", hudStatus = "Rajasthan";
+        private float nextHudUpdate;
         public int CurrentScore => RunRules.Score(distance, coins);
 
         private void Awake()
@@ -42,11 +45,12 @@ namespace IndianRunner
         private void StartRun()
         {
             distance = x = height = verticalSpeed = slideUntil = clock = 0;
+            laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
             world.Reset(seed); world.Position(0, seed, 0, reduced); state = State.Running;
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.identity;
             runner.Animate(0, false, false, 0, reduced); PositionCamera();
-            input.ResetGesture(); audioPlayer.Paused(false);
+            input.ResetGesture(); audioPlayer.Paused(false); RefreshHud();
         }
         private void Update()
         {
@@ -61,11 +65,21 @@ namespace IndianRunner
             if (state != State.Running) return;
             Vector3 previous = new Vector3(x, height, distance);
             clock += dt;
-            if (input.Horizontal != 0) lane = Mathf.Clamp(lane + input.Horizontal, 0, 2);
+            if (input.Horizontal != 0)
+            {
+                int nextLane = Mathf.Clamp(lane + input.Horizontal, 0, 2);
+                if (nextLane != lane)
+                {
+                    lane = nextLane; laneStartX = x; laneTargetX = RunRules.LaneX(lane);
+                    laneElapsed = 0; laneDuration = RunRules.LaneTravelTime(laneTargetX - laneStartX);
+                }
+            }
             if (input.Jump && height <= .001f && clock >= slideUntil) { verticalSpeed = RunRules.JumpVelocity; audioPlayer.Jump(); }
             if (input.Slide && height <= .001f && clock >= slideUntil) slideUntil = clock + .7f;
             bool sliding = clock < slideUntil;
-            x = Mathf.MoveTowards(x, RunRules.LaneX(lane), RunRules.LaneSpeed * dt);
+            laneElapsed += dt;
+            float laneT = laneDuration > 0 ? Mathf.Clamp01(laneElapsed / laneDuration) : 1;
+            x = Mathf.Lerp(laneStartX, laneTargetX, RunRules.LaneProgress(laneT));
             if (height > 0 || verticalSpeed > 0)
             {
                 // Integrate ballistic motion analytically per step.
@@ -81,13 +95,29 @@ namespace IndianRunner
             runner.Root.localPosition = new Vector3(x, height, 0);
             runner.Animate(clock, state == State.Running, sliding, height, reduced);
             if (hit) runner.Root.localRotation = Quaternion.Euler(0, 0, -12);
-            else runner.Root.localRotation = Quaternion.identity;
-            weather.Tick(clock, dt, reduced); PositionCamera();
+            else
+            {
+                float lean = reduced ? 0 : Mathf.Clamp((x - previous.x) / Mathf.Max(.001f, dt) / RunRules.LaneSpeed, -1, 1) * -8;
+                runner.Root.localRotation = Quaternion.Slerp(runner.Root.localRotation, Quaternion.Euler(0, 0, lean), 1 - Mathf.Exp(-16 * dt));
+            }
+            weather.Tick(clock, dt, reduced); world.SetWeather(weather.Cloudiness);
+            PositionCamera(dt);
+            if (clock >= nextHudUpdate || hit)
+            {
+                RefreshHud(); nextHudUpdate = clock + .1f;
+            }
         }
-        private void PositionCamera()
+        private void RefreshHud()
         {
-            gameCamera.transform.position = transform.position + new Vector3(x * .20f, 5.2f, -8.5f);
-            gameCamera.transform.LookAt(transform.position + new Vector3(x * .20f, 1.4f, 14));
+            hudScore = $"{CurrentScore} pts    {coins} coins";
+            hudStatus = $"Rajasthan  |  {(int)distance} m  |  {weather.Description}";
+        }
+        private void PositionCamera(float dt = 0)
+        {
+            float targetX = x * .18f;
+            cameraX = dt <= 0 ? targetX : Mathf.Lerp(cameraX, targetX, 1 - Mathf.Exp(-10 * dt));
+            gameCamera.transform.position = transform.position + new Vector3(cameraX, 5.2f, -8.5f);
+            gameCamera.transform.LookAt(transform.position + new Vector3(cameraX, 1.4f, 14));
         }
         private void Pause() { state = State.Paused; SaveBest(); input.ResetGesture(); audioPlayer.Paused(true); }
         private void Resume() { state = State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
@@ -105,7 +135,7 @@ namespace IndianRunner
         private void OnApplicationPause(bool paused) { if (paused && state == State.Running) Pause(); }
         private void OnApplicationFocus(bool focus) { if (!focus && state == State.Running) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void OnDestroy() { world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
         private void Styles()
         {
             if (title != null) return;
@@ -115,6 +145,7 @@ namespace IndianRunner
             text = new GUIStyle(subtitle) { fontSize = 17, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(12, 12, 6, 6) };
             button = new GUIStyle(GUI.skin.button) { fontSize = 20, fontStyle = FontStyle.Bold, wordWrap = true };
             badge = new GUIStyle(text) { fontSize = 19, fontStyle = FontStyle.Bold };
+            footnote = new GUIStyle(text) { fontSize = 14, alignment = TextAnchor.MiddleCenter };
         }
         private bool Button(float xPos, float yPos, float w, string label) => GUI.Button(new Rect(xPos, yPos, w, 52), label, button);
         private void OnGUI()
@@ -129,8 +160,8 @@ namespace IndianRunner
             var previousMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
             GUI.Box(new Rect(left + 8, top, safeWidth - 16, 72), GUIContent.none);
-            GUI.Label(new Rect(left + 18, top + 5, safeWidth - 120, 32), $"{CurrentScore} pts    {coins} coins", badge);
-            GUI.Label(new Rect(left + 18, top + 38, safeWidth - 30, 28), $"Rajasthan  |  {(int)distance} m  |  {weather.Description}", text);
+            GUI.Label(new Rect(left + 18, top + 5, safeWidth - 120, 32), hudScore, badge);
+            GUI.Label(new Rect(left + 18, top + 38, safeWidth - 30, 28), hudStatus, text);
             if (state == State.Running)
             {
                 if (GUI.Button(new Rect(left + safeWidth - 105, top + 9, 88, 44), "Pause", button)) Pause();
@@ -151,8 +182,8 @@ namespace IndianRunner
                 if (Button(bx, panelY + 362, bw / 2 - 5, "Music: " + (music ? "ON" : "OFF"))) { music = !music; SaveSettings(); }
                 if (Button(bx + bw / 2 + 5, panelY + 362, bw / 2 - 5, "Sound: " + (sound ? "ON" : "OFF"))) { sound = !sound; SaveSettings(); }
                 if (Button(bx, panelY + 424, bw, "Weather: " + weather.Selection + " (tap)"))
-                { weather.Selection = (WeatherController.Mode)(((int)weather.Selection + 1) % 4); weather.Tick(clock, 10, reduced); }
-                GUI.Label(new Rect(bx, panelY + 480, bw, 94), "Original placeholder art and audio.\nEnglish prototype; Hindi and other regions are planned.\nKeep looking for updates for new content.", new GUIStyle(text) { fontSize = 14, alignment = TextAnchor.MiddleCenter });
+                { weather.Selection = (WeatherController.Mode)(((int)weather.Selection + 1) % 4); weather.Tick(clock, 10, reduced); world.SetWeather(weather.Cloudiness); RefreshHud(); }
+                GUI.Label(new Rect(bx, panelY + 480, bw, 94), "Original placeholder art and audio.\nEnglish prototype; Hindi and other regions are planned.\nKeep looking for updates for new content.", footnote);
             }
             GUI.matrix = previousMatrix;
         }

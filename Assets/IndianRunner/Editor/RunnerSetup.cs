@@ -85,8 +85,20 @@ namespace IndianRunner.Editor
                 Require(tinted, "Pipeline shader has no supported tint property");
             }
             finally { UnityEngine.Object.DestroyImmediate(probe); }
+            var sceneryShader = UnityEngine.Resources.Load<Shader>("Scenery/RunnerScenery");
+            Require(sceneryShader != null && sceneryShader.isSupported, "Scenery shader missing or unsupported");
+            Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanHorizon") != null, "Horizon image missing");
+            Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanBazaar") != null, "Bazaar image missing");
+            Require(RunRules.LaneProgress(0) == 0 && RunRules.LaneProgress(1) == 1, "Lane easing endpoints");
+            float lastProgress = 0;
+            for (int step = 1; step <= 600; step++)
+            {
+                float progress = RunRules.LaneProgress(step / 600f);
+                Require(progress >= lastProgress && progress <= 1, "Lane easing overshoot");
+                lastProgress = progress;
+            }
             int checkedRows = 0;
-            float maxLaneTravel = RunRules.LaneWidth * 2 / RunRules.LaneSpeed;
+            float maxLaneTravel = RunRules.LaneTravelTime(RunRules.LaneWidth * 2);
             float betweenRows = (RunRules.RowSpacing - 1.88f) / RunRules.MaxSpeed;
             // Safe lane changes need at least .7 seconds of human reaction allowance.
             Require(betweenRows > maxLaneTravel + .7f, "Insufficient safe-route reaction allowance");
