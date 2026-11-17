@@ -46,6 +46,10 @@ namespace IndianRunner.Editor
             PrimitiveArt.ConfigureMaterial(material, shader, Color.white);
             EditorUtility.SetDirty(material);
             AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            var saved = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (saved == null || saved.shader == null || saved.shader != shader)
+                throw new InvalidOperationException("RunnerBase material could not be serialized. Check asset write permissions, then run Indian Runner > Repair runner materials again.");
             Debug.Log("Runner material prepared with " + shader.name + ". Press Play to regenerate scene colours.");
         }
         [MenuItem("Indian Runner/2 - Configure Android prototype")]
@@ -73,6 +77,8 @@ namespace IndianRunner.Editor
             // Regression: an imported template must not retain an incompatible shader
             // or lose its tint when materials use _BaseColor instead of _Color.
             var shader = PrimitiveArt.ResolveShader();
+            var savedTemplate = AssetDatabase.LoadAssetAtPath<Material>("Assets/IndianRunner/Resources/RunnerBase.mat");
+            Require(savedTemplate != null && savedTemplate.shader == shader, "RunnerBase serialized shader is invalid; run Repair runner materials");
             var probe = new Material(shader);
             try
             {

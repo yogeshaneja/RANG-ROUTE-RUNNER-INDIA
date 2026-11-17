@@ -2,7 +2,7 @@
 
 ## Performed in the implementation workspace
 
-- C# grammar parsing: all twelve runtime/editor files passed without syntax errors using tree-sitter C#.
+- C# grammar parsing: all thirteen runtime/editor files passed without syntax errors using tree-sitter C#.
 - JSON manifest parsed successfully.
 - All asset/folder metadata exists; GUIDs are unique; scene references resolve to the included RunManager script and enabled build scene.
 - Analytical timing bounds checked using constants extracted from RunRules.cs:
@@ -82,3 +82,9 @@ Completed source checks: all twelve C# files parse. An independent mathematical 
 The update replaces rigid avatar limbs with rounded original meshes, hip/knee/ankle placement, bent elbows and a crouched slide; it introduces a soft analytic contact shadow. Environment changes reduce regularity through differing house counts/setbacks/heights/rotations, recessed arches/lattice details, acacias, sparse illustration panels, deterministic ground grain, off-road height variation and layered cloud meshes. Startup-generated texture/material/mesh ownership is explicitly cleaned up. Existing obstacle spawn/collision rules remain unchanged.
 
 Before acceptance, locally verify: model materials/normals and contact shadow; no foot/road penetration or excessive sliding; jump and slide transitions; pause/restart pose reset; outer-lane and slide framing in 9:16; no terrain seams; no decorative object masking a hazard; preserved obstacle collisions/escape warnings; and frame-time/memory behaviour on the target phone. This is still original stylised procedural art, not a photorealistic or artist-authored production asset. No Unity screenshot, visual approval or FPS measurement is claimed here.
+
+## RunnerBase native shader-reference build repair
+
+A Windows Unity Android build reported `Could not extract GUID` in RunnerBase.mat and `Broken text PPtr` for the shader reference. The hand-authored native shader pointer was removed. The tracked source template now has a valid null shader reference, and the user's installed Editor prepares/serializes the actual pipeline shader through AssetDatabase after script import and before a build. Repair saves, synchronously reimports and validates the shader on the saved material. The core-check menu now checks the serialized template as well as a runtime material.
+
+Source validation: the source template contains no hardcoded shader GUID/fileID, all thirteen C# files parse, and asset GUID metadata remains complete/unique. Native material reserialization, shader compilation and Android build success cannot be verified without Unity and the user's toolchain. The next required check is to pull, run Repair runner materials, clear old Console entries and rebuild on the connected phone.

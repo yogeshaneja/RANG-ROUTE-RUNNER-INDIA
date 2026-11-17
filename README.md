@@ -7,7 +7,7 @@ An original offline Android 3D endless runner. **Stage 1 source implementation**
 1. Install **Unity Hub** and a supported **Unity 6.3 LTS** patch, including Android Build Support, Android SDK & NDK Tools and OpenJDK. The project baseline is `6000.3.0f1`; use your installed supported 6.3 patch when Hub offers to upgrade. This baseline is a project target, not an Editor version verified on the author's machine.
 2. Clone this repository and check out `feature/rajasthan-unity-prototype` (or use `main` after the PR is merged).
 3. In Unity Hub choose **Add > Add project from disk** and select the repository folder containing `Assets`, `Packages` and `ProjectSettings`.
-4. Wait for Unity to import and compile. Open **Indian Runner > 1 - Create or open Rajasthan scene**. This also prepares the correct build material for the active render pipeline.
+4. Wait for Unity to import and compile. Open **Indian Runner > 1 - Create or open Rajasthan scene**. This also prepares the correct build material for the active render pipeline. Unity now prepares it automatically after script import and again before a build.
 5. Set Game view to **portrait / 9:16**, then press **Play** and **START RUN**.
 6. Use arrow keys or WASD; Space also jumps. P/Escape pauses. Mouse drags emulate swipes.
 
@@ -97,3 +97,9 @@ The roadside now alternates open and denser village layouts, with varied setback
 The runner has rounded custom meshes, richer outfit/face/hair details, articulated limbs and inverse-kinematic foot placement. A short sprint stance moves feet backwards at road speed, with a longer knee-lift recovery. Sliding uses a crouched/back-leaning pose instead of scaling the whole body. The camera is closer and narrower (62 degrees), with stronger damped horizontal follow; the menu initially faces the character towards the camera. Built-in rendering requests 2x MSAA; URP keeps its project AA settings. No performance result is implied.
 
 See Documentation/NATURAL_VISUALS.md for scope, source verification and local checks. Unity rendering, shader compilation, clipping during movement and phone frame/memory measurements still require local testing.
+
+### RunnerBase GUID / Broken text PPtr build error
+
+The source template no longer hardcodes a native shader GUID or fileID. The installed Unity Editor assigns and serializes the active pipeline shader after scripts import and before packaging. The explicit repair menu also saves, synchronously reimports and validates the material.
+
+After pulling this repair, stop Play Mode and let scripts recompile. Run **Indian Runner > Repair runner materials**, clear the Console's old entries, and retry **Build and Run**. Do not manually edit shader GUIDs. A successful repair is not itself evidence that the whole Android build has passed.
