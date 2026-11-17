@@ -16,7 +16,13 @@ namespace IndianRunner
         private float laneStartX, laneTargetX, laneElapsed, laneDuration, cameraX;
         private int lane = 1, coins, best, seed = 7301;
         private bool reduced, music, sound;
-        private GUIStyle title, subtitle, text, button, badge, footnote;
+        private RunnerSkin skin;
+        private RunFeedback feedback;
+        private float menuClock, introDuration, milestoneUntil;
+        private Vector3 introCameraPosition;
+        private Quaternion introCameraRotation;
+        private int nextMilestone = 100;
+        private string milestoneText = "", hudCoins = "0";
         private string hudScore = "0 pts    0 coins", hudStatus = "Rajasthan";
         private float nextHudUpdate;
         private string runEndMessage = "Try the open lane for a safe route.";
@@ -40,6 +46,7 @@ namespace IndianRunner
             var sunlight = lightObject.AddComponent<Light>(); sunlight.type = LightType.Directional;
             sunlight.shadows = LightShadows.None; lightObject.transform.rotation = Quaternion.Euler(48, -32, 0);
             world = new TrackWorld(transform); world.Reset(seed);
+            feedback = new RunFeedback(transform);
             runner = new RunnerModel(transform);
             weather = new WeatherController(transform, gameCamera, sunlight);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
@@ -47,12 +54,16 @@ namespace IndianRunner
         }
         private void StartRun()
         {
+            bool fromMenu = state == State.Menu;
+            introCameraPosition = gameCamera.transform.position; introCameraRotation = gameCamera.transform.rotation;
+            introDuration = reduced ? 0 : fromMenu ? .7f : .25f;
+            milestoneUntil = 0; milestoneText = ""; nextMilestone = 100; feedback.Reset();
             distance = x = height = verticalSpeed = slideUntil = clock = 0;
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
             runEndMessage = "Try the open lane for a safe route.";
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
             world.Reset(seed); world.Position(0, seed, 0, reduced); state = State.Running;
-            runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.identity;
+            runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = fromMenu && !reduced ? Quaternion.Euler(0,180,0) : Quaternion.identity;
             runner.Animate(0, false, false, 0, reduced); PositionCamera();
             input.ResetGesture(); audioPlayer.Paused(false); RefreshHud();
         }
@@ -65,6 +76,12 @@ namespace IndianRunner
             {
                 if (state == State.Running) Pause();
                 else if (state == State.Paused) Resume();
+            }
+            if (state == State.Menu)
+            {
+                menuClock += dt; runner.Animate(menuClock,false,false,0,reduced);
+                world.Position(0,seed,menuClock,reduced); weather.Tick(menuClock,dt,reduced); world.SetWeather(weather.Cloudiness);
+                return;
             }
             if (state != State.Running) return;
             Vector3 previous = new Vector3(x, height, distance);
@@ -93,16 +110,22 @@ namespace IndianRunner
             }
             distance += RunRules.Speed(distance) * dt;
             int gained = world.CollectAndCollide(previous, new Vector3(x, height, distance), sliding ? .82f : 2.05f, out bool hit);
-            coins += gained; if (gained > 0) audioPlayer.Coin();
+            coins += gained;
+            if (gained > 0) { audioPlayer.Coin(); feedback.Coin(x,height,reduced); }
             if (hit) { EndRun(world.CamelContact); }
-            world.Position(distance, seed, clock, reduced);
+            world.Position(distance, seed, clock, reduced); feedback.Tick(dt);
+            if (distance >= nextMilestone)
+            {
+                milestoneText = nextMilestone + " m  -  GREAT RUN"; milestoneUntil = clock+1.5f; nextMilestone += 100;
+            }
             runner.Root.localPosition = new Vector3(x, height, 0);
             runner.Animate(clock, state == State.Running, sliding, height, reduced, RunRules.Speed(distance));
             if (hit) runner.Root.localRotation = Quaternion.Euler(0, 0, -12);
             else
             {
                 float lean = reduced ? 0 : Mathf.Clamp((x - previous.x) / Mathf.Max(.001f, dt) / RunRules.LaneSpeed, -1, 1) * -8;
-                runner.Root.localRotation = Quaternion.Slerp(runner.Root.localRotation, Quaternion.Euler(0, 0, lean), 1 - Mathf.Exp(-16 * dt));
+                float turn = reduced ? 0 : Mathf.Clamp((x-previous.x)/Mathf.Max(.001f,dt)/RunRules.LaneSpeed,-1,1)*9;
+                runner.Root.localRotation = Quaternion.Slerp(runner.Root.localRotation, Quaternion.Euler(0,turn,lean), 1-Mathf.Exp(-16*dt));
             }
             weather.Tick(clock, dt, reduced); world.SetWeather(weather.Cloudiness);
             PositionCamera(dt);
@@ -113,23 +136,43 @@ namespace IndianRunner
         }
         private void RefreshHud()
         {
-            hudScore = $"{CurrentScore} pts    {coins} coins";
-            hudStatus = $"Rajasthan  |  {(int)distance} m  |  {weather.Description}";
+            hudScore = CurrentScore.ToString("N0"); hudCoins = coins.ToString();
+            hudStatus = $"{(int)distance} m    {weather.Description}";
         }
         private void PositionCamera(float dt = 0)
         {
-            float targetX = x * .35f;
-            cameraX = dt <= 0 ? targetX : Mathf.Lerp(cameraX, targetX, 1 - Mathf.Exp(-10 * dt));
-            gameCamera.transform.position = transform.position + new Vector3(cameraX, 4.7f, -7.8f);
-            gameCamera.transform.LookAt(transform.position + new Vector3(cameraX, 1.15f, 12.5f));
+            if (state == State.Menu)
+            {
+                gameCamera.transform.position = transform.position+new Vector3(2.7f,1.8f,-4.4f);
+                gameCamera.transform.LookAt(transform.position+new Vector3(0,1.2f,0));
+                gameCamera.fieldOfView = 62; return;
+            }
+            float targetX = x*.35f;
+            cameraX = dt <= 0 ? targetX : Mathf.Lerp(cameraX,targetX,1-Mathf.Exp(-10*dt));
+            var position = transform.position+new Vector3(cameraX,4.7f+(reduced ? 0 : height*.045f),-7.8f);
+            var rotation = Quaternion.LookRotation(transform.position+new Vector3(cameraX,1.15f,12.5f)-position);
+            float transition = introDuration > 0 ? Mathf.SmoothStep(0,1,Mathf.Clamp01(clock/introDuration)) : 1;
+            gameCamera.transform.position = Vector3.Lerp(introCameraPosition,position,transition);
+            gameCamera.transform.rotation = Quaternion.Slerp(introCameraRotation,rotation,transition);
+            float fov = reduced ? 62 : Mathf.Lerp(62,65,Mathf.InverseLerp(9,18,RunRules.Speed(distance)));
+            gameCamera.fieldOfView = dt <= 0 ? 62 : Mathf.Lerp(gameCamera.fieldOfView,fov,1-Mathf.Exp(-3*dt));
         }
-        private void Pause() { state = State.Paused; SaveBest(); input.ResetGesture(); audioPlayer.Paused(true); }
+        private void ReturnToMenu()
+        {
+            SaveBest(); state = State.Menu;
+            distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
+            lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
+            runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
+            runner.Animate(0,false,false,0,reduced); audioPlayer.Paused(false); PositionCamera(); RefreshHud();
+            input.ResetGesture();
+        }
+        private void Pause() { state = State.Paused; SaveBest(); RefreshHud(); input.ResetGesture(); audioPlayer.Paused(true); }
         private void Resume() { state = State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
         private void EndRun(bool camelContact)
         {
             state = State.GameOver;
             runEndMessage = camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
-            SaveBest(); audioPlayer.Stumble();
+            SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
         private void SaveBest()
         {
@@ -144,64 +187,81 @@ namespace IndianRunner
         private void OnApplicationPause(bool paused) { if (paused && state == State.Running) Pause(); }
         private void OnApplicationFocus(bool focus) { if (!focus && state == State.Running) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
-        private void Styles()
+        private void OnDestroy() { skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void WeatherChoice()
         {
-            if (title != null) return;
-            title = new GUIStyle(GUI.skin.label) { fontSize = 35, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = true };
-            title.normal.textColor = new Color(1, .80f, .25f);
-            subtitle = new GUIStyle(title) { fontSize = 18 }; subtitle.normal.textColor = Color.white;
-            text = new GUIStyle(subtitle) { fontSize = 17, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(12, 12, 6, 6) };
-            button = new GUIStyle(GUI.skin.button) { fontSize = 20, fontStyle = FontStyle.Bold, wordWrap = true };
-            badge = new GUIStyle(text) { fontSize = 19, fontStyle = FontStyle.Bold };
-            footnote = new GUIStyle(text) { fontSize = 14, alignment = TextAnchor.MiddleCenter };
+            weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);
+            weather.Tick(state == State.Menu ? menuClock : clock,10,reduced); world.SetWeather(weather.Cloudiness); RefreshHud();
         }
-        private bool Button(float xPos, float yPos, float w, string label) => GUI.Button(new Rect(xPos, yPos, w, 52), label, button);
+        private void DrawOptions(float xPos, float yPos, float width)
+        {
+            float half = (width-10)/2;
+            if (GUI.Button(new Rect(xPos,yPos,half,43),"Music  "+(music ? "ON" : "OFF"),skin.Toggle)) { music = !music; SaveSettings(); }
+            if (GUI.Button(new Rect(xPos+half+10,yPos,half,43),"Sound  "+(sound ? "ON" : "OFF"),skin.Toggle)) { sound = !sound; SaveSettings(); }
+            if (GUI.Button(new Rect(xPos,yPos+52,half,43),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
+            if (GUI.Button(new Rect(xPos+half+10,yPos+52,half,43),"Sky  "+weather.Selection,skin.Toggle)) WeatherChoice();
+        }
         private void OnGUI()
         {
-            Styles();
-            float scale = Mathf.Min(Screen.width / 480f, Screen.height / 760f);
-            float width = Screen.width / scale, fullHeight = Screen.height / scale;
+            if (skin == null) skin = new RunnerSkin();
+            float scale = Mathf.Min(Screen.width/480f,Screen.height/800f);
+            float screenHeight = Screen.height/scale;
             Rect safe = Screen.safeArea;
-            float top = (Screen.height - safe.yMax) / scale + 10;
-            float left = safe.xMin / scale, safeWidth = safe.width / scale;
-            float center = left + safeWidth / 2;
-            var previousMatrix = GUI.matrix;
-            GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
-            GUI.Box(new Rect(left + 8, top, safeWidth - 16, 72), GUIContent.none);
-            GUI.Label(new Rect(left + 18, top + 5, safeWidth - 120, 32), hudScore, badge);
-            GUI.Label(new Rect(left + 18, top + 38, safeWidth - 30, 28), hudStatus, text);
-            if (state == State.Running)
+            float top = (Screen.height-safe.yMax)/scale+10,left = safe.xMin/scale,width = safe.width/scale;
+            float center = left+width/2,bottom = screenHeight-safe.yMin/scale-12;
+            var oldMatrix = GUI.matrix; var oldColour = GUI.color;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(scale,scale,1));
+            if (state == State.Menu)
             {
-                if (!string.IsNullOrEmpty(world.WarningMessage))
-                {
-                    GUI.Box(new Rect(center - 217, top + 80, 434, 40), GUIContent.none);
-                    Color previousColor = GUI.color; GUI.color = new Color(1, .85f, .25f);
-                    GUI.Label(new Rect(center - 210, top + 82, 420, 36), world.WarningMessage, subtitle);
-                    GUI.color = previousColor;
-                }
-                if (GUI.Button(new Rect(left + safeWidth - 105, top + 9, 88, 44), "Pause", button)) Pause();
-                GUI.Label(new Rect(center - 210, fullHeight - safe.yMin / scale - 52, 420, 40), "SWIPE: change lane / jump / slide", subtitle);
+                GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
+                GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
+                GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
+                float sheet = bottom-318;
+                GUI.Box(new Rect(left+12,sheet,width-24,318),GUIContent.none,skin.Card);
+                float xPos = left+32,w = width-64;
+                if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
+                GUI.Label(new Rect(xPos,sheet+86,w,49),"Swipe to move. Jump pots and cloth.\nSlide under awnings. Follow camel warnings.",skin.Text);
+                DrawOptions(xPos,sheet+146,w);
+                GUI.Label(new Rect(xPos,sheet+252,w,50),"Keep looking for updates for new content.",skin.Caption);
             }
             else
             {
-                float panelWidth = Mathf.Min(440, safeWidth - 24), panelX = center - panelWidth / 2;
-                float panelY = Mathf.Max(top + 90, (fullHeight - 595) / 2);
-                GUI.Box(new Rect(panelX, panelY, panelWidth, 585), GUIContent.none);
-                GUI.Label(new Rect(panelX + 10, panelY + 12, panelWidth - 20, 92), state == State.Menu ? "RANG ROUTE\nRUNNER" : state == State.Paused ? "RUN PAUSED" : "NICE RUN!", title);
-                GUI.Label(new Rect(panelX + 12, panelY + 108, panelWidth - 24, 32), $"Rajasthan prototype  /  Best: {best}", subtitle);
-                GUI.Label(new Rect(panelX + 14, panelY + 145, panelWidth - 28, 82), state == State.GameOver ? $"Distance: {(int)distance} m   Coins: {coins}\nScore: {CurrentScore}\n{runEndMessage}" : "Swipe left/right to change lanes.\nJump pots/cloth; slide under awnings.\nDodge carts. Follow camel warnings.", text);
-                float bx = panelX + 22, bw = panelWidth - 44;
-                if (Button(bx, panelY + 238, bw, state == State.Paused ? "RESUME" : state == State.GameOver ? "RUN AGAIN" : "START RUN"))
-                { if (state == State.Paused) Resume(); else { runner.Root.localRotation = Quaternion.identity; StartRun(); } }
-                if (Button(bx, panelY + 300, bw, "Reduced effects: " + (reduced ? "ON" : "OFF"))) { reduced = !reduced; SaveSettings(); }
-                if (Button(bx, panelY + 362, bw / 2 - 5, "Music: " + (music ? "ON" : "OFF"))) { music = !music; SaveSettings(); }
-                if (Button(bx + bw / 2 + 5, panelY + 362, bw / 2 - 5, "Sound: " + (sound ? "ON" : "OFF"))) { sound = !sound; SaveSettings(); }
-                if (Button(bx, panelY + 424, bw, "Weather: " + weather.Selection + " (tap)"))
-                { weather.Selection = (WeatherController.Mode)(((int)weather.Selection + 1) % 4); weather.Tick(clock, 10, reduced); world.SetWeather(weather.Cloudiness); RefreshHud(); }
-                GUI.Label(new Rect(bx, panelY + 480, bw, 94), "Original placeholder art and audio.\nEnglish prototype; Hindi and other regions are planned.\nKeep looking for updates for new content.", footnote);
+                GUI.Box(new Rect(left+10,top,width-198,66),GUIContent.none,skin.Card);
+                GUI.Label(new Rect(left+24,top+3,width-230,35),hudScore,skin.Score);
+                GUI.Label(new Rect(left+18,top+38,width-214,23),hudStatus,skin.Caption);
+                GUI.Box(new Rect(left+width-178,top+5,108,54),"COINS "+hudCoins,skin.Chip);
+                if (state == State.Running)
+                {
+                    if (GUI.Button(new Rect(left+width-61,top+5,50,54),"II",skin.Secondary)) Pause();
+                    if (!string.IsNullOrEmpty(world.WarningMessage))
+                    {
+                        GUI.Box(new Rect(left+12,top+79,width-24,43),GUIContent.none,skin.Card);
+                        GUI.Label(new Rect(left+20,top+81,width-40,39),world.WarningMessage,skin.Subtitle);
+                    }
+                    if (clock < milestoneUntil && string.IsNullOrEmpty(world.WarningMessage))
+                    {
+                        GUI.Box(new Rect(center-160,top+82,320,42),GUIContent.none,skin.Card);
+                        GUI.Label(new Rect(center-152,top+84,304,38),milestoneText,skin.Subtitle);
+                    }
+                    if (clock < 12) GUI.Label(new Rect(left+20,bottom-40,width-40,30),"SWIPE TO MOVE  |  UP TO JUMP  |  DOWN TO SLIDE",skin.Caption);
+                }
+                else
+                {
+                    GUI.color = new Color(0,0,0,.30f); GUI.DrawTexture(new Rect(0,0,Screen.width/scale,screenHeight),Texture2D.whiteTexture); GUI.color = oldColour;
+                    float panel = Mathf.Max(top+100,(screenHeight-440)/2);
+                    GUI.Box(new Rect(left+12,panel,width-24,440),GUIContent.none,skin.Card);
+                    GUI.Label(new Rect(left+25,panel+15,width-50,50),state == State.Paused ? "TAKE A BREATHER" : "GOOD RUN!",skin.Subtitle);
+                    GUI.Label(new Rect(left+25,panel+61,width-50,60),hudScore,skin.Title);
+                    GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} coins",skin.Caption);
+                    GUI.Label(new Rect(left+30,panel+158,width-60,48),state == State.Paused ? "Your journey is waiting." : runEndMessage,skin.Text);
+                    if (GUI.Button(new Rect(left+32,panel+219,width-64,57),state == State.Paused ? "CONTINUE RUN" : "RUN AGAIN",skin.Primary))
+                    { if (state == State.Paused) Resume(); else StartRun(); }
+                    if (GUI.Button(new Rect(left+32,panel+286,width-64,46),"BACK TO START",skin.Secondary)) ReturnToMenu();
+                    if (GUI.Button(new Rect(left+32,panel+350,(width-74)/2,45),"Music  "+(music ? "ON" : "OFF"),skin.Toggle)) { music = !music; SaveSettings(); }
+                    if (GUI.Button(new Rect(center+5,panel+350,(width-74)/2,45),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
+                }
             }
-            GUI.matrix = previousMatrix;
+            GUI.color = oldColour; GUI.matrix = oldMatrix;
         }
     }
 }

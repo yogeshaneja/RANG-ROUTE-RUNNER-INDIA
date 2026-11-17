@@ -6,7 +6,7 @@ namespace IndianRunner
     // Original bundled illustrations on reusable world geometry. No downloads at runtime.
     public sealed class RajasthanScenery
     {
-        private readonly Material horizonMaterial, facadeMaterial;
+        private readonly Material horizonMaterial;
         private readonly Material sandstone, paleStone, leafy, terracotta;
         public Material RoadSurface { get; }
         private readonly Material sandSurface;
@@ -14,16 +14,13 @@ namespace IndianRunner
         public RajasthanScenery(Transform parent)
         {
             var shader = Resources.Load<Shader>("Scenery/RunnerScenery");
-            var horizon = Resources.Load<Texture2D>("Scenery/RajasthanHorizon");
-            var bazaar = Resources.Load<Texture2D>("Scenery/RajasthanBazaar");
-            if (shader == null || horizon == null || bazaar == null)
+            var horizon = Resources.Load<Texture2D>("Scenery/RajasthanHorizonReal") ?? Resources.Load<Texture2D>("Scenery/RajasthanHorizon");
+            if (shader == null || horizon == null)
                 throw new System.InvalidOperationException("Bundled Rajasthan scenery is missing. Pull the artwork, shader and their metadata, then let Unity import them.");
             horizonMaterial = new Material(shader) { mainTexture = horizon, name = "Rajasthan distant dunes and fort", renderQueue = 1000 };
             horizonMaterial.SetFloat("_ZWrite", 0);
-            horizonMaterial.SetColor("_Tint", new Color(1,.97f,.91f));
-            facadeMaterial = new Material(shader) { mainTexture = bazaar, name = "Rajasthan haveli and bazaar", enableInstancing = true };
-            facadeMaterial.SetFloat("_CutSky", 1);
-            facadeMaterial.SetFloat("_ZWrite", 1);
+            horizonMaterial.SetColor("_Tint", Color.white);
+            horizonMaterial.SetFloat("_Saturation",1);
             Panel(parent, "Distant Rajasthan panorama", new Vector3(0, 22, 185), new Vector2(420, 280), 0, horizonMaterial);
             sandstone = PrimitiveArt.Mat(new Color(.79f, .43f, .23f));
             paleStone = PrimitiveArt.Mat(new Color(1, .83f, .53f));
@@ -110,7 +107,7 @@ namespace IndianRunner
         {
             var root = new GameObject("Varied Rajasthan courtyard house").transform; root.SetParent(tile,false); root.localPosition = position;
             root.localRotation = Quaternion.Euler(0,(Variation(seed,5)-.5f)*7,0);
-            var wall = PrimitiveArt.Mat(Color.Lerp(new Color(.68f,.39f,.25f),new Color(.88f,.66f,.43f),Variation(seed,7)));
+            var wall = PrimitiveArt.TexturedMat("Scenery/SandstoneReal",Color.Lerp(new Color(.91f,.85f,.76f),new Color(1,.98f,.93f),Variation(seed,7)),new Vector2(2,2));
             var recess = PrimitiveArt.Mat(new Color(.20f,.24f,.22f));
             const float depth = 4.6f;
             PrimitiveArt.Box(root,"Solid sandstone building",new Vector3(0,height/2,0),new Vector3(depth,height,length),wall);
@@ -164,11 +161,8 @@ namespace IndianRunner
         }
         public void AddPanels(Transform tile, int variant)
         {
-            // Keep illustration as occasional distant detail, not identical walls
-            // pasted alongside every section of the playable road.
-            if (variant%3 == 0) return;
-            float side = variant%2 == 0 ? -1 : 1, h = 7.0f+Variation(variant,9);
-            Panel(tile,"Distant illustrated market",new Vector3(side*16,h/2,22+variant*2),new Vector2(h*1.5f,h),side*85,facadeMaterial);
+            // Architecture now uses actual textured 3D walls; omit the old
+            // flat illustrated storefront cards from the active scene.
         }
         private static Texture2D Grain(string name, Color colour, int seed)
         {
@@ -193,7 +187,6 @@ namespace IndianRunner
         public void SetWeather(float cloudiness)
         {
             horizonMaterial.SetFloat("_Cloudiness", cloudiness);
-            facadeMaterial.SetFloat("_Cloudiness", cloudiness);
         }
         private static void Panel(Transform parent, string name, Vector3 pos, Vector2 size, float yaw, Material material)
         {
@@ -208,7 +201,7 @@ namespace IndianRunner
         }
         public void Dispose()
         {
-            Object.Destroy(horizonMaterial); Object.Destroy(facadeMaterial);
+            Object.Destroy(horizonMaterial);
             Object.Destroy(RoadSurface); Object.Destroy(sandSurface); Object.Destroy(roadGrain); Object.Destroy(sandGrain);
         }
     }

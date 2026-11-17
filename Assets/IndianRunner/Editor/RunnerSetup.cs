@@ -95,6 +95,10 @@ namespace IndianRunner.Editor
             Require(sceneryShader != null && sceneryShader.isSupported, "Scenery shader missing or unsupported");
             Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanHorizon") != null, "Horizon image missing");
             Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanBazaar") != null, "Bazaar image missing");
+            Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanHorizonReal") != null, "Realistic horizon missing");
+            Require(UnityEngine.Resources.Load<Texture2D>("Scenery/SandstoneReal") != null, "Sandstone surface missing");
+            var cotton = UnityEngine.Resources.Load<Texture2D>("Scenery/CottonReal");
+            Require(cotton != null && cotton.wrapMode == TextureWrapMode.Repeat, "Cotton surface missing or not repeatable");
             Require(RunRules.LaneProgress(0) == 0 && RunRules.LaneProgress(1) == 1, "Lane easing endpoints");
             float lastProgress = 0;
             for (int step = 1; step <= 600; step++)

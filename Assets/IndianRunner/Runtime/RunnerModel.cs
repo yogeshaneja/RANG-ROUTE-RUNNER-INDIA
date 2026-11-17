@@ -20,12 +20,12 @@ namespace IndianRunner
             Root = Pivot(parent, "Original articulated Indian runner", Vector3.zero);
             var skin = PrimitiveArt.Mat(new Color(.55f, .32f, .20f));
             var skinLight = PrimitiveArt.Mat(new Color(.64f, .39f, .25f));
-            var kurta = PrimitiveArt.Mat(new Color(.035f, .38f, .43f));
+            var kurta = PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.08f,.55f,.61f),new Vector2(2,3));
             var trim = PrimitiveArt.Mat(new Color(.86f, .66f, .29f));
-            var trousers = PrimitiveArt.Mat(new Color(.87f, .82f, .69f));
+            var trousers = PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(1,.98f,.91f),new Vector2(2,3));
             var hair = PrimitiveArt.Mat(new Color(.055f, .038f, .028f));
             var shoe = PrimitiveArt.Mat(new Color(.27f, .13f, .065f));
-            var orange = PrimitiveArt.Mat(new Color(.91f, .35f, .10f));
+            var orange = PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.98f,.44f,.15f),new Vector2(1,2));
             var white = PrimitiveArt.Mat(new Color(.96f, .94f, .86f));
             torso = Pivot(Root, "Pelvis and torso articulation", new Vector3(0, .94f, 0));
             var shirt = Pivot(torso, "Tailored kurta body", Vector3.zero);
@@ -100,7 +100,8 @@ namespace IndianRunner
             if (running) gaitPhase += dt*Mathf.Lerp(11,16,Mathf.InverseLerp(9,18,speed));
             Root.localPosition = new Vector3(Root.localPosition.x,height,0);
             float bob = running && !reduced ? (1-Mathf.Cos(gaitPhase*2))*.009f*(1-slideBlend)*(1-jumpBlend) : 0;
-            float hipHeight = Mathf.Lerp(Mathf.Lerp(.94f,.80f,locomotionBlend),.34f,slideBlend)+bob;
+            float idleBreath = running || reduced ? 0 : Mathf.Sin(clock*1.7f)*.006f;
+            float hipHeight = Mathf.Lerp(Mathf.Lerp(.94f,.80f,locomotionBlend),.34f,slideBlend)+bob+idleBreath;
             torso.localPosition = new Vector3(0,hipHeight,0);
             float twist = reduced ? 0 : Mathf.Sin(gaitPhase)*3*(1-slideBlend);
             torso.localRotation = Quaternion.Euler(Mathf.Lerp(7*locomotionBlend,-72,slideBlend),twist,0);
@@ -130,7 +131,9 @@ namespace IndianRunner
             float swingArm = Mathf.Cos(gaitPhase)*25*locomotionBlend;
             leftArm.localRotation = Quaternion.Euler(Mathf.Lerp(swingArm-8,-52,slideBlend),0,-5);
             rightArm.localRotation = Quaternion.Euler(Mathf.Lerp(-swingArm-8,-52,slideBlend),0,5);
-            leftElbow.localRotation = rightElbow.localRotation = Quaternion.Euler(Mathf.Lerp(Mathf.Lerp(-12,-75,locomotionBlend),-45,slideBlend),0,0);
+            float elbowBase = Mathf.Lerp(-12,-75,locomotionBlend);
+            leftElbow.localRotation = Quaternion.Euler(Mathf.Lerp(elbowBase+Mathf.Sin(gaitPhase+.6f)*10*locomotionBlend,-45,slideBlend),0,0);
+            rightElbow.localRotation = Quaternion.Euler(Mathf.Lerp(elbowBase-Mathf.Sin(gaitPhase+.6f)*10*locomotionBlend,-45,slideBlend),0,0);
             scarf.localRotation = Quaternion.Euler(reduced ? 0 : -10+Mathf.Sin(clock*7)*7,reduced ? 0 : Mathf.Sin(clock*4)*3,0);
             if (shadow != null)
             {

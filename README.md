@@ -37,7 +37,7 @@ Build And Run requires your licensed local Unity Editor and compatible Android t
 ## Included
 
 - A real three-lane 3D runner with automatic forward movement, swipe/keyboard input, eased lane changes, gentle camera follow, jump and slide.
-- Original bundled Rajasthan illustrations: a distant Thar-dune/fort panorama and haveli/bazaar frontages beside both sides of the road, plus chhatri pavilions, pots, shrubs and sandstone walls.
+- Original photo-like Rajasthan panorama, weathered sandstone on 3D building walls and woven cotton on the runner's clothes. The old flat illustrated storefront cards are no longer drawn. Chhatris, pots, shrubs and native 3D architecture remain part of the roadside.
 - Seven reusable track segments: scenery meshes combined per material, pooled obstacle rows and coins.
 - Rajasthan-themed obstacles: painted matka stacks and colourful fabric bundles to jump, wooden market carts to dodge, cloth awnings to slide under, and decorated camel crossings with directional warnings.
 - Flying festival kites above the road; kites have no collider and never hide a lane hazard.
@@ -103,3 +103,14 @@ See Documentation/NATURAL_VISUALS.md for scope, source verification and local ch
 The source template no longer hardcodes a native shader GUID or fileID. The installed Unity Editor assigns and serializes the active pipeline shader after scripts import and before packaging. The explicit repair menu also saves, synchronously reimports and validates the material.
 
 After pulling this repair, stop Play Mode and let scripts recompile. Run **Indian Runner > Repair runner materials**, clear the Console's old entries, and retry **Build and Run**. Do not manually edit shader GUIDs. A successful repair is not itself evidence that the whole Android build has passed.
+
+## Art and feel polish pass
+
+- New original photo-like dune/fort panorama, sandstone albedo and neutral woven-cotton albedo; all bundled offline. The panorama imports at 1024 pixels; repeating material maps at 512 with mipmaps/compression. These are generated images, not location photographs.
+- Immediate one-shot swipe recognition on threshold crossing; lifting the finger does not generate another action. Short taps, header gestures and cancelled touches do not issue a move.
+- A character-focused start camera and 0.7-second eased transition into running; reduced effects skip the transition and speed-FOV effects.
+- Varied elbow movement and subtle idle breathing, small lane-turn yaw, a cleaner rounded dark/gold interface, clear pause/results navigation, bounded coin glints and distance milestones.
+- Roadside mesh groups receive small deterministic offsets/scale changes when reused. Road, ground and gameplay obstacles are not moved by this decoration variation.
+- Texture seams on rounded meshes use duplicated UV vertices with averaged seam normals.
+
+The artwork/feel source pass is complete; its Unity import, UI touch behaviour, camera framing and frame-time/memory impact still require the local phone build. The character remains procedurally articulated; a production skinned character and authored run animations are not included. See Documentation/ART_AND_FEEL.md.

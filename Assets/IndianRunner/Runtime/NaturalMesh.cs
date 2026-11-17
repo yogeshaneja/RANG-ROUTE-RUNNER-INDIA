@@ -8,19 +8,20 @@ namespace IndianRunner
         // Each ring is (X radius, Y height, Z radius).
         public static Transform Lathe(Transform parent, string name, Vector3[] rings, Material material, int sides = 14)
         {
-            var vertices = new Vector3[rings.Length * sides + 2];
+            int stride = sides+1; // Duplicate UV seam vertices for woven/textured surfaces.
+            var vertices = new Vector3[rings.Length * stride + 2];
             var uv = new Vector2[vertices.Length];
             var triangles = new int[((rings.Length - 1) * sides * 2 + sides * 2) * 3];
-            for (int r = 0; r < rings.Length; r++) for (int s = 0; s < sides; s++)
+            for (int r = 0; r < rings.Length; r++) for (int s = 0; s <= sides; s++)
             {
                 float angle = s * Mathf.PI * 2 / sides;
-                vertices[r * sides + s] = new Vector3(Mathf.Cos(angle) * rings[r].x, rings[r].y, Mathf.Sin(angle) * rings[r].z);
-                uv[r * sides + s] = new Vector2((float)s / sides, (float)r / (rings.Length - 1));
+                vertices[r * stride + s] = new Vector3(Mathf.Cos(angle) * rings[r].x, rings[r].y, Mathf.Sin(angle) * rings[r].z);
+                uv[r * stride + s] = new Vector2((float)s / sides, (float)r / (rings.Length - 1));
             }
             int cursor = 0;
             for (int r = 0; r < rings.Length - 1; r++) for (int s = 0; s < sides; s++)
             {
-                int a = r * sides + s, b = r * sides + (s + 1) % sides, c = a + sides, d = b + sides;
+                int a = r * stride + s,b = a+1,c = a+stride,d = b+stride;
                 triangles[cursor++] = a; triangles[cursor++] = c; triangles[cursor++] = b;
                 triangles[cursor++] = b; triangles[cursor++] = c; triangles[cursor++] = d;
             }
@@ -28,11 +29,21 @@ namespace IndianRunner
             vertices[bottom] = new Vector3(0, rings[0].y, 0); vertices[top] = new Vector3(0, rings[rings.Length - 1].y, 0);
             for (int s = 0; s < sides; s++)
             {
-                int next = (s + 1) % sides;
+                int next = s+1;
                 triangles[cursor++] = bottom; triangles[cursor++] = s; triangles[cursor++] = next;
-                triangles[cursor++] = top; triangles[cursor++] = (rings.Length - 1) * sides + next; triangles[cursor++] = (rings.Length - 1) * sides + s;
+                triangles[cursor++] = top; triangles[cursor++] = (rings.Length - 1) * stride + next; triangles[cursor++] = (rings.Length - 1) * stride + s;
             }
-            return Make(parent, name, vertices, uv, triangles, material);
+            var shape = Make(parent,name,vertices,uv,triangles,material);
+            var mesh = shape.GetComponent<MeshFilter>().sharedMesh;
+            var normals = mesh.normals;
+            for (int r = 0; r < rings.Length; r++)
+            {
+                int first = r*stride,last = first+sides;
+                var normal = (normals[first]+normals[last]).normalized;
+                normals[first] = normals[last] = normal;
+            }
+            mesh.normals = normals;
+            return shape;
         }
         public static Transform Oval(Transform parent, string name, Vector3 center, Vector3 size, Material material, int sides = 14)
         {

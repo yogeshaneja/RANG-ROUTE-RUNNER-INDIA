@@ -20,6 +20,7 @@ namespace IndianRunner
         private sealed class Tile
         {
             public Transform Root;
+            public Transform Village;
             public int Index;
             public readonly Row[] Rows = { new Row(), new Row() };
         }
@@ -53,16 +54,18 @@ namespace IndianRunner
             for (int i = 0; i < TileCount; i++)
             {
                 var tile = new Tile { Root = new GameObject("Pooled Rajasthan segment " + i).transform };
-                tile.Root.SetParent(parent, false); tiles[i] = tile;
-                scenery.AddGround(tile.Root,i,TileLength);
-                PrimitiveArt.Box(tile.Root, "Road", new Vector3(0, -.045f, TileLength / 2), new Vector3(8.5f, .12f, TileLength), road);
+                tile.Root.SetParent(parent,false); tiles[i] = tile;
+                var ground = new GameObject("Batched road and terrain").transform; ground.SetParent(tile.Root,false);
+                tile.Village = new GameObject("Reusable varied roadside").transform; tile.Village.SetParent(tile.Root,false);
+                scenery.AddGround(ground,i,TileLength);
+                PrimitiveArt.Box(ground, "Road", new Vector3(0, -.045f, TileLength / 2), new Vector3(8.5f, .12f, TileLength), road);
                 for (int dash = 0; dash < 8; dash++) foreach (float x in new[] { -RunRules.LaneWidth / 2, RunRules.LaneWidth / 2 })
-                    PrimitiveArt.Box(tile.Root, "Lane dash", new Vector3(x, .025f, dash * 6.5f + 2), new Vector3(.11f, .03f, 2.4f), white);
-                if (i%3 == 1) PrimitiveArt.Camel(tile.Root,-7.7f,17+i*2,camel,RajasthanScenery.GroundY(i,-7.7f,17+i*2,TileLength));
-                if (i%3 == 2) PrimitiveArt.Peacock(tile.Root,6.3f,29+i,blue,green,RajasthanScenery.GroundY(i,6.3f,29+i,TileLength));
-                scenery.AddGeometry(tile.Root, i);
-                PrimitiveArt.CombineScenery(tile.Root);
-                scenery.AddPanels(tile.Root, i);
+                    PrimitiveArt.Box(ground, "Lane dash", new Vector3(x, .025f, dash * 6.5f + 2), new Vector3(.11f, .03f, 2.4f), white);
+                if (i%3 == 1) PrimitiveArt.Camel(tile.Village,-7.7f,17+i*2,camel,RajasthanScenery.GroundY(i,-7.7f,17+i*2,TileLength));
+                if (i%3 == 2) PrimitiveArt.Peacock(tile.Village,6.3f,29+i,blue,green,RajasthanScenery.GroundY(i,6.3f,29+i,TileLength));
+                scenery.AddGeometry(tile.Village,i);
+                PrimitiveArt.CombineScenery(ground);
+                PrimitiveArt.CombineScenery(tile.Village);
                 for (int b = 0; b < 2; b++)
                 {
                     var bird = new GameObject("Scenic bird").transform; bird.SetParent(tile.Root, false);
@@ -99,6 +102,12 @@ namespace IndianRunner
         private static void Configure(Tile tile, int index, int seed)
         {
             tile.Index = index;
+            // Reuse the same meshes with a small deterministic layout variation.
+            // Ground, lanes and gameplay obstacles are never shifted or scaled.
+            float lateral = (RunRules.SafeLane(index*3,seed)-1)*.12f;
+            float forward = (RunRules.Kind(index*2,index%3,seed)-2.5f)*.8f;
+            tile.Village.localPosition = new Vector3(lateral,0,forward);
+            tile.Village.localScale = new Vector3(1,1,.96f+.016f*RunRules.Kind(index,index%3,seed));
             for (int r = 0; r < 2; r++)
             {
                 var row = tile.Rows[r]; int rowNumber = index * 2 + r;

@@ -2,7 +2,7 @@
 
 ## Performed in the implementation workspace
 
-- C# grammar parsing: all thirteen runtime/editor files passed without syntax errors using tree-sitter C#.
+- C# grammar parsing: all fifteen runtime/editor files passed without syntax errors using tree-sitter C#.
 - JSON manifest parsed successfully.
 - All asset/folder metadata exists; GUIDs are unique; scene references resolve to the included RunManager script and enabled build scene.
 - Analytical timing bounds checked using constants extracted from RunRules.cs:
@@ -88,3 +88,16 @@ Before acceptance, locally verify: model materials/normals and contact shadow; n
 A Windows Unity Android build reported `Could not extract GUID` in RunnerBase.mat and `Broken text PPtr` for the shader reference. The hand-authored native shader pointer was removed. The tracked source template now has a valid null shader reference, and the user's installed Editor prepares/serializes the actual pipeline shader through AssetDatabase after script import and before a build. Repair saves, synchronously reimports and validates the shader on the saved material. The core-check menu now checks the serialized template as well as a runtime material.
 
 Source validation: the source template contains no hardcoded shader GUID/fileID, all thirteen C# files parse, and asset GUID metadata remains complete/unique. Native material reserialization, shader compilation and Android build success cannot be verified without Unity and the user's toolchain. The next required check is to pull, run Repair runner materials, clear old Console entries and rebuild on the connected phone.
+
+## Art-and-feel polish validation
+
+The user reports the preceding build runs on their phone. The following checks concern new source and do not certify this newer APK:
+
+- All fifteen C# files parse without grammar errors; complete/unique asset metadata checked; the three JPEGs decode.
+- Mesh index/count/UV contracts audited for 16 ring/sides combinations. Side triangles no longer interpolate across the texture wrap seam; matching seam normals are averaged.
+- Independent gesture-state traces cover early threshold commit, no second action on release, short taps, header exclusion and cancellation. These are mathematical/contract traces; native touch still needs phone testing.
+- Camera intro finishes before the first obstacle window. Menu-sheet bounds were checked against sampled 16:9, 19.5:9 and 20:9 portrait aspects. Actual text rendering/framing needs Unity.
+- Native material preparation/build repair is retained; the source template still contains no manually encoded shader GUID.
+- Coin effects use 18 preallocated objects; mesh/material caches and skin textures are disposed. No frame-rate, GC or memory-growth result is claimed without profiling.
+
+Local acceptance: rebuild and verify realistic surfaces/no pink errors; full character and controls on the start screen; intro and reduced-effects behaviour; immediate single-action swipes; pause/resume/restart/back-to-start; score/coin accuracy; glints/milestones; reserved camel escape lanes; long-run recycling; and sustained Android frame-time/memory captures. Production character/rigged animation quality remains outside this procedural-art pass.

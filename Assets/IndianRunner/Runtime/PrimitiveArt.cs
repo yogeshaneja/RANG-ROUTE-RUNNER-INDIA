@@ -6,6 +6,7 @@ namespace IndianRunner
     public static class PrimitiveArt
     {
         private static readonly List<Mesh> CombinedMeshes = new List<Mesh>();
+        private static readonly Dictionary<(string,Color,Vector2),Material> TexturedMaterials = new Dictionary<(string,Color,Vector2),Material>();
         private static readonly Dictionary<Color, Material> Materials = new Dictionary<Color, Material>();
         public static Material Mat(Color color)
         {
@@ -18,6 +19,17 @@ namespace IndianRunner
             ConfigureMaterial(mat, shader, color);
             mat.name = "Runner colour " + color;
             Materials[color] = mat; return mat;
+        }
+        public static Material TexturedMat(string resource, Color tint, Vector2 tiling)
+        {
+            var key = (resource,tint,tiling);
+            if (TexturedMaterials.TryGetValue(key,out var existing)) return existing;
+            var texture = Resources.Load<Texture2D>(resource);
+            if (texture == null) return Mat(tint);
+            var material = new Material(Mat(tint)) { name = "Original surface " + resource };
+            foreach (var property in new[] { "_MainTex", "_BaseMap" })
+                if (material.HasProperty(property)) { material.SetTexture(property,texture); material.SetTextureScale(property,tiling); }
+            TexturedMaterials.Add(key,material); return material;
         }
         public static Shader ResolveShader()
         {
@@ -46,6 +58,8 @@ namespace IndianRunner
         {
             foreach (var mat in Materials.Values) if (mat != null) Object.Destroy(mat);
             Materials.Clear();
+            foreach (var material in TexturedMaterials.Values) if (material != null) Object.Destroy(material);
+            TexturedMaterials.Clear();
             foreach (var mesh in CombinedMeshes) if (mesh != null) Object.Destroy(mesh);
             CombinedMeshes.Clear();
         }

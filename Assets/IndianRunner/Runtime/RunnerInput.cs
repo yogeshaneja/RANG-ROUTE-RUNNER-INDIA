@@ -31,7 +31,8 @@ namespace IndianRunner
             if (touch != null && (touch.primaryTouch.press.isPressed || touch.primaryTouch.press.wasReleasedThisFrame))
             {
                 var t = touch.primaryTouch;
-                Pointer(t.position.ReadValue(), t.press.wasPressedThisFrame, t.press.wasReleasedThisFrame, usableTop);
+                if (t.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Canceled) tracking = false;
+                else Pointer(t.position.ReadValue(), t.press.wasPressedThisFrame, t.press.wasReleasedThisFrame, usableTop);
             }
             else if (Mouse.current != null)
             {
@@ -47,8 +48,8 @@ namespace IndianRunner
             if (Input.touchCount > 0)
             {
                 var t = Input.GetTouch(0);
-                Pointer(t.position, t.phase == TouchPhase.Began, t.phase == TouchPhase.Ended, usableTop);
                 if (t.phase == TouchPhase.Canceled) tracking = false;
+                else Pointer(t.position,t.phase == TouchPhase.Began,t.phase == TouchPhase.Ended,usableTop);
             }
             else Pointer(Input.mousePosition, Input.GetMouseButtonDown(0), Input.GetMouseButtonUp(0), usableTop);
 #endif
@@ -56,10 +57,15 @@ namespace IndianRunner
         private void Pointer(Vector2 p, bool began, bool ended, float usableTop)
         {
             if (began) { start = p; tracking = p.y < usableTop; }
-            if (!ended || !tracking) return;
-            tracking = false;
+            if (!tracking) return;
             Vector2 delta = p - start;
-            if (delta.magnitude < Mathf.Max(32f, Screen.width * 0.055f)) return;
+            if (delta.magnitude < Mathf.Max(24f,Screen.width*.035f))
+            {
+                if (ended) tracking = false;
+                return;
+            }
+            // Commit once on crossing the threshold, not on finger release.
+            tracking = false;
             if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y)) Horizontal = delta.x > 0 ? 1 : -1;
             else { Jump = delta.y > 0; Slide = delta.y < 0; }
         }
