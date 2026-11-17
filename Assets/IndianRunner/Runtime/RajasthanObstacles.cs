@@ -6,18 +6,28 @@ namespace IndianRunner
     // Shared geometry is built once. Every pooled slot reuses these meshes/materials.
     public sealed class RajasthanObstacles
     {
-        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5;
+        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7;
         private sealed class Part
         {
             public Mesh Mesh;
             public Material Material;
         }
-        private readonly Part[][] models = new Part[6][];
+        private readonly Part[][] models = new Part[8][];
+        private Part[] camelLeg;
         public int MaxParts { get; private set; }
 
         public RajasthanObstacles()
         {
-            for (int kind = 1; kind <= 5; kind++)
+            var legRoot = new GameObject("Shared sculpted camel leg").transform;
+            var legHide = PrimitiveArt.Mat(new Color(.66f,.40f,.19f));
+            NaturalMesh.Lathe(legRoot,"Tapered camel leg",new[] {new Vector3(.07f,-1.05f,.065f),new Vector3(.055f,-.65f,.055f),new Vector3(.085f,-.48f,.08f),new Vector3(.10f,0,.09f)},legHide,10);
+            NaturalMesh.Oval(legRoot,"Soft camel foot",new Vector3(.03f,-1.04f,0),new Vector3(.25f,.12f,.20f),PrimitiveArt.Mat(new Color(.29f,.19f,.12f)),10);
+            PrimitiveArt.CombineScenery(legRoot);
+            var legParts = new List<Part>();
+            foreach(var r in legRoot.GetComponentsInChildren<MeshRenderer>()) if(r.enabled)
+                legParts.Add(new Part {Mesh=r.GetComponent<MeshFilter>().sharedMesh,Material=r.sharedMaterial});
+            camelLeg = legParts.ToArray(); Object.Destroy(legRoot.gameObject);
+            for (int kind = 1; kind <= 7; kind++)
             {
                 var root = new GameObject("Shared Rajasthan obstacle " + kind).transform;
                 Build(root, kind);
@@ -40,10 +50,26 @@ namespace IndianRunner
             private readonly MeshFilter[] filters;
             private readonly MeshRenderer[] renderers;
             private readonly RajasthanObstacles catalog;
-            public Instance(Transform parent, RajasthanObstacles source)
+            private readonly Transform[] legs;
+            public Instance(Transform parent, RajasthanObstacles source, bool camelSlot = false)
             {
                 catalog = source;
                 Root = new GameObject("Pooled themed obstacle").transform; Root.SetParent(parent, false);
+                if (camelSlot)
+                {
+                    legs = new Transform[4];
+                    for(int l=0;l<4;l++)
+                    {
+                        legs[l]=new GameObject("Walking camel leg").transform; legs[l].SetParent(Root,false);
+                        foreach(var part in source.camelLeg)
+                        {
+                            var go=new GameObject("Shared leg mesh"); go.transform.SetParent(legs[l],false);
+                            go.AddComponent<MeshFilter>().sharedMesh=part.Mesh;
+                            var renderer=go.AddComponent<MeshRenderer>(); renderer.sharedMaterial=part.Material;
+                            renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows=false;
+                        }
+                    }
+                }
                 filters = new MeshFilter[source.MaxParts]; renderers = new MeshRenderer[source.MaxParts];
                 for (int i = 0; i < filters.Length; i++)
                 {
@@ -57,6 +83,7 @@ namespace IndianRunner
             {
                 Root.gameObject.SetActive(kind != 0); Root.localScale = Vector3.one;
                 Root.localRotation = Quaternion.identity;
+                if(legs != null) foreach(var leg in legs) leg.gameObject.SetActive(kind == Camel);
                 if (kind == 0) return;
                 var parts = catalog.models[kind];
                 for (int i = 0; i < filters.Length; i++)
@@ -65,7 +92,16 @@ namespace IndianRunner
                     if (!active) continue;
                     filters[i].sharedMesh = parts[i].Mesh; renderers[i].sharedMaterial = parts[i].Material;
                 }
-                Root.name = kind == Matkas ? "Matka pottery stack - jump" : kind == Fabric ? "Fabric bundles - jump" : kind == Cart ? "Wooden bazaar cart - dodge" : kind == Awning ? "Market awning - slide" : "Decorated camel crossing - dodge";
+                Root.name = kind == Matkas ? "Matka pottery stack - jump" : kind == Fabric ? "Fabric bundles - jump" : kind == Cart ? "Wooden bazaar cart - dodge" : kind == Awning ? "Market awning - slide" : kind == Camel ? "Decorated camel crossing - dodge" : kind == Motorcycle ? "Oncoming motorcycle - dodge" : "Descending spaceship - dodge";
+            }
+            public void Walk(float distance)
+            {
+                if(legs == null) return;
+                for(int i=0;i<4;i++)
+                {
+                    legs[i].localPosition=new Vector3(i<2 ? -.52f : .52f,1.10f,i%2==0 ? -.29f : .29f);
+                    legs[i].localRotation=Quaternion.Euler(0,0,Mathf.Sin(distance*.45f+i%2*Mathf.PI+(i<2 ? .5f : 0))*13);
+                }
             }
         }
         private static void Build(Transform root, int kind)
@@ -120,16 +156,62 @@ namespace IndianRunner
                 for (int stripe = 0; stripe < 5; stripe++)
                     PrimitiveArt.Box(root, "Fabric canopy stripe", new Vector3(-.72f + stripe * .36f, 2.31f, 0), new Vector3(.16f, .035f, 1.5f), gold);
             }
+            else if (kind == Motorcycle)
+            {
+                var metal=PrimitiveArt.Mat(new Color(.48f,.53f,.56f));
+                var paint=PrimitiveArt.Mat(new Color(.76f,.08f,.08f));
+                foreach(float z in new[]{-.72f,.72f})
+                {
+                    var wheel=PrimitiveArt.Shape(root,"Rubber motorcycle tyre",PrimitiveType.Cylinder,new Vector3(0,.36f,z),new Vector3(.68f,.10f,.68f),dark);
+                    wheel.localRotation=Quaternion.Euler(0,0,90);
+                    var hub=PrimitiveArt.Shape(root,"Metal wheel hub",PrimitiveType.Cylinder,new Vector3(0,.36f,z),new Vector3(.40f,.105f,.40f),metal);
+                    hub.localRotation=Quaternion.Euler(0,0,90);
+                }
+                NaturalMesh.Branch(root,"Frame",new Vector3(0,.40f,.65f),new Vector3(0,.85f,-.5f),.08f,metal);
+                NaturalMesh.Branch(root,"Front fork",new Vector3(0,.35f,-.72f),new Vector3(0,1.25f,-.52f),.06f,metal);
+                NaturalMesh.Oval(root,"Red fuel tank",new Vector3(0,.92f,-.16f),new Vector3(.52f,.40f,.66f),paint,18);
+                NaturalMesh.Oval(root,"Saddle",new Vector3(0,.98f,.39f),new Vector3(.44f,.18f,.62f),dark);
+                PrimitiveArt.Box(root,"Engine",new Vector3(0,.55f,0),new Vector3(.38f,.38f,.45f),metal);
+                PrimitiveArt.Box(root,"Handlebars",new Vector3(0,1.24f,-.57f),new Vector3(.94f,.07f,.08f),metal);
+                NaturalMesh.Oval(root,"Bright headlamp",new Vector3(0,1.06f,-.74f),new Vector3(.27f,.27f,.12f),gold);
+                // Helmeted rider, facing towards the player (-Z).
+                NaturalMesh.Oval(root,"Rider jacket",new Vector3(0,1.32f,.12f),new Vector3(.51f,.62f,.36f),teal);
+                NaturalMesh.Oval(root,"Helmet",new Vector3(0,1.78f,-.02f),new Vector3(.36f,.38f,.35f),gold,18);
+                NaturalMesh.Oval(root,"Dark visor",new Vector3(0,1.78f,-.17f),new Vector3(.30f,.12f,.08f),dark);
+                foreach(float x in new[]{-.22f,.22f})
+                {
+                    NaturalMesh.Branch(root,"Rider arm",new Vector3(x,1.5f,.08f),new Vector3(x*1.6f,1.24f,-.54f),.075f,teal);
+                    NaturalMesh.Branch(root,"Rider leg",new Vector3(x,1,.35f),new Vector3(x,.45f,.08f),.10f,dark);
+                }
+            }
+            else if (kind == Spaceship)
+            {
+                var metal=PrimitiveArt.Mat(new Color(.48f,.59f,.67f));
+                NaturalMesh.Lathe(root,"Sculpted flying saucer",new[]{new Vector3(.25f,0,.25f),new Vector3(.87f,.16f,.87f),new Vector3(.92f,.26f,.92f),new Vector3(.55f,.42f,.55f),new Vector3(.25f,.48f,.25f)},metal,24);
+                NaturalMesh.Oval(root,"Turquoise cockpit",new Vector3(0,.49f,0),new Vector3(.80f,.50f,.80f),teal,20);
+                for(int i=0;i<10;i++)
+                {
+                    float a=i*Mathf.PI/5;
+                    NaturalMesh.Oval(root,"Amber rim light",new Vector3(Mathf.Cos(a)*.82f,.27f,Mathf.Sin(a)*.82f),Vector3.one*.13f,gold,8);
+                }
+            }
             else
             {
                 // Side-on camel, with its head facing +X. The broad collision envelope
                 // stays inside the two blocked lanes; the head never enters the safe lane.
-                PrimitiveArt.Box(root, "Camel body", new Vector3(0, 1.35f, 0), new Vector3(1.6f, .7f, .85f), hide);
-                PrimitiveArt.Shape(root, "Camel hump", PrimitiveType.Sphere, new Vector3(-.1f, 1.83f, 0), new Vector3(.8f, .8f, .75f), hide);
-                PrimitiveArt.Box(root, "Camel neck", new Vector3(.80f, 1.93f, 0), new Vector3(.35f, 1.3f, .32f), hide);
-                PrimitiveArt.Box(root, "Camel head", new Vector3(1.02f, 2.57f, 0), new Vector3(.61f, .34f, .39f), hide);
-                foreach (float x in new[] { -.5f, .5f }) foreach (float z in new[] { -.29f, .29f })
-                    PrimitiveArt.Box(root, "Camel leg", new Vector3(x, .56f, z), new Vector3(.17f, 1.1f, .16f), hide);
+                NaturalMesh.Oval(root, "Camel body", new Vector3(0, 1.35f, 0), new Vector3(1.6f, .7f, .85f), hide);
+                NaturalMesh.Oval(root, "Camel hump", new Vector3(-.1f, 1.83f, 0), new Vector3(.8f, .8f, .75f), hide);
+                NaturalMesh.Oval(root, "Camel neck", new Vector3(.80f, 1.93f, 0), new Vector3(.35f, 1.3f, .32f), hide);
+                NaturalMesh.Oval(root, "Camel head", new Vector3(1.02f, 2.57f, 0), new Vector3(.61f, .34f, .39f), hide);
+                NaturalMesh.Oval(root,"Soft camel muzzle",new Vector3(1.22f,2.49f,0),new Vector3(.30f,.22f,.35f),hide);
+                foreach(float z in new[]{-.17f,.17f})
+                {
+                    NaturalMesh.Oval(root,"Upright camel ear",new Vector3(.85f,2.76f,z),new Vector3(.12f,.22f,.10f),hide);
+                    NaturalMesh.Oval(root,"Muzzle nostril",new Vector3(1.32f,2.53f,z*.8f),new Vector3(.045f,.03f,.025f),dark,8);
+                }
+                NaturalMesh.Branch(root,"Camel tail",new Vector3(-.75f,1.5f,0),new Vector3(-1.05f,.8f,0),.045f,hide);
+                NaturalMesh.Oval(root,"Tail tuft",new Vector3(-1.05f,.76f,0),new Vector3(.13f,.25f,.13f),dark);
+                NaturalMesh.Branch(root,"Colourful bridle",new Vector3(.81f,2.55f,-.2f),new Vector3(1.30f,2.44f,-.2f),.025f,magenta);
                 PrimitiveArt.Box(root, "Decorated saddle cloth", new Vector3(-.2f, 1.57f, 0), new Vector3(.95f, .15f, .98f), teal);
                 foreach (float z in new[] { -.51f, .51f })
                 {

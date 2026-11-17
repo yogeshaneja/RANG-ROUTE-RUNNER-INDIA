@@ -101,3 +101,9 @@ The user reports the preceding build runs on their phone. The following checks c
 - Coin effects use 18 preallocated objects; mesh/material caches and skin textures are disposed. No frame-rate, GC or memory-growth result is claimed without profiling.
 
 Local acceptance: rebuild and verify realistic surfaces/no pink errors; full character and controls on the start screen; intro and reduced-effects behaviour; immediate single-action swipes; pause/resume/restart/back-to-start; score/coin accuracy; glints/milestones; reserved camel escape lanes; long-run recycling; and sustained Android frame-time/memory captures. Production character/rigged animation quality remains outside this procedural-art pass.
+
+## Character and moving-hazard pass
+
+All 15 C# files parse, and asset metadata remains complete with unique GUIDs. An independent numerical audit covers 32,000 deterministic layouts, all seven obstacle types, camel swept escape envelopes, empty rows adjacent to dynamic encounters, and 48 moving-hazard collision/safe-lane traces across speeds 9/12/18 m/s and 20/30/60/120 Hz. Direct motorcycle/ship contacts register while the neighbouring lane stays clear. This audit independently mirrors formulas; it does not execute C# or Unity.
+
+Editor core checks now include dynamic type bounds, reserved lanes, recovery rows, descent endpoints, oncoming direction and relative collision sweeps. They have not run here. Unity shader/mesh rendering, native compilation, actual visual quality and phone performance are pending the local Build and Run review in MOVING_HAZARDS.md. Existing native material repair is preserved.

@@ -101,12 +101,22 @@ namespace IndianRunner
         public static void Camel(Transform parent, float x, float z, Material sand, float groundHeight = 0)
         {
             var root = new GameObject("Scenic camel").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z);
-            Box(root, "Body", new Vector3(0, 1.35f, 0), new Vector3(.85f, .7f, 1.6f), sand);
-            Shape(root, "Hump", PrimitiveType.Sphere, new Vector3(0, 1.82f, -.15f), new Vector3(.75f, .85f, .8f), sand);
-            Box(root, "Neck", new Vector3(0, 1.9f, .85f), new Vector3(.32f, 1.35f, .35f), sand);
-            Box(root, "Head", new Vector3(0, 2.57f, 1.05f), new Vector3(.4f, .33f, .65f), sand);
-            foreach (float side in new[] { -.29f, .29f }) foreach (float end in new[] { -.5f, .5f })
-                Box(root, "Leg", new Vector3(side, .56f, end), new Vector3(.16f, 1.1f, .17f), sand);
+            NaturalMesh.Oval(root,"Rounded camel body",new Vector3(0,1.35f,0),new Vector3(.85f,.72f,1.65f),sand,18);
+            NaturalMesh.Oval(root,"Single camel hump",new Vector3(0,1.83f,-.12f),new Vector3(.75f,.86f,.8f),sand,18);
+            NaturalMesh.Oval(root,"Long camel neck",new Vector3(0,1.94f,.80f),new Vector3(.34f,1.30f,.37f),sand,18);
+            NaturalMesh.Oval(root,"Camel head",new Vector3(0,2.57f,1.04f),new Vector3(.39f,.34f,.62f),sand,18);
+            var dark=Mat(new Color(.20f,.13f,.08f));
+            foreach(float side in new[]{-.29f,.29f}) foreach(float end in new[]{-.5f,.5f})
+            {
+                NaturalMesh.Branch(root,"Tapered leg",new Vector3(side,.08f,end),new Vector3(side,1.15f,end),.085f,sand);
+                NaturalMesh.Oval(root,"Padded foot",new Vector3(side,.07f,end+.03f),new Vector3(.20f,.12f,.25f),dark);
+            }
+            foreach(float side in new[]{-1f,1f})
+            {
+                NaturalMesh.Oval(root,"Camel ear",new Vector3(side*.17f,2.76f,.86f),new Vector3(.10f,.22f,.12f),sand);
+                NaturalMesh.Oval(root,"Camel eye",new Vector3(side*.19f,2.63f,1.12f),Vector3.one*.05f,dark,8);
+            }
+            NaturalMesh.Oval(root,"Woven camel saddle",new Vector3(0,1.57f,-.2f),new Vector3(.98f,.20f,.95f),Mat(new Color(.04f,.52f,.53f)),16);
         }
         public static void Peacock(Transform parent, float x, float z, Material blue, Material green, float groundHeight = 0)
         {

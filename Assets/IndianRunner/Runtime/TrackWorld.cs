@@ -13,6 +13,8 @@ namespace IndianRunner
             public readonly int[] Kind = new int[3];
             public readonly RajasthanObstacles.Instance[] Obstacles = new RajasthanObstacles.Instance[3];
             public bool CamelCrossing;
+            public int DynamicKind, HazardLane;
+            public Transform LandingMarker;
             public readonly Transform[] Coins = new Transform[5];
             public readonly bool[] Taken = new bool[5];
             public int Safe;
@@ -37,6 +39,7 @@ namespace IndianRunner
         private readonly List<Kite> kites = new List<Kite>();
         public string WarningMessage { get; private set; } = "";
         public bool CamelContact { get; private set; }
+        public string ContactMessage { get; private set; } = "";
         private int nextIndex;
         private readonly RajasthanScenery scenery;
         public TrackWorld(Transform parent)
@@ -88,7 +91,7 @@ namespace IndianRunner
                 foreach (var row in tile.Rows)
                 {
                     for (int lane = 0; lane < 3; lane++)
-                        row.Obstacles[lane] = new RajasthanObstacles.Instance(tile.Root, obstacleArt);
+                        row.Obstacles[lane] = new RajasthanObstacles.Instance(tile.Root, obstacleArt, lane == 1);
                     for (int c = 0; c < 5; c++)
                         row.Coins[c] = PrimitiveArt.Shape(tile.Root, "Coin", PrimitiveType.Cylinder, Vector3.zero, new Vector3(.48f, .07f, .48f), yellow);
                 }
@@ -96,7 +99,7 @@ namespace IndianRunner
         }
         public void Reset(int seed)
         {
-            nextIndex = TileCount; WarningMessage = ""; CamelContact = false;
+            nextIndex = TileCount; WarningMessage = ""; CamelContact = false; ContactMessage = "";
             for (int i = 0; i < TileCount; i++) Configure(tiles[i], i, seed);
         }
         private static void Configure(Tile tile, int index, int seed)
@@ -114,6 +117,9 @@ namespace IndianRunner
                 row.Z = index * TileLength + RunRules.RowSpacing * .5f + r * RunRules.RowSpacing;
                 row.Safe = RunRules.SafeLane(rowNumber, seed);
                 row.CamelCrossing = RunRules.HasCamel(rowNumber, seed);
+                row.DynamicKind = RunRules.DynamicKind(rowNumber); row.HazardLane = RunRules.HazardLane(rowNumber,seed);
+                row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship);
+                row.LandingMarker.localPosition = new Vector3(RunRules.LaneX(row.HazardLane),0,row.Z-index*TileLength);
                 for (int lane = 0; lane < 3; lane++)
                 {
                     int kind = RunRules.ObstacleFor(rowNumber, lane, seed);
@@ -142,10 +148,24 @@ namespace IndianRunner
                 tile.Root.localPosition = new Vector3(0, 0, tile.Index * TileLength - distance);
                 foreach (var row in tile.Rows)
                 {
+                    float ahead = row.Z-distance;
+                    if(row.DynamicKind != 0)
+                    {
+                        var hazard = row.Obstacles[row.HazardLane].Root;
+                        hazard.localPosition = new Vector3(RunRules.LaneX(row.HazardLane),RunRules.HazardY(row.DynamicKind,ahead),RunRules.HazardZ(row.DynamicKind,row.Z,distance)-tile.Index*TileLength);
+                        if(row.DynamicKind == RajasthanObstacles.Spaceship) hazard.localRotation=Quaternion.Euler(0,reduced ? 0 : clock*24,0);
+                        row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship && ahead < 48 && ahead > -5);
+                        if(ahead > 0 && ahead <= nearestCamel)
+                        {
+                            nearestCamel=ahead;
+                            string laneName=row.Safe == 0 ? "LEFT" : row.Safe == 1 ? "MIDDLE" : "RIGHT";
+                            WarningMessage=(row.DynamicKind == RajasthanObstacles.Motorcycle ? "MOTORCYCLE AHEAD" : "SPACESHIP DESCENDING")+" - take "+laneName+" lane";
+                        }
+                    }
                     if (!row.CamelCrossing) continue;
-                    float ahead = row.Z - distance;
                     var camel = row.Obstacles[1].Root;
                     camel.localPosition = new Vector3(RunRules.CamelX(row.Safe, ahead), 0, row.Z - tile.Index * TileLength);
+                    row.Obstacles[1].Walk(distance);
                     camel.localRotation = Quaternion.Euler(0, row.Safe == 0 ? 180 : 0, 0);
                     if (ahead > 0 && ahead <= nearestCamel)
                     {
@@ -171,13 +191,27 @@ namespace IndianRunner
         }
         public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit)
         {
-            int collected = 0; hit = false; CamelContact = false;
+            int collected = 0; hit = false; CamelContact = false; ContactMessage = "";
             foreach (var tile in tiles) foreach (var row in tile.Rows)
             {
                 if (row.Z < previousFoot.z - 6 || row.Z > foot.z + 7) continue;
                 for (int lane = 0; lane < 3; lane++)
                 {
                     int kind = row.Kind[lane]; if (kind == 0) continue;
+                    if (kind == RajasthanObstacles.Motorcycle || kind == RajasthanObstacles.Spaceship)
+                    {
+                        float hazardX=RunRules.LaneX(lane);
+                        var a=previousFoot-new Vector3(hazardX,RunRules.HazardY(kind,row.Z-previousFoot.z),RunRules.HazardZ(kind,row.Z,previousFoot.z));
+                        var b=foot-new Vector3(hazardX,RunRules.HazardY(kind,row.Z-foot.z),RunRules.HazardZ(kind,row.Z,foot.z));
+                        float width=kind == RajasthanObstacles.Motorcycle ? .50f : .92f;
+                        float depth=kind == RajasthanObstacles.Motorcycle ? 1.06f : .92f;
+                        float top=kind == RajasthanObstacles.Motorcycle ? 1.97f : .74f;
+                        if(SegmentBox(a,b,new Vector3(-width-RunRules.PlayerHalfWidth,-playerHeight+.02f,-depth-RunRules.PlayerHalfWidth),new Vector3(width+RunRules.PlayerHalfWidth,top,depth+RunRules.PlayerHalfWidth)))
+                        {
+                            hit=true; ContactMessage=kind == RajasthanObstacles.Motorcycle ? "Motorcycle contact. Follow the warning and change lane." : "Spaceship contact. Avoid its marked landing lane.";
+                        }
+                        continue;
+                    }
                     if (kind == RajasthanObstacles.Camel)
                     {
                         // Sweep in camel-relative coordinates, including motion over this

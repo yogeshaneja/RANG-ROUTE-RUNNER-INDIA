@@ -37,3 +37,5 @@ ambientCG Wood Floor 001: https://ambientcg.com/view?id=WoodFloor001 . Its offic
 | Coin glints | Original small native mesh pool in RunFeedback.cs | 18 maximum; cosmetic only, shared material |
 
 Prompts and generation details for the three images are in ARTWORK.md. They are not photographs of actual locations or people. Source images were encoded as JPEG without content editing; no third-party stock images were imported in this pass.
+
+- Moving-hazard/character pass: original code-generated motorcycle with helmeted rider, flying saucer with rim lights, landing marker, rounded/leg-animated crossing camel and rounded scenic camel. Runner face/clothing/accessory refinements are original procedural geometry. No downloaded models, new licenses, paid services or external dependencies.

@@ -37,23 +37,33 @@ namespace IndianRunner
             PrimitiveArt.CombineScenery(shirt);
             NaturalMesh.Oval(torso, "Neck", new Vector3(0,.72f,0), new Vector3(.17f,.20f,.16f), skin);
             head = Pivot(torso, "Stable head", new Vector3(0,.91f,.005f));
-            NaturalMesh.Oval(head, "Face and jaw", Vector3.zero, new Vector3(.30f,.37f,.29f), skinLight, 20);
+            NaturalMesh.Oval(head, "Face and jaw", Vector3.zero, new Vector3(.295f,.39f,.285f), skinLight, 20);
             NaturalMesh.Oval(head, "Defined jaw", new Vector3(0,-.095f,.015f), new Vector3(.245f,.16f,.245f), skin, 18);
             NaturalMesh.Oval(head, "Sculpted black hair", new Vector3(0,.14f,-.025f), new Vector3(.32f,.16f,.30f), hair, 18);
             NaturalMesh.Oval(head, "Swept hair quiff", new Vector3(-.035f,.20f,.035f), new Vector3(.22f,.105f,.22f), hair, 16).localRotation = Quaternion.Euler(0,0,-12);
             foreach (float side in new[] { -1f, 1f })
             {
                 NaturalMesh.Oval(head, "Ear", new Vector3(side*.153f,-.005f,0), new Vector3(.06f,.10f,.055f), skin, 10);
-                NaturalMesh.Oval(head, "Eye white", new Vector3(side*.066f,.025f,.132f), new Vector3(.060f,.031f,.021f), white, 12);
-                NaturalMesh.Oval(head, "Dark eye", new Vector3(side*.066f,.025f,.145f), new Vector3(.022f,.027f,.012f), hair, 10);
+                NaturalMesh.Oval(head, "Eye white", new Vector3(side*.066f,.025f,.132f), new Vector3(.053f,.022f,.018f), white, 12);
+                NaturalMesh.Oval(head, "Dark eye", new Vector3(side*.066f,.025f,.145f), new Vector3(.021f,.020f,.010f), hair, 10);
                 NaturalMesh.Oval(head, "Eyebrow", new Vector3(side*.065f,.063f,.135f), new Vector3(.072f,.014f,.015f), hair, 10);
             }
             NaturalMesh.Oval(head, "Nose bridge", new Vector3(0,-.006f,.146f), new Vector3(.043f,.082f,.052f), skinLight, 12);
             NaturalMesh.Oval(head, "Mouth", new Vector3(0,-.092f,.129f), new Vector3(.078f,.015f,.012f), skin, 12);
+            NaturalMesh.Oval(head,"Shaped nose tip",new Vector3(0,-.037f,.174f),new Vector3(.052f,.038f,.045f),skinLight,14);
+            NaturalMesh.Oval(head,"Lower lip",new Vector3(0,-.101f,.134f),new Vector3(.063f,.010f,.012f),PrimitiveArt.Mat(new Color(.40f,.22f,.16f)),12);
+            foreach(float side in new[]{-1f,1f})
+            {
+                NaturalMesh.Oval(head,"Hair sideburn",new Vector3(side*.135f,.045f,-.01f),new Vector3(.025f,.105f,.10f),hair,12);
+                NaturalMesh.Oval(head,"Ear inner contour",new Vector3(side*.174f,-.005f,.008f),new Vector3(.015f,.05f,.028f),skinLight,10);
+                NaturalMesh.Oval(head,"Small eye highlight",new Vector3(side*.066f-.004f,.029f,.152f),Vector3.one*.007f,white,8);
+            }
             PrimitiveArt.CombineScenery(head);
+            NaturalMesh.Lathe(torso,"Saffron scarf neck wrap",new[]{new Vector3(.12f,.64f,.105f),new Vector3(.125f,.69f,.11f),new Vector3(.105f,.72f,.095f)},orange,18);
             scarf = Pivot(torso, "Free scarf tail", new Vector3(.17f,.60f,-.16f));
             NaturalMesh.Lathe(scarf, "Saffron woven scarf", new[] {new Vector3(.085f,-.57f,.026f),new Vector3(.08f,-.29f,.025f),new Vector3(.072f,0,.026f)}, orange, 10);
             for (int i = 0; i < 4; i++) PrimitiveArt.Box(scarf, "Scarf fringe", new Vector3(-.06f+i*.04f,-.61f,0), new Vector3(.012f,.10f,.018f), trim);
+            NaturalMesh.Lathe(scarf,"Second offset scarf fold",new[]{new Vector3(.035f,-.46f,.018f),new Vector3(.045f,-.20f,.02f),new Vector3(.04f,0,.02f)},orange,10).localPosition=new Vector3(-.10f,0,-.02f);
             PrimitiveArt.CombineScenery(scarf);
             leftArm = Arm(torso, -1, kurta, skinLight, trim, out leftElbow);
             rightArm = Arm(torso, 1, kurta, skinLight, trim, out rightElbow);
@@ -67,6 +77,7 @@ namespace IndianRunner
                 feet[i] = Pivot(calves[i], "Ankle " + i, new Vector3(0,-LowerLeg,0));
                 NaturalMesh.Oval(feet[i], "Brown running jutti", new Vector3(0,-.015f,.065f), new Vector3(.19f,.13f,.34f), shoe, 16);
                 NaturalMesh.Oval(feet[i], "Shoe sole", new Vector3(0,-.065f,.065f), new Vector3(.195f,.025f,.345f), hair, 14);
+                NaturalMesh.Oval(feet[i],"Stitched leather vamp",new Vector3(0,.028f,.11f),new Vector3(.14f,.025f,.19f),trim,12);
                 PrimitiveArt.CombineScenery(feet[i]);
             }
             var shader = Resources.Load<Shader>("Scenery/RunnerGroundShadow");
@@ -83,9 +94,11 @@ namespace IndianRunner
         {
             var shoulder = Pivot(torso, "Shoulder", new Vector3(side*.31f,.55f,0));
             NaturalMesh.Lathe(shoulder, "Kurta sleeve", new[] {new Vector3(.075f,-.29f,.075f),new Vector3(.09f,-.12f,.09f),new Vector3(.092f,0,.092f)}, sleeve, 14);
+            NaturalMesh.Lathe(shoulder,"Neat embroidered sleeve cuff",new[]{new Vector3(.077f,-.29f,.077f),new Vector3(.079f,-.265f,.079f)},trim,14);
             elbow = Pivot(shoulder, "Elbow", new Vector3(0,-.29f,0));
             NaturalMesh.Lathe(elbow, "Forearm", new[] {new Vector3(.05f,-.25f,.05f),new Vector3(.067f,-.10f,.067f),new Vector3(.068f,0,.068f)}, skin, 14);
             NaturalMesh.Oval(elbow, "Relaxed hand", new Vector3(0,-.29f,.012f), new Vector3(.105f,.15f,.095f), skin, 12);
+            NaturalMesh.Oval(elbow,"Natural thumb",new Vector3(side*.045f,-.275f,.035f),new Vector3(.035f,.075f,.045f),skin,10);
             return shoulder;
         }
         public void Animate(float clock, bool running, bool sliding, float height, bool reduced, float speed = 9)
@@ -105,7 +118,7 @@ namespace IndianRunner
             torso.localPosition = new Vector3(0,hipHeight,0);
             float twist = reduced ? 0 : Mathf.Sin(gaitPhase)*3*(1-slideBlend);
             torso.localRotation = Quaternion.Euler(Mathf.Lerp(7*locomotionBlend,-72,slideBlend),twist,0);
-            head.localRotation = Quaternion.Euler(-3,-twist*.5f,0);
+            head.localRotation = Quaternion.Euler(-3-Mathf.Lerp(7*locomotionBlend,0,slideBlend),-twist*.65f,0);
             for (int i = 0; i < 2; i++)
             {
                 float phase = Mathf.Repeat(gaitPhase/(Mathf.PI*2)+i*.5f,1);

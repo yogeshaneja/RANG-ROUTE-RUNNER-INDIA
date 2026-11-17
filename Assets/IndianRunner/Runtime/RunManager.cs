@@ -171,7 +171,7 @@ namespace IndianRunner
         private void EndRun(bool camelContact)
         {
             state = State.GameOver;
-            runEndMessage = camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
+            runEndMessage = world.ContactMessage.Length > 0 ? world.ContactMessage : camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
             SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
         private void SaveBest()
@@ -220,7 +220,7 @@ namespace IndianRunner
                 GUI.Box(new Rect(left+12,sheet,width-24,318),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
-                GUI.Label(new Rect(xPos,sheet+86,w,49),"Swipe to move. Jump pots and cloth.\nSlide under awnings. Follow camel warnings.",skin.Text);
+                GUI.Label(new Rect(xPos,sheet+86,w,49),"Swipe to move. Jump pots and cloth.\nSlide under awnings. Follow hazard warnings.",skin.Text);
                 DrawOptions(xPos,sheet+146,w);
                 GUI.Label(new Rect(xPos,sheet+252,w,50),"Keep looking for updates for new content.",skin.Caption);
             }

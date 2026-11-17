@@ -114,3 +114,5 @@ After pulling this repair, stop Play Mode and let scripts recompile. Run **India
 - Texture seams on rounded meshes use duplicated UV vertices with averaged seam normals.
 
 The artwork/feel source pass is complete; its Unity import, UI touch behaviour, camera framing and frame-time/memory impact still require the local phone build. The character remains procedurally articulated; a production skinned character and authored run animations are not included. See Documentation/ART_AND_FEEL.md.
+
+Latest character/hazard update: rounded walking camels, refined original boy, oncoming motorcycles and descending spaceships with warned escape lanes and contact game-over. See [moving hazards and local playtest](Documentation/MOVING_HAZARDS.md). Pulling source requires a fresh Android Build and Run to update the installed phone game.

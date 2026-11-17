@@ -120,7 +120,7 @@ namespace IndianRunner.Editor
                 {
                     if (!RunRules.IsBlocked(row, lane, seed)) clear++;
                     int kind = RunRules.ObstacleFor(row, lane, seed);
-                    Require(kind >= 0 && kind <= RajasthanObstacles.Camel, "Unknown obstacle kind");
+                    Require(kind >= 0 && kind <= RajasthanObstacles.Spaceship, "Unknown obstacle kind");
                 }
                 Require(clear >= 1 && !RunRules.IsBlocked(row, safe, seed), "Every generated obstacle row needs a reserved safe lane");
                 if (RunRules.HasCamel(row, seed))
@@ -132,6 +132,14 @@ namespace IndianRunner.Editor
                         float gap = Mathf.Abs(RunRules.CamelX(safe, ahead) - RunRules.LaneX(safe));
                         Require(gap > RunRules.CamelHalfWidth + RunRules.PlayerHalfWidth, "Camel sweep blocks the reserved lane");
                     }
+                }
+                if(RunRules.DynamicKind(row) != 0)
+                {
+                    int target=RunRules.HazardLane(row,seed);
+                    Require(target != safe,"Dynamic hazard blocks coin lane");
+                    Require(Mathf.Abs(RunRules.LaneX(target)-RunRules.LaneX(safe)) > .92f+RunRules.PlayerHalfWidth,"Dynamic swept width blocks escape lane");
+                    foreach(int neighbour in new[]{row-1,row+1}) for(int lane=0;lane<3;lane++)
+                        Require(RunRules.ObstacleFor(neighbour,lane,seed) == 0,"Moving hazard needs empty recovery rows");
                 }
                 checkedRows++;
             }
@@ -145,6 +153,11 @@ namespace IndianRunner.Editor
             Require(!TrackWorld.SegmentBox(new Vector3(0, 1.2f, -5), new Vector3(0, 1.2f, 5), new Vector3(-1, -2, -1), new Vector3(1, .93f, 1)), "Jump incorrectly hit low obstacle");
             Require(!TrackWorld.SegmentBox(new Vector3(0, 0, -5), new Vector3(0, 0, 5), new Vector3(-1, .45f, -1), new Vector3(1, 3, 1)), "Slide incorrectly hit high barrier");
             Require(RunRules.CamelWarningDistance / RunRules.MaxSpeed >= 2, "Camel warning must allow at least two seconds at maximum speed");
+            Require(RunRules.HazardY(7,40) == 9 && Mathf.Abs(RunRules.HazardY(7,8)-.8f)<.001f,"Spaceship descent endpoints");
+            Require(RunRules.HazardZ(6,100,90)>100 && RunRules.HazardZ(6,100,110)<100,"Motorcycle must approach from the front");
+            // Relative sweeps include both player movement and obstacle motion.
+            Require(TrackWorld.SegmentBox(new Vector3(0,0,3),new Vector3(0,0,-3),new Vector3(-.84f,-2.03f,-1.4f),new Vector3(.84f,1.97f,1.4f)),"Motorcycle sweep missed");
+            Require(TrackWorld.SegmentBox(new Vector3(0,-4,0),new Vector3(0,-.8f,0),new Vector3(-1.26f,-2.03f,-1.26f),new Vector3(1.26f,.74f,1.26f)),"Descending ship sweep missed");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
         private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
