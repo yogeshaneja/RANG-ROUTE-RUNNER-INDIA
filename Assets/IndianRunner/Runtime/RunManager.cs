@@ -52,6 +52,12 @@ namespace IndianRunner
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced);
         }
+        public void ValidateStartup()
+        {
+            if (world == null || runner == null || weather == null || audioPlayer == null || feedback == null || gameCamera == null)
+                throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
+            world.ValidatePool();
+        }
         private void StartRun()
         {
             bool fromMenu = state == State.Menu;

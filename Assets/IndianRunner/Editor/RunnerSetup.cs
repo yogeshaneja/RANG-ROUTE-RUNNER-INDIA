@@ -160,6 +160,15 @@ namespace IndianRunner.Editor
             Require(TrackWorld.SegmentBox(new Vector3(0,-4,0),new Vector3(0,-.8f,0),new Vector3(-1.26f,-2.03f,-1.26f),new Vector3(1.26f,.74f,1.26f)),"Descending ship sweep missed");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
+        [MenuItem("Indian Runner/4 - Check live startup (Play Mode)")]
+        public static void CheckLiveStartup()
+        {
+            Require(Application.isPlaying, "Press Play in the Rajasthan scene before checking live startup.");
+            var manager = UnityEngine.Object.FindFirstObjectByType<RunManager>();
+            Require(manager != null, "No runner manager found in the playing scene.");
+            manager.ValidateStartup();
+            Debug.Log("PASS: runner, weather, audio, camera, feedback and all 14 pooled rows (markers, obstacles, coins) initialized.");
+        }
         private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     }
 }

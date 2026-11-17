@@ -92,9 +92,34 @@ namespace IndianRunner
                 {
                     for (int lane = 0; lane < 3; lane++)
                         row.Obstacles[lane] = new RajasthanObstacles.Instance(tile.Root, obstacleArt, lane == 1);
+                    // Every pooled row owns a marker, including initially empty rows:
+                    // recycling can turn any of them into a spaceship encounter.
+                    row.LandingMarker = new GameObject("Spaceship landing warning - avoid marked lane").transform;
+                    row.LandingMarker.SetParent(tile.Root, false);
+                    foreach (float side in new[] { -1f, 1f })
+                    {
+                        PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(side*.98f,.04f,0), new Vector3(.07f,.025f,2.2f), yellow);
+                        PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(0,.04f,side*1.1f), new Vector3(2,.025f,.07f), yellow);
+                    }
+                    PrimitiveArt.CombineScenery(row.LandingMarker);
+                    row.LandingMarker.gameObject.SetActive(false);
                     for (int c = 0; c < 5; c++)
                         row.Coins[c] = PrimitiveArt.Shape(tile.Root, "Coin", PrimitiveType.Cylinder, Vector3.zero, new Vector3(.48f, .07f, .48f), yellow);
                 }
+            }
+        }
+        // Inspect the actual constructed pool, not just the generation formulas.
+        public void ValidatePool()
+        {
+            foreach (var tile in tiles) foreach (var row in tile.Rows)
+            {
+                if (row.LandingMarker == null || row.LandingMarker.parent != tile.Root)
+                    throw new System.InvalidOperationException("Pooled row is missing its landing marker.");
+                foreach (var obstacle in row.Obstacles)
+                    if (obstacle == null || obstacle.Root == null)
+                        throw new System.InvalidOperationException("Pooled row is missing an obstacle slot.");
+                foreach (var coin in row.Coins)
+                    if (coin == null) throw new System.InvalidOperationException("Pooled row is missing a coin slot.");
             }
         }
         public void Reset(int seed)
