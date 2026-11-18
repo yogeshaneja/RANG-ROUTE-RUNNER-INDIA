@@ -61,7 +61,7 @@ namespace IndianRunner
         {
             if (progress == null || world == null || runner == null || weather == null || audioPlayer == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
-            world.ValidatePool();
+            world.ValidatePool(); runner.ValidateRig();
         }
         private void StartRun()
         {
