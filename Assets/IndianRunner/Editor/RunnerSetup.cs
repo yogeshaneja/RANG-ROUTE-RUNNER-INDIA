@@ -93,8 +93,6 @@ namespace IndianRunner.Editor
             finally { UnityEngine.Object.DestroyImmediate(probe); }
             var sceneryShader = UnityEngine.Resources.Load<Shader>("Scenery/RunnerScenery");
             Require(sceneryShader != null && sceneryShader.isSupported, "Scenery shader missing or unsupported");
-            Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanHorizon") != null, "Horizon image missing");
-            Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanBazaar") != null, "Bazaar image missing");
             Require(UnityEngine.Resources.Load<Texture2D>("Scenery/RajasthanHorizonReal") != null, "Realistic horizon missing");
             Require(UnityEngine.Resources.Load<Texture2D>("Scenery/SandstoneReal") != null, "Sandstone surface missing");
             var cotton = UnityEngine.Resources.Load<Texture2D>("Scenery/CottonReal");
@@ -212,6 +210,14 @@ namespace IndianRunner.Editor
             Require(manager != null, "No runner manager found in the playing scene.");
             manager.ValidateStartup();
             Debug.Log("PASS: runner, weather, audio, camera, feedback and all 14 pooled rows (markers, obstacles, coins) initialized.");
+        }
+        [MenuItem("Indian Runner/5 - Inspect owned mesh memory (Play Mode)")]
+        public static void CheckMeshMemory()
+        {
+            Require(Application.isPlaying,"Press Play before inspecting runtime mesh ownership.");
+            PrimitiveArt.GetOwnedMeshStats(out int count,out int readable,out long bytes);
+            Require(count>0 && readable<count,"No finalized static meshes found; check scenery setup.");
+            Debug.Log($"Owned meshes: {count}; readable: {readable}; finalized: {count-readable}; engine-reported mesh memory: {bytes/1048576f:F2} MiB. This is owned mesh memory only, not total app/GPU/TTS memory or APK size. Profile Android separately.");
         }
         private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     }

@@ -24,7 +24,7 @@ namespace IndianRunner
             var legHide = PrimitiveArt.Mat(new Color(.66f,.40f,.19f));
             NaturalMesh.Lathe(legRoot,"Tapered camel leg",new[] {new Vector3(.07f,-1.05f,.065f),new Vector3(.055f,-.65f,.055f),new Vector3(.085f,-.48f,.08f),new Vector3(.10f,0,.09f)},legHide,10);
             NaturalMesh.Oval(legRoot,"Soft camel foot",new Vector3(.03f,-1.04f,0),new Vector3(.25f,.12f,.20f),PrimitiveArt.Mat(new Color(.29f,.19f,.12f)),10);
-            PrimitiveArt.CombineScenery(legRoot);
+            PrimitiveArt.CombineScenery(legRoot,true);
             var legParts = new List<Part>();
             foreach(var r in legRoot.GetComponentsInChildren<MeshRenderer>()) if(r.enabled)
                 legParts.Add(new Part {Mesh=r.GetComponent<MeshFilter>().sharedMesh,Material=r.sharedMaterial});
@@ -33,7 +33,7 @@ namespace IndianRunner
             {
                 var root = new GameObject("Shared Rajasthan obstacle " + kind).transform;
                 Build(root, kind);
-                PrimitiveArt.CombineScenery(root);
+                PrimitiveArt.CombineScenery(root,true);
                 var parts = new List<Part>();
                 foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>())
                 {

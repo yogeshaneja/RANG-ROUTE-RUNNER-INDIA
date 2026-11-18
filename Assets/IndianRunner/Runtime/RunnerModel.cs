@@ -9,6 +9,7 @@ namespace IndianRunner
         private readonly Transform[] thighs=new Transform[2], calves=new Transform[2], feet=new Transform[2], wrists=new Transform[2], eyes=new Transform[2];
         private readonly Transform shadow;
         private readonly Material shadowMaterial, outfitMaterial;
+        private float appliedEyeScale=-1;
         private float lastClock, gaitPhase, slideBlend, jumpBlend, locomotionBlend, scarfPitch, scarfBend;
         private const float UpperLeg=.49f, LowerLeg=.47f, StandingHip=1.035f;
         private static Transform Pivot(Transform parent,string name,Vector3 position)
@@ -39,7 +40,7 @@ namespace IndianRunner
             // Cloth seams are shallow and follow the silhouette, rather than bulky props.
             foreach(float side in new[]{-1f,1f})
                 NaturalMesh.Branch(shirt,"Kurta side seam",new Vector3(side*.213f,-.12f,0),new Vector3(side*.201f,.20f,0),.003f,trim);
-            PrimitiveArt.CombineScenery(shirt);
+            PrimitiveArt.CombineScenery(shirt,true);
             NaturalMesh.Oval(torso,"Anatomical neck",new Vector3(0,.669f,-.006f),new Vector3(.145f,.155f,.139f),skin,18);
             head=Pivot(torso,"Stabilised sculpted head",new Vector3(0,.83f,.018f));
             var faceRigid=Pivot(head,"Sculpted head surfaces",Vector3.zero);
@@ -55,14 +56,14 @@ namespace IndianRunner
             }
             RunnerSculpt.FaceLine(faceRigid,"Relaxed closed mouth",0,-.091f,.062f,.0035f,-.0015f,lip);
             RunnerSculpt.FaceLine(faceRigid,"Soft lower lip",0,-.098f,.054f,.004f,-.002f,skin);
-            PrimitiveArt.CombineScenery(faceRigid);
+            PrimitiveArt.CombineScenery(faceRigid,true);
             eyes[0]=RunnerSculpt.Eye(head,-1,white,hair,white); eyes[1]=RunnerSculpt.Eye(head,1,white,hair,white);
             NaturalMesh.Lathe(torso,"Saffron scarf neck wrap",new[]{new Vector3(.111f,.607f,.100f),new Vector3(.115f,.646f,.102f),new Vector3(.100f,.676f,.089f)},orange,20);
             scarf=Pivot(torso,"Soft scarf root",new Vector3(.145f,.58f,-.128f));
             scarfMiddle=Pivot(scarf,"Scarf middle",new Vector3(0,-.27f,0)); scarfTip=Pivot(scarfMiddle,"Scarf tip",new Vector3(0,-.27f,0));
             RunnerSculpt.Scarf(scarf,scarfMiddle,scarfTip,orange);
             for(int i=0;i<4;i++) NaturalMesh.Branch(scarfTip,"Fine scarf fringe",new Vector3(-.058f+i*.039f,0,0),new Vector3(-.058f+i*.039f,-.05f,0),.004f,trim);
-            PrimitiveArt.CombineScenery(scarfTip);
+            PrimitiveArt.CombineScenery(scarfTip,true);
             leftArm=Arm(torso,-1,outfitMaterial,skinWarm,trim,out leftElbow,out wrists[0]);
             rightArm=Arm(torso,1,outfitMaterial,skinWarm,trim,out rightElbow,out wrists[1]);
             for(int i=0;i<2;i++)
@@ -78,7 +79,7 @@ namespace IndianRunner
                 NaturalMesh.Oval(feet[i],"Shaped leather running shoe",new Vector3(0,-.014f,.058f),new Vector3(.166f,.118f,.30f),shoe,18);
                 NaturalMesh.Oval(feet[i],"Thin dark shoe sole",new Vector3(0,-.064f,.058f),new Vector3(.169f,.023f,.304f),hair,16);
                 NaturalMesh.Oval(feet[i],"Leather vamp stitching",new Vector3(0,.027f,.088f),new Vector3(.113f,.009f,.145f),trim,12);
-                PrimitiveArt.CombineScenery(feet[i]);
+                PrimitiveArt.CombineScenery(feet[i],true);
             }
             var shader=Resources.Load<Shader>("Scenery/RunnerGroundShadow");
             if(shader!=null)
@@ -128,7 +129,12 @@ namespace IndianRunner
             // A gentle blink, independent of frame rate; no moving eyes in reduced effects.
             float blinkPhase=Mathf.Repeat(clock,3.7f);
             float blink=reduced ? 0:Mathf.Clamp01(1-Mathf.Abs(blinkPhase-3.45f)/.10f);
-            foreach(var eye in eyes) eye.localScale=new Vector3(1,Mathf.Max(.06f,1-blink),1);
+            float eyeScale=Mathf.Max(.06f,1-blink);
+            if(Mathf.Abs(eyeScale-appliedEyeScale)>.0001f)
+            {
+                appliedEyeScale=eyeScale;
+                foreach(var eye in eyes) eye.localScale=new Vector3(1,eyeScale,1);
+            }
             for(int i=0;i<2;i++)
             {
                 float phase=Mathf.Repeat(gaitPhase/(Mathf.PI*2)+i*.5f,1),stance=Mathf.Lerp(.30f,.24f,speedT);

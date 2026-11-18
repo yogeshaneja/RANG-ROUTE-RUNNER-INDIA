@@ -20,6 +20,7 @@ namespace IndianRunner
             public bool HasPouch, PouchTaken, SlideTaken;
             public readonly Transform[] Coins = new Transform[5];
             public readonly bool[] Taken = new bool[5];
+            public readonly bool[] Pulled = new bool[5];
             public int Safe;
         }
         private sealed class Tile
@@ -83,8 +84,8 @@ namespace IndianRunner
                 tile.HasElephant = i%3 == 0;
                 if(tile.HasElephant) RajasthanDecor.Elephant(tile.Village,new Vector3(9.5f,RajasthanScenery.GroundY(i,9.5f,31,TileLength),31));
                 scenery.AddGeometry(tile.Village,i);
-                PrimitiveArt.CombineScenery(ground);
-                PrimitiveArt.CombineScenery(tile.Village);
+                PrimitiveArt.CombineScenery(ground,true);
+                PrimitiveArt.CombineScenery(tile.Village,true);
                 for (int b = 0; b < 2; b++)
                 {
                     var bird = new GameObject("Scenic bird").transform; bird.SetParent(tile.Root, false);
@@ -117,7 +118,7 @@ namespace IndianRunner
                         PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(side*1.25f,.04f,0), new Vector3(.07f,.025f,2.5f), yellow);
                         PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(0,.04f,side*1.25f), new Vector3(2.5f,.025f,.07f), yellow);
                     }
-                    PrimitiveArt.CombineScenery(row.LandingMarker);
+                    PrimitiveArt.CombineScenery(row.LandingMarker,true);
                     row.LandingMarker.gameObject.SetActive(false);
                     row.Pouch=RajasthanDecor.Pouch(tile.Root); row.Garden=RajasthanDecor.RestGarden(tile.Root);
                     for (int c = 0; c < 5; c++)
@@ -181,7 +182,7 @@ namespace IndianRunner
                 }
                 for (int c = 0; c < 5; c++)
                 {
-                    row.Taken[c] = false; row.Coins[c].gameObject.SetActive(true);
+                    row.Taken[c] = row.Pulled[c] = false; row.Coins[c].gameObject.SetActive(true);
                     row.Coins[c].localPosition = new Vector3(RunRules.LaneX(row.Safe), 1.1f, RunRules.RowSpacing * .5f + r * RunRules.RowSpacing + (c - 2) * 2.2f);
                     row.Coins[c].localRotation = Quaternion.identity;
                 }
@@ -265,7 +266,11 @@ namespace IndianRunner
                         float z=row.Z-tile.Index*TileLength+(c-2)*2.2f;
                         float ahead=row.Z+(c-2)*2.2f-distance;
                         float pull=magnet && !reduced && ahead>=0 && ahead<6 && Mathf.Abs(RunRules.LaneX(row.Safe)-playerX)<3.2f ? 1-ahead/6 : 0;
-                        coin.localPosition=new Vector3(Mathf.Lerp(RunRules.LaneX(row.Safe),playerX,pull),Mathf.Lerp(1.1f,playerHeight+.9f,pull),z);
+                        if(pull>0 || row.Pulled[c])
+                        {
+                            coin.localPosition=new Vector3(Mathf.Lerp(RunRules.LaneX(row.Safe),playerX,pull),Mathf.Lerp(1.1f,playerHeight+.9f,pull),z);
+                            row.Pulled[c]=pull>0;
+                        }
                         coin.localRotation=coinRotation;
                     }
                 }

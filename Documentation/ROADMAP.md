@@ -15,3 +15,5 @@ Replace placeholder character with an original rigged model and animation clips;
 Add researched Punjab and Kerala content first, then Tamil Nadu, West Bengal and Assam as distinct environments. Add forest tracks, appropriate wildlife, richer regional weather, region selection and optional outfit cosmetics. Do not flatten distinct regional identities into one generic template.
 
 Repository creation was performed by the user. No merge, paid assets, release signing or publication is authorized by this implementation. All merge/deploy/publish decisions remain with the user.
+
+Before adding the next state, follow LIGHTWEIGHT_REGIONS.md: establish per-region ownership/loading and keep one active region, reuse the player/game core, avoid growing a global Resources library, and profile real phone startup/frame-time/memory/build size. The current project has no multi-region loader; global PrimitiveArt caches must not be shared by overlapping old/new RunManagers without scoping. The completed cleanup reduces retained mesh copies, duplicate state updates and unconditional legacy artwork inputs; it does not certify a device budget.

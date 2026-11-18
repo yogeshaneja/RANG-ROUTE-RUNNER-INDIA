@@ -28,7 +28,7 @@ namespace IndianRunner
                     NaturalMesh.Oval(root,"Embroidered gold petal",new Vector3(Mathf.Cos(a)*.235f,Mathf.Sin(a)*.235f,side*.05f),new Vector3(.08f,.08f,.035f),gold,8);
                 }
             }
-            PrimitiveArt.CombineScenery(root);
+            PrimitiveArt.CombineScenery(root,true);
             var meshes=new List<Mesh>(); var materials=new List<Material>();
             foreach(var renderer in root.GetComponentsInChildren<MeshRenderer>()) if(renderer.enabled)
             {
@@ -58,7 +58,7 @@ namespace IndianRunner
             NaturalMesh.Oval(root,"Golden pouch tie",new Vector3(0,.21f,0),new Vector3(.34f,.08f,.23f),gold,14);
             var mirror=PrimitiveArt.Box(root,"Turquoise diamond embroidery",new Vector3(0,0,-.17f),new Vector3(.21f,.21f,.035f),turquoise); mirror.localRotation=Quaternion.Euler(0,0,45);
             foreach(float side in new[]{-1f,1f}) NaturalMesh.Branch(root,"Gold drawstring",new Vector3(side*.12f,.22f,0),new Vector3(side*.24f,.45f,0),.025f,gold);
-            PrimitiveArt.CombineScenery(root); root.gameObject.SetActive(false); return root;
+            PrimitiveArt.CombineScenery(root,true); root.gameObject.SetActive(false); return root;
         }
         public static Transform RestGarden(Transform parent)
         {
@@ -77,7 +77,7 @@ namespace IndianRunner
                     NaturalMesh.Oval(root,"Marigold or pink garden flower",new Vector3(side*4.9f,.66f,z),new Vector3(.46f,.30f,.46f),i%2==0 ? gold : pink,10);
                 }
             }
-            PrimitiveArt.CombineScenery(root); root.gameObject.SetActive(false); return root;
+            PrimitiveArt.CombineScenery(root,true); root.gameObject.SetActive(false); return root;
         }
         public static void Elephant(Transform parent,Vector3 position)
         {

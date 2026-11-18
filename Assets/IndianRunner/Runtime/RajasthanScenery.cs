@@ -11,10 +11,11 @@ namespace IndianRunner
         public Material RoadSurface { get; }
         private readonly Material sandSurface;
         private readonly Texture2D roadGrain, sandGrain;
+        private float appliedCloudiness=-1;
         public RajasthanScenery(Transform parent)
         {
             var shader = Resources.Load<Shader>("Scenery/RunnerScenery");
-            var horizon = Resources.Load<Texture2D>("Scenery/RajasthanHorizonReal") ?? Resources.Load<Texture2D>("Scenery/RajasthanHorizon");
+            var horizon = Resources.Load<Texture2D>("Scenery/RajasthanHorizonReal");
             if (shader == null || horizon == null)
                 throw new System.InvalidOperationException("Bundled Rajasthan scenery is missing. Pull the artwork, shader and their metadata, then let Unity import them.");
             horizonMaterial = new Material(shader) { mainTexture = horizon, name = "Rajasthan distant dunes and fort", renderQueue = 1000 };
@@ -186,7 +187,8 @@ namespace IndianRunner
         }
         public void SetWeather(float cloudiness)
         {
-            horizonMaterial.SetFloat("_Cloudiness", cloudiness);
+            if(Mathf.Abs(cloudiness-appliedCloudiness)<.0001f) return;
+            appliedCloudiness=cloudiness; horizonMaterial.SetFloat("_Cloudiness", cloudiness);
         }
         private static void Panel(Transform parent, string name, Vector3 pos, Vector2 size, float yaw, Material material)
         {

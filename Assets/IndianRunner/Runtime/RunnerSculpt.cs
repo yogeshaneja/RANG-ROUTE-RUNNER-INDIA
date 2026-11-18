@@ -125,7 +125,7 @@ namespace IndianRunner
             NaturalMesh.Make(root,"Curved almond sclera",vertices,uv,tris,white);
             NaturalMesh.Oval(root,"Warm dark iris",new Vector3(0,0,.007f),new Vector3(.012f,.013f,.007f),iris,12);
             NaturalMesh.Oval(root,"Eye catchlight",new Vector3(-.002f,.0025f,.011f),Vector3.one*.0035f,glint,8);
-            PrimitiveArt.CombineScenery(root); return root;
+            PrimitiveArt.CombineScenery(root,true); return root;
         }
         public static void Kurta(Transform parent,Material material)
         {
@@ -182,7 +182,7 @@ namespace IndianRunner
                 finger.localRotation=Quaternion.Euler(-25,0,0);
             }
             NaturalMesh.Oval(parent,"Natural thumb",new Vector3(.044f*thumbSide,-.052f,.016f),new Vector3(.028f,.071f,.033f),skin,12).localRotation=Quaternion.Euler(-15,0,-24*thumbSide);
-            PrimitiveArt.CombineScenery(parent);
+            PrimitiveArt.CombineScenery(parent,true);
         }
         public static void Scarf(Transform root,Transform middle,Transform tip,Material material)
         {

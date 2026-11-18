@@ -5,7 +5,7 @@ namespace IndianRunner
 {
     public static class PrimitiveArt
     {
-        private static readonly List<Mesh> CombinedMeshes = new List<Mesh>();
+        private static readonly HashSet<Mesh> OwnedMeshes = new HashSet<Mesh>();
         private static readonly Dictionary<(string,Color,Vector2),Material> TexturedMaterials = new Dictionary<(string,Color,Vector2),Material>();
         private static readonly Dictionary<Color, Material> Materials = new Dictionary<Color, Material>();
         public static Material Mat(Color color)
@@ -53,15 +53,15 @@ namespace IndianRunner
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", .12f);
             if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", .12f);
         }
-        public static void OwnMesh(Mesh mesh) { CombinedMeshes.Add(mesh); }
+        public static void OwnMesh(Mesh mesh) { OwnedMeshes.Add(mesh); }
         public static void Clear()
         {
             foreach (var mat in Materials.Values) if (mat != null) Object.Destroy(mat);
             Materials.Clear();
             foreach (var material in TexturedMaterials.Values) if (material != null) Object.Destroy(material);
             TexturedMaterials.Clear();
-            foreach (var mesh in CombinedMeshes) if (mesh != null) Object.Destroy(mesh);
-            CombinedMeshes.Clear();
+            foreach (var mesh in OwnedMeshes) if (mesh != null) Object.Destroy(mesh);
+            OwnedMeshes.Clear();
         }
         public static Transform Box(Transform parent, string name, Vector3 pos, Vector3 scale, Material mat)
             => Shape(parent, name, PrimitiveType.Cube, pos, scale, mat);
@@ -73,30 +73,58 @@ namespace IndianRunner
             var collider = o.GetComponent<Collider>(); if (collider != null) Object.Destroy(collider);
             return o.transform;
         }
-        // One combined scenery mesh per material per segment. Moving the pooled root
-        // does not require recreating meshes; animated birds/coins are added afterwards.
-        public static void CombineScenery(Transform root)
+        // finalizeStatic consumes uniquely owned construction meshes and releases the
+        // result's CPU copy. Finalized results may be rendered/shared, never merged again.
+        // Leave false for builders that still need to read/reuse their source geometry.
+        public static void CombineScenery(Transform root, bool finalizeStatic = false)
         {
             var groups = new Dictionary<Material, List<CombineInstance>>();
+            var consumed = new HashSet<Mesh>();
             var filters = root.GetComponentsInChildren<MeshFilter>();
+            // Validate before disabling any renderer, so an invalid future builder
+            // fails clearly instead of silently losing finalized/unreadable geometry.
+            foreach (var filter in filters)
+            {
+                var renderer=filter.GetComponent<MeshRenderer>();
+                if(renderer!=null && renderer.enabled && filter.sharedMesh!=null && !filter.sharedMesh.isReadable)
+                    throw new System.InvalidOperationException("Cannot merge a finalized mesh. Reuse its sharedMesh for rendering, or keep construction data readable until the final merge.");
+            }
             foreach (var filter in filters)
             {
                 var renderer = filter.GetComponent<MeshRenderer>();
-                if (renderer == null || filter.sharedMesh == null) continue;
+                if (renderer == null || !renderer.enabled || filter.sharedMesh == null) continue;
                 var mat = renderer.sharedMaterial;
                 if (!groups.TryGetValue(mat, out var entries)) { entries = new List<CombineInstance>(); groups.Add(mat, entries); }
                 entries.Add(new CombineInstance { mesh = filter.sharedMesh, transform = root.worldToLocalMatrix * filter.transform.localToWorldMatrix });
-                renderer.enabled = false;
+                consumed.Add(filter.sharedMesh); renderer.enabled = false;
             }
             foreach (var group in groups)
             {
-                var mesh = new Mesh { name = "Combined Rajasthan scenery", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
-                mesh.CombineMeshes(group.Value.ToArray(), true, true); CombinedMeshes.Add(mesh);
+                long vertices=0;
+                foreach(var part in group.Value) vertices+=part.mesh.vertexCount;
+                var mesh = new Mesh { name = "Combined runner scenery", indexFormat = vertices>65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
+                mesh.CombineMeshes(group.Value.ToArray(), true, true); OwnMesh(mesh);
+                if(finalizeStatic) mesh.UploadMeshData(true);
                 var obj = new GameObject("Batched scenery"); obj.transform.SetParent(root, false);
                 obj.AddComponent<MeshFilter>().sharedMesh = mesh;
-                obj.AddComponent<MeshRenderer>().sharedMaterial = group.Key;
+                var renderer=obj.AddComponent<MeshRenderer>(); renderer.sharedMaterial=group.Key;
+                renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows=false;
+                renderer.lightProbeUsage=UnityEngine.Rendering.LightProbeUsage.Off; renderer.reflectionProbeUsage=UnityEngine.Rendering.ReflectionProbeUsage.Off;
             }
+            // Imported/built-in shared primitive meshes are never owned here, so are
+            // never destroyed. Callers opt in only for uniquely owned source meshes.
+            if(finalizeStatic) foreach(var mesh in consumed)
+                if(OwnedMeshes.Remove(mesh)) Object.Destroy(mesh);
             foreach (var filter in filters) Object.Destroy(filter.gameObject);
+        }
+        public static void GetOwnedMeshStats(out int count,out int readable,out long bytes)
+        {
+            count=readable=0; bytes=0;
+            foreach(var mesh in OwnedMeshes) if(mesh!=null)
+            {
+                count++; if(mesh.isReadable) readable++;
+                bytes+=UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(mesh);
+            }
         }
         public static void Camel(Transform parent, float x, float z, Material sand, float groundHeight = 0)
         {
