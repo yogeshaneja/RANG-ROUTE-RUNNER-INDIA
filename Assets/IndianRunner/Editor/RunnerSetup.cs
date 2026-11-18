@@ -130,14 +130,14 @@ namespace IndianRunner.Editor
                     {
                         float ahead = RunRules.CamelWarningDistance - sample * (RunRules.CamelWarningDistance + 12) / 20;
                         float gap = Mathf.Abs(RunRules.CamelX(safe, ahead) - RunRules.LaneX(safe));
-                        Require(gap > RunRules.CamelHalfWidth + RunRules.PlayerHalfWidth, "Camel sweep blocks the reserved lane");
+                        Require(gap > RunRules.CamelHalfWidth*RajasthanObstacles.VisualScale(RajasthanObstacles.Camel) + RunRules.PlayerHalfWidth, "Camel sweep blocks the reserved lane");
                     }
                 }
                 if(RunRules.DynamicKind(row) != 0)
                 {
                     int target=RunRules.HazardLane(row,seed);
                     Require(target != safe,"Dynamic hazard blocks coin lane");
-                    Require(Mathf.Abs(RunRules.LaneX(target)-RunRules.LaneX(safe)) > .92f+RunRules.PlayerHalfWidth,"Dynamic swept width blocks escape lane");
+                    Require(Mathf.Abs(RunRules.LaneX(target)-RunRules.LaneX(safe)) > .92f*RajasthanObstacles.VisualScale(RajasthanObstacles.Spaceship)+RunRules.PlayerHalfWidth,"Dynamic swept width blocks escape lane");
                     foreach(int neighbour in new[]{row-1,row+1}) for(int lane=0;lane<3;lane++)
                         Require(RunRules.ObstacleFor(neighbour,lane,seed) == 0,"Moving hazard needs empty recovery rows");
                 }

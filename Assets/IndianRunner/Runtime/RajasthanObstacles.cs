@@ -7,6 +7,7 @@ namespace IndianRunner
     public sealed class RajasthanObstacles
     {
         public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7;
+        public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 ? 1 : 1.12f;
         private sealed class Part
         {
             public Mesh Mesh;
@@ -81,7 +82,7 @@ namespace IndianRunner
             }
             public void Configure(int kind)
             {
-                Root.gameObject.SetActive(kind != 0); Root.localScale = Vector3.one;
+                Root.gameObject.SetActive(kind != 0); Root.localScale = Vector3.one*VisualScale(kind);
                 Root.localRotation = Quaternion.identity;
                 if(legs != null) foreach(var leg in legs) leg.gameObject.SetActive(kind == Camel);
                 if (kind == 0) return;
@@ -215,6 +216,11 @@ namespace IndianRunner
                 PrimitiveArt.Box(root, "Decorated saddle cloth", new Vector3(-.2f, 1.57f, 0), new Vector3(.95f, .15f, .98f), teal);
                 foreach (float z in new[] { -.51f, .51f })
                 {
+                    for(int stitch=0;stitch<5;stitch++)
+                    {
+                        var diamond=PrimitiveArt.Box(root,"Mirror-work saddle diamond",new Vector3(-.56f+stitch*.18f,1.38f,z*1.08f),new Vector3(.10f,.10f,.025f),gold);
+                        diamond.localRotation=Quaternion.Euler(0,0,45);
+                    }
                     PrimitiveArt.Box(root, "Saddle cloth tassels", new Vector3(-.2f, 1.35f, z), new Vector3(.95f, .33f, .05f), magenta);
                     for (int tassel = 0; tassel < 4; tassel++)
                         PrimitiveArt.Shape(root, "Gold tassel", PrimitiveType.Sphere, new Vector3(-.55f + tassel * .23f, 1.12f, z), Vector3.one * .12f, gold);

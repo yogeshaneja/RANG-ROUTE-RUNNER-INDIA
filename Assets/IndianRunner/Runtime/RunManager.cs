@@ -23,7 +23,7 @@ namespace IndianRunner
         private Quaternion introCameraRotation;
         private int nextMilestone = 100;
         private string milestoneText = "", hudCoins = "0";
-        private string hudScore = "0 pts    0 coins", hudStatus = "Rajasthan";
+        private string hudScore = "0 pts    0 tokens", hudStatus = "Rajasthan";
         private float nextHudUpdate;
         private string runEndMessage = "Try the open lane for a safe route.";
         public int CurrentScore => RunRules.Score(distance, coins);
@@ -68,7 +68,7 @@ namespace IndianRunner
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
             runEndMessage = "Try the open lane for a safe route.";
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
-            world.Reset(seed); world.Position(0, seed, 0, reduced); state = State.Running;
+            world.Reset(seed); world.Position(0, seed, 0, reduced); audioPlayer.ResetRun(); state = State.Running;
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = fromMenu && !reduced ? Quaternion.Euler(0,180,0) : Quaternion.identity;
             runner.Animate(0, false, false, 0, reduced); PositionCamera();
             input.ResetGesture(); audioPlayer.Paused(false); RefreshHud();
@@ -86,10 +86,10 @@ namespace IndianRunner
             if (state == State.Menu)
             {
                 menuClock += dt; runner.Animate(menuClock,false,false,0,reduced);
-                world.Position(0,seed,menuClock,reduced); weather.Tick(menuClock,dt,reduced); world.SetWeather(weather.Cloudiness);
+                world.Position(0,seed,menuClock,reduced); weather.Tick(menuClock,dt,reduced); world.SetWeather(weather.Cloudiness); audioPlayer.Tick(dt);
                 return;
             }
-            if (state != State.Running) return;
+            if (state != State.Running) { audioPlayer.Tick(dt); return; }
             Vector3 previous = new Vector3(x, height, distance);
             clock += dt;
             if (input.Horizontal != 0)
@@ -120,6 +120,7 @@ namespace IndianRunner
             if (gained > 0) { audioPlayer.Coin(); feedback.Coin(x,height,reduced); }
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced); feedback.Tick(dt);
+            if(!hit) audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey);
             if (distance >= nextMilestone)
             {
                 milestoneText = nextMilestone + " m  -  GREAT RUN"; milestoneUntil = clock+1.5f; nextMilestone += 100;
@@ -169,7 +170,7 @@ namespace IndianRunner
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
-            runner.Animate(0,false,false,0,reduced); audioPlayer.Paused(false); PositionCamera(); RefreshHud();
+            runner.Animate(0,false,false,0,reduced); audioPlayer.ResetRun(); audioPlayer.Paused(false); PositionCamera(); RefreshHud();
             input.ResetGesture();
         }
         private void Pause() { state = State.Paused; SaveBest(); RefreshHud(); input.ResetGesture(); audioPlayer.Paused(true); }
@@ -226,7 +227,7 @@ namespace IndianRunner
                 GUI.Box(new Rect(left+12,sheet,width-24,318),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
-                GUI.Label(new Rect(xPos,sheet+86,w,49),"Swipe to move. Jump pots and cloth.\nSlide under awnings. Follow hazard warnings.",skin.Text);
+                GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under awnings. Follow hazard warnings.",skin.Text);
                 DrawOptions(xPos,sheet+146,w);
                 GUI.Label(new Rect(xPos,sheet+252,w,50),"Keep looking for updates for new content.",skin.Caption);
             }
@@ -235,7 +236,7 @@ namespace IndianRunner
                 GUI.Box(new Rect(left+10,top,width-198,66),GUIContent.none,skin.Card);
                 GUI.Label(new Rect(left+24,top+3,width-230,35),hudScore,skin.Score);
                 GUI.Label(new Rect(left+18,top+38,width-214,23),hudStatus,skin.Caption);
-                GUI.Box(new Rect(left+width-178,top+5,108,54),"COINS "+hudCoins,skin.Chip);
+                GUI.Box(new Rect(left+width-192,top+5,122,54),"TOKENS "+hudCoins,skin.Chip);
                 if (state == State.Running)
                 {
                     if (GUI.Button(new Rect(left+width-61,top+5,50,54),"II",skin.Secondary)) Pause();
@@ -258,7 +259,7 @@ namespace IndianRunner
                     GUI.Box(new Rect(left+12,panel,width-24,440),GUIContent.none,skin.Card);
                     GUI.Label(new Rect(left+25,panel+15,width-50,50),state == State.Paused ? "TAKE A BREATHER" : "GOOD RUN!",skin.Subtitle);
                     GUI.Label(new Rect(left+25,panel+61,width-50,60),hudScore,skin.Title);
-                    GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} coins",skin.Caption);
+                    GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} tokens",skin.Caption);
                     GUI.Label(new Rect(left+30,panel+158,width-60,48),state == State.Paused ? "Your journey is waiting." : runEndMessage,skin.Text);
                     if (GUI.Button(new Rect(left+32,panel+219,width-64,57),state == State.Paused ? "CONTINUE RUN" : "RUN AGAIN",skin.Primary))
                     { if (state == State.Paused) Resume(); else StartRun(); }

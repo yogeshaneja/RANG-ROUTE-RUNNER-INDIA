@@ -100,7 +100,7 @@ namespace IndianRunner
         }
         public static void Camel(Transform parent, float x, float z, Material sand, float groundHeight = 0)
         {
-            var root = new GameObject("Scenic camel").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z);
+            var root = new GameObject("Scenic camel").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z); root.localScale = Vector3.one*1.16f;
             NaturalMesh.Oval(root,"Rounded camel body",new Vector3(0,1.35f,0),new Vector3(.85f,.72f,1.65f),sand,18);
             NaturalMesh.Oval(root,"Single camel hump",new Vector3(0,1.83f,-.12f),new Vector3(.75f,.86f,.8f),sand,18);
             NaturalMesh.Oval(root,"Long camel neck",new Vector3(0,1.94f,.80f),new Vector3(.34f,1.30f,.37f),sand,18);
@@ -120,7 +120,7 @@ namespace IndianRunner
         }
         public static void Peacock(Transform parent, float x, float z, Material blue, Material green, float groundHeight = 0)
         {
-            var root = new GameObject("Scenic peacock").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z);
+            var root = new GameObject("Scenic peacock").transform; root.SetParent(parent, false); root.localPosition = new Vector3(x, groundHeight, z); root.localScale = Vector3.one*1.30f;
             Shape(root, "Body", PrimitiveType.Sphere, new Vector3(0, .55f, 0), new Vector3(.42f, .55f, .65f), blue);
             Shape(root, "Neck", PrimitiveType.Capsule, new Vector3(0, .95f, .22f), new Vector3(.16f, .35f, .16f), blue);
             for (int i = -3; i <= 3; i++)

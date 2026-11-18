@@ -24,12 +24,14 @@ namespace IndianRunner
             public Transform Root;
             public Transform Village;
             public int Index;
+            public bool HasElephant;
             public readonly Row[] Rows = { new Row(), new Row() };
         }
         private readonly Tile[] tiles = new Tile[TileCount];
         private readonly List<Transform> birds = new List<Transform>();
         private readonly Material yellow, coral, teal;
         private readonly RajasthanObstacles obstacleArt;
+        private readonly RajasthanDecor decor;
         private sealed class Kite
         {
             public Transform Root;
@@ -38,6 +40,10 @@ namespace IndianRunner
         }
         private readonly List<Kite> kites = new List<Kite>();
         public string WarningMessage { get; private set; } = "";
+        public int SoundKind { get; private set; }
+        public int SoundKey { get; private set; } = -1;
+        public float SoundAhead { get; private set; } = 100;
+        public float SoundPan { get; private set; }
         public bool CamelContact { get; private set; }
         public string ContactMessage { get; private set; } = "";
         private int nextIndex;
@@ -45,7 +51,7 @@ namespace IndianRunner
         public TrackWorld(Transform parent)
         {
             scenery = new RajasthanScenery(parent);
-            obstacleArt = new RajasthanObstacles();
+            obstacleArt = new RajasthanObstacles(); decor = new RajasthanDecor();
             yellow = PrimitiveArt.Mat(new Color(1f, .75f, .05f));
             coral = PrimitiveArt.Mat(new Color(.91f, .23f, .14f));
             teal = PrimitiveArt.Mat(new Color(.04f, .43f, .50f));
@@ -66,13 +72,15 @@ namespace IndianRunner
                     PrimitiveArt.Box(ground, "Lane dash", new Vector3(x, .025f, dash * 6.5f + 2), new Vector3(.11f, .03f, 2.4f), white);
                 if (i%3 == 1) PrimitiveArt.Camel(tile.Village,-7.7f,17+i*2,camel,RajasthanScenery.GroundY(i,-7.7f,17+i*2,TileLength));
                 if (i%3 == 2) PrimitiveArt.Peacock(tile.Village,6.3f,29+i,blue,green,RajasthanScenery.GroundY(i,6.3f,29+i,TileLength));
+                tile.HasElephant = i%3 == 0;
+                if(tile.HasElephant) RajasthanDecor.Elephant(tile.Village,new Vector3(9.5f,RajasthanScenery.GroundY(i,9.5f,31,TileLength),31));
                 scenery.AddGeometry(tile.Village,i);
                 PrimitiveArt.CombineScenery(ground);
                 PrimitiveArt.CombineScenery(tile.Village);
                 for (int b = 0; b < 2; b++)
                 {
                     var bird = new GameObject("Scenic bird").transform; bird.SetParent(tile.Root, false);
-                    bird.localPosition = new Vector3(b == 0 ? -6 : 6, 8 + b, 12 + b * 23);
+                    bird.localPosition = new Vector3(b == 0 ? -6 : 6, 8 + b, 12 + b * 23); bird.localScale=Vector3.one*1.25f;
                     PrimitiveArt.Box(bird, "Left wing", new Vector3(-.3f, 0, 0), new Vector3(.7f, .06f, .16f), teal).localRotation = Quaternion.Euler(0, 0, -15);
                     PrimitiveArt.Box(bird, "Right wing", new Vector3(.3f, 0, 0), new Vector3(.7f, .06f, .16f), teal).localRotation = Quaternion.Euler(0, 0, 15);
                     birds.Add(bird);
@@ -81,7 +89,7 @@ namespace IndianRunner
                 {
                     var kiteRoot = new GameObject("Flying Rajasthan festival kite").transform; kiteRoot.SetParent(tile.Root, false);
                     var position = new Vector3(k == 0 ? -3.9f : 3.9f, 6.6f + k, 8 + k * 28);
-                    kiteRoot.localPosition = position;
+                    kiteRoot.localPosition = position; kiteRoot.localScale=Vector3.one*1.25f;
                     var diamond = PrimitiveArt.Shape(kiteRoot, "Colourful diamond kite", PrimitiveType.Cube, Vector3.zero, new Vector3(.75f, 1.05f, .04f), k == 0 ? yellow : teal);
                     diamond.localRotation = Quaternion.Euler(0, 0, 45);
                     for (int tail = 0; tail < 3; tail++)
@@ -98,13 +106,13 @@ namespace IndianRunner
                     row.LandingMarker.SetParent(tile.Root, false);
                     foreach (float side in new[] { -1f, 1f })
                     {
-                        PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(side*.98f,.04f,0), new Vector3(.07f,.025f,2.2f), yellow);
-                        PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(0,.04f,side*1.1f), new Vector3(2,.025f,.07f), yellow);
+                        PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(side*1.25f,.04f,0), new Vector3(.07f,.025f,2.5f), yellow);
+                        PrimitiveArt.Box(row.LandingMarker, "Landing marker edge", new Vector3(0,.04f,side*1.25f), new Vector3(2.5f,.025f,.07f), yellow);
                     }
                     PrimitiveArt.CombineScenery(row.LandingMarker);
                     row.LandingMarker.gameObject.SetActive(false);
                     for (int c = 0; c < 5; c++)
-                        row.Coins[c] = PrimitiveArt.Shape(tile.Root, "Coin", PrimitiveType.Cylinder, Vector3.zero, new Vector3(.48f, .07f, .48f), yellow);
+                        row.Coins[c] = decor.Token(tile.Root);
                 }
             }
         }
@@ -158,7 +166,7 @@ namespace IndianRunner
                 {
                     row.Taken[c] = false; row.Coins[c].gameObject.SetActive(true);
                     row.Coins[c].localPosition = new Vector3(RunRules.LaneX(row.Safe), 1.1f, RunRules.RowSpacing * .5f + r * RunRules.RowSpacing + (c - 2) * 2.2f);
-                    row.Coins[c].localRotation = Quaternion.Euler(90, 0, 0);
+                    row.Coins[c].localRotation = Quaternion.identity;
                 }
             }
         }
@@ -166,16 +174,20 @@ namespace IndianRunner
         public void Position(float distance, int seed, float clock, bool reduced)
         {
             WarningMessage = ""; float nearestCamel = RunRules.CamelWarningDistance;
-            Quaternion coinRotation = Quaternion.Euler(90, reduced ? 0 : clock * 100, 0);
+            SoundKind=0; SoundKey=-1; SoundAhead=100; SoundPan=0;
+            Quaternion coinRotation = Quaternion.Euler(0, reduced ? 0 : Mathf.Sin(clock*1.7f)*24, reduced ? 0 : Mathf.Sin(clock*2)*5);
             foreach (var tile in tiles)
             {
                 if ((tile.Index + 1) * TileLength - distance < -18) Configure(tile, nextIndex++, seed);
                 tile.Root.localPosition = new Vector3(0, 0, tile.Index * TileLength - distance);
+                if(tile.HasElephant) ConsiderSound(8,tile.Index*TileLength+31-distance,.65f,tile.Index*2+1);
                 foreach (var row in tile.Rows)
                 {
                     float ahead = row.Z-distance;
+                    if(row.CamelCrossing) ConsiderSound(RajasthanObstacles.Camel,ahead,RunRules.CamelX(row.Safe,ahead)/8,row.Z.GetHashCode());
                     if(row.DynamicKind != 0)
                     {
+                        ConsiderSound(row.DynamicKind,row.DynamicKind == RajasthanObstacles.Motorcycle ? ahead*1.65f : ahead,RunRules.LaneX(row.HazardLane)/5,row.Z.GetHashCode());
                         var hazard = row.Obstacles[row.HazardLane].Root;
                         hazard.localPosition = new Vector3(RunRules.LaneX(row.HazardLane),RunRules.HazardY(row.DynamicKind,ahead),RunRules.HazardZ(row.DynamicKind,row.Z,distance)-tile.Index*TileLength);
                         if(row.DynamicKind == RajasthanObstacles.Spaceship) hazard.localRotation=Quaternion.Euler(0,reduced ? 0 : clock*24,0);
@@ -214,6 +226,11 @@ namespace IndianRunner
                 kite.Root.localRotation = Quaternion.Euler(0, 0, wind * 9);
             }
         }
+        private void ConsiderSound(int kind,float ahead,float pan,int key)
+        {
+            if(ahead < -10 || ahead > 52 || Mathf.Abs(ahead) >= Mathf.Abs(SoundAhead)) return;
+            SoundKind=kind; SoundAhead=ahead; SoundPan=pan; SoundKey=key;
+        }
         public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit)
         {
             int collected = 0; hit = false; CamelContact = false; ContactMessage = "";
@@ -228,9 +245,10 @@ namespace IndianRunner
                         float hazardX=RunRules.LaneX(lane);
                         var a=previousFoot-new Vector3(hazardX,RunRules.HazardY(kind,row.Z-previousFoot.z),RunRules.HazardZ(kind,row.Z,previousFoot.z));
                         var b=foot-new Vector3(hazardX,RunRules.HazardY(kind,row.Z-foot.z),RunRules.HazardZ(kind,row.Z,foot.z));
-                        float width=kind == RajasthanObstacles.Motorcycle ? .50f : .92f;
-                        float depth=kind == RajasthanObstacles.Motorcycle ? 1.06f : .92f;
-                        float top=kind == RajasthanObstacles.Motorcycle ? 1.97f : .74f;
+                        float scale=RajasthanObstacles.VisualScale(kind);
+                        float width=(kind == RajasthanObstacles.Motorcycle ? .50f : .92f)*scale;
+                        float depth=(kind == RajasthanObstacles.Motorcycle ? 1.06f : .92f)*scale;
+                        float top=(kind == RajasthanObstacles.Motorcycle ? 1.97f : .74f)*scale;
                         if(SegmentBox(a,b,new Vector3(-width-RunRules.PlayerHalfWidth,-playerHeight+.02f,-depth-RunRules.PlayerHalfWidth),new Vector3(width+RunRules.PlayerHalfWidth,top,depth+RunRules.PlayerHalfWidth)))
                         {
                             hit=true; ContactMessage=kind == RajasthanObstacles.Motorcycle ? "Motorcycle contact. Follow the warning and change lane." : "Spaceship contact. Avoid its marked landing lane.";
@@ -243,26 +261,26 @@ namespace IndianRunner
                         // frame. It cannot tunnel into the runner between render updates.
                         var a = new Vector3(previousFoot.x - RunRules.CamelX(row.Safe, row.Z - previousFoot.z), previousFoot.y, previousFoot.z - row.Z);
                         var b = new Vector3(foot.x - RunRules.CamelX(row.Safe, row.Z - foot.z), foot.y, foot.z - row.Z);
-                        var min = new Vector3(-RunRules.CamelHalfWidth - RunRules.PlayerHalfWidth, -playerHeight + .02f, -RunRules.CamelHalfDepth - RunRules.PlayerHalfWidth);
-                        var max = new Vector3(RunRules.CamelHalfWidth + RunRules.PlayerHalfWidth, 2.8f, RunRules.CamelHalfDepth + RunRules.PlayerHalfWidth);
+                        var min = new Vector3(-RunRules.CamelHalfWidth*RajasthanObstacles.VisualScale(kind) - RunRules.PlayerHalfWidth, -playerHeight + .02f, -RunRules.CamelHalfDepth*RajasthanObstacles.VisualScale(kind) - RunRules.PlayerHalfWidth);
+                        var max = new Vector3(RunRules.CamelHalfWidth*RajasthanObstacles.VisualScale(kind) + RunRules.PlayerHalfWidth, 2.9f*RajasthanObstacles.VisualScale(kind), RunRules.CamelHalfDepth*RajasthanObstacles.VisualScale(kind) + RunRules.PlayerHalfWidth);
                         if (SegmentBox(a, b, min, max)) { hit = true; CamelContact = true; }
                         continue;
                     }
-                    float x = RunRules.LaneX(lane);
+                    float x = RunRules.LaneX(lane), visualScale=RajasthanObstacles.VisualScale(kind);
                     if (kind == RajasthanObstacles.Awning)
                     {
-                        hit |= HitBox(previousFoot, foot, playerHeight, x, row.Z, .9f, .75f, 1.25f, 2.32f);
+                        hit |= HitBox(previousFoot, foot, playerHeight, x, row.Z, .9f*visualScale, .75f*visualScale, 1.25f*visualScale, 2.32f*visualScale);
                         // The two visible posts are solid even during a slide; the centre
                         // opening stays clear. This avoids invisible/ghost support legs.
-                        hit |= HitBox(previousFoot, foot, playerHeight, x - .82f, row.Z, .06f, .06f, 0, 2.5f);
-                        hit |= HitBox(previousFoot, foot, playerHeight, x + .82f, row.Z, .06f, .06f, 0, 2.5f);
+                        hit |= HitBox(previousFoot, foot, playerHeight, x - .82f*visualScale, row.Z, .06f*visualScale, .06f*visualScale, 0, 2.5f*visualScale);
+                        hit |= HitBox(previousFoot, foot, playerHeight, x + .82f*visualScale, row.Z, .06f*visualScale, .06f*visualScale, 0, 2.5f*visualScale);
                     }
                     else
                     {
                         float halfWidth = kind == RajasthanObstacles.Cart ? 1.05f : kind == RajasthanObstacles.Fabric ? .83f : .75f;
                         float halfDepth = kind == RajasthanObstacles.Cart ? .85f : .55f;
                         float top = kind == RajasthanObstacles.Cart ? 2.15f : .95f;
-                        hit |= HitBox(previousFoot, foot, playerHeight, x, row.Z, halfWidth, halfDepth, 0, top);
+                        hit |= HitBox(previousFoot, foot, playerHeight, x, row.Z, halfWidth*visualScale, halfDepth*visualScale, 0, top*visualScale);
                     }
                 }
                 for (int c = 0; c < 5; c++)
