@@ -239,6 +239,40 @@ namespace IndianRunner
             speech.SetEnabled(voices && sound); if(!voices || !sound) audioPlayer.EndSpeechDuck();
             if (state == State.Paused) audioPlayer.Paused(true);
         }
+        private void ReturnToPhoneHome()
+        {
+            SaveBest(); SaveSettings(); speech.Stop(); audioPlayer.EndSpeechDuck();
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Open the actual launcher, preserving this app in Recents. Moving a
+            // task back alone can expose a previous app instead of the Home screen.
+            try
+            {
+                using(var player=new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                {
+                    var activity=player.GetStatic<AndroidJavaObject>("currentActivity");
+                    try
+                    {
+                        activity.Call("runOnUiThread",new AndroidJavaRunnable(()=>
+                        {
+                            try
+                            {
+                                using(var home=new AndroidJavaObject("android.content.Intent","android.intent.action.MAIN"))
+                                using(var category=home.Call<AndroidJavaObject>("addCategory","android.intent.category.HOME"))
+                                using(var flags=home.Call<AndroidJavaObject>("addFlags",0x10000000)) // FLAG_ACTIVITY_NEW_TASK
+                                    activity.Call("startActivity",home);
+                            }
+                            catch(System.Exception error) { Debug.LogWarning("Return to phone Home failed: "+error); }
+                            finally { activity.Dispose(); }
+                        }));
+                    }
+                    catch { activity.Dispose(); throw; }
+                }
+            }
+            catch(System.Exception error) { Debug.LogWarning("Return to phone Home unavailable: "+error); }
+#else
+            Debug.Log("Exit to Home is available in the Android phone build.");
+#endif
+        }
         private void OnApplicationPause(bool paused) { if(paused) speech?.Stop(); if (paused && state == State.Running) Pause(); }
         private void OnApplicationFocus(bool focus) { if(!focus) speech?.Stop(); if (!focus && state == State.Running) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
@@ -307,8 +341,8 @@ namespace IndianRunner
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
                 if(menuClock<rewardRevealUntil)
                     GUI.Label(new Rect(left+24,top+158,width-48,62),"SURPRISE UNLOCKED!\n"+rewardRevealName,skin.Subtitle);
-                float sheet = bottom-494;
-                GUI.Box(new Rect(left+12,sheet,width-24,494),GUIContent.none,skin.Card);
+                float sheet = bottom-548;
+                GUI.Box(new Rect(left+12,sheet,width-24,548),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
                 GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under low bars. Follow hazard warnings.",skin.Text);
@@ -330,6 +364,7 @@ namespace IndianRunner
                 string voiceStatus=!voices ? "Voices are OFF. Turn Voices ON to hear dialogue.":
                     !sound ? "Sound is OFF. Turn Sound ON to hear dialogue.":speech.Status;
                 GUI.Label(new Rect(xPos,sheet+412,w,72),voiceStatus+"\nKeep looking for updates for new content.",skin.Caption);
+                if(GUI.Button(new Rect(xPos,sheet+494,w,44),"EXIT TO HOME",skin.Secondary)) ReturnToPhoneHome();
             }
             else
             {
@@ -362,8 +397,8 @@ namespace IndianRunner
                 else
                 {
                     GUI.color = new Color(0,0,0,.30f); GUI.DrawTexture(new Rect(0,0,Screen.width/scale,screenHeight),Texture2D.whiteTexture); GUI.color = oldColour;
-                    float panel = Mathf.Max(top+100,(screenHeight-494)/2);
-                    GUI.Box(new Rect(left+12,panel,width-24,494),GUIContent.none,skin.Card);
+                    float panel = Mathf.Max(top+100,(screenHeight-548)/2);
+                    GUI.Box(new Rect(left+12,panel,width-24,548),GUIContent.none,skin.Card);
                     GUI.Label(new Rect(left+25,panel+15,width-50,50),state == State.Paused ? "TAKE A BREATHER" : "GOOD RUN!",skin.Subtitle);
                     GUI.Label(new Rect(left+25,panel+61,width-50,60),hudScore,skin.Title);
                     GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} tokens",skin.Caption);
@@ -376,6 +411,7 @@ namespace IndianRunner
                     float actions=width-74;
                     if(GUI.Button(new Rect(left+32,panel+408,actions*.63f,45),"FESTIVAL GOALS",skin.Secondary)) showingGoals=true;
                     if(GUI.Button(new Rect(left+42+actions*.63f,panel+408,actions*.37f,45),VoiceLabel,skin.Toggle)) { voices=!voices; SaveSettings(); }
+                    if(GUI.Button(new Rect(left+32,panel+470,width-64,46),"EXIT TO HOME",skin.Secondary)) ReturnToPhoneHome();
                 }
             }
             GUI.enabled=true;
