@@ -6,7 +6,7 @@ Her exact revised line is:
 
 **“देखो, बारिश हो रही है! It's raining, it's raining!”**
 
-The native Hindi voice receives the English words phonetically in Devanagari (“इट्स रेनिंग, इट्स रेनिंग”) for the existing Hindi speech engine. The matching on-screen caption is “Dekho, baarish ho rahi hai! It's raining, it's raining!” The previously discussed invitation line is not used. This remains synthesized dialogue from an installed offline Hindi voice, with a slightly brighter pitch, not a recorded actress or verified regional accent.
+The native Hindi voice receives the English words phonetically in Devanagari (“इट्स रेनिंग, इट्स रेनिंग”) for the existing Hindi speech engine. The matching on-screen caption is “Dekho, baarish ho rahi hai! It's raining, it's raining!” The previously discussed invitation line is not used. English mode/fallback says “Look, it is raining! It is raining, it is raining!” with a matching English caption. This remains synthesized dialogue from an installed offline Hindi or English voice, with a slightly brighter pitch, not a recorded actress or verified regional accent.
 
 ## Rain and safe spawning
 
@@ -20,7 +20,7 @@ The native Hindi voice receives the English words phonetically in Devanagari (�
 
 The spoken-banter catalogue now contains 16 lines across six speaker groups. The visitor has one fixed requested line. Reset/index selection uses each group's actual length, so the one-line group cannot index outside its array. Nearby committed visitors reserve a 10.5-second speech slot; this keeps other chatter from consuming the existing nine-second cooldown just before her line. Safety warnings and natural sound effects are unaffected.
 
-At Start select **Sky → Rain** and, with Sound/Voices enabled and the installed Hindi voice ready, tap **TEST RAIN VOICE**. This previews her line immediately. Then run to the first candidate at 182 m. With Auto weather, visitors only appear once actual rain arrives and a candidate is still sufficiently far ahead. Unity Editor previews captions/visuals; speech playback remains Android-only.
+At Start select **Sky → Rain** and, with Sound/Voices enabled and the installed Hindi voice ready, tap **the voice test**. This previews her line immediately. Then run to the first candidate at 182 m. With Auto weather, visitors only appear once actual rain arrives and a candidate is still sufficiently far ahead. Unity Editor previews captions/visuals; speech playback remains Android-only.
 
 ## Local acceptance
 

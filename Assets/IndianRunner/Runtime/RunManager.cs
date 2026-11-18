@@ -18,6 +18,7 @@ namespace IndianRunner
         private float laneStartX, laneTargetX, laneElapsed, laneDuration, cameraX;
         private int lane = 1, coins, best, seed = 7301;
         private bool reduced, music, sound, voices;
+        private DialogueLanguage dialogueLanguage;
         private RunnerSkin skin;
         private RunFeedback feedback;
         private FestivalProgress progress;
@@ -44,6 +45,7 @@ namespace IndianRunner
             music = PlayerPrefs.GetInt("runner.music", 1) == 1;
             sound = PlayerPrefs.GetInt("runner.sound", 1) == 1;
             voices = PlayerPrefs.GetInt("runner.voices",1)==1;
+            dialogueLanguage=(DialogueLanguage)Mathf.Clamp(PlayerPrefs.GetInt("runner.dialogueLanguage",0),0,2);
             var cameraObject = new GameObject("Runner Camera"); cameraObject.transform.SetParent(transform, false);
             gameCamera = cameraObject.AddComponent<Camera>(); gameCamera.clearFlags = CameraClearFlags.SolidColor;
             gameCamera.fieldOfView = 62; gameCamera.allowMSAA = true; gameCamera.nearClipPlane = .15f; gameCamera.farClipPlane = 210;
@@ -58,7 +60,7 @@ namespace IndianRunner
             runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
             weather = new WeatherController(transform, gameCamera, sunlight);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
-            speech=new AndroidSpeech(); speech.SetEnabled(voices && sound); banter.Reset(seed);
+            speech=new AndroidSpeech(dialogueLanguage); speech.SetEnabled(voices && sound); banter.Reset(seed);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); world.SetRain(weather.RainIntensity); RefreshHud();
         }
         public void ValidateStartup()
@@ -228,7 +230,7 @@ namespace IndianRunner
         private void SaveSettings()
         {
             PlayerPrefs.SetInt("runner.reduced", reduced ? 1 : 0); PlayerPrefs.SetInt("runner.music", music ? 1 : 0);
-            PlayerPrefs.SetInt("runner.sound", sound ? 1 : 0); PlayerPrefs.SetInt("runner.voices",voices ? 1:0); PlayerPrefs.Save(); audioPlayer.Settings(sound, music);
+            PlayerPrefs.SetInt("runner.sound", sound ? 1 : 0); PlayerPrefs.SetInt("runner.voices",voices ? 1:0); PlayerPrefs.SetInt("runner.dialogueLanguage",(int)dialogueLanguage); PlayerPrefs.Save(); audioPlayer.Settings(sound, music);
             speech.SetEnabled(voices && sound); if(!voices || !sound) audioPlayer.EndSpeechDuck();
             if (state == State.Paused) audioPlayer.Paused(true);
         }
@@ -251,6 +253,12 @@ namespace IndianRunner
             if (GUI.Button(new Rect(xPos+(third+8)*2,yPos,third,43),VoiceLabel,skin.Toggle)) { voices=!voices; SaveSettings(); }
             if (GUI.Button(new Rect(xPos,yPos+52,half,43),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
             if (GUI.Button(new Rect(xPos+half+10,yPos+52,half,43),"Sky  "+weather.Selection,skin.Toggle)) WeatherChoice();
+            if(GUI.Button(new Rect(xPos,yPos+104,width,43),"DIALOGUE  "+dialogueLanguage.ToString().ToUpperInvariant()+"  >",skin.Toggle))
+            {
+                dialogueLanguage=(DialogueLanguage)(((int)dialogueLanguage+1)%3);
+                speech.Dispose(); audioPlayer.EndSpeechDuck();
+                speech=new AndroidSpeech(dialogueLanguage); SaveSettings();
+            }
         }
         private void DrawGoals(float left,float top,float width,float screenHeight)
         {
@@ -287,28 +295,28 @@ namespace IndianRunner
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
                 GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
-                float sheet = bottom-440;
-                GUI.Box(new Rect(left+12,sheet,width-24,440),GUIContent.none,skin.Card);
+                float sheet = bottom-494;
+                GUI.Box(new Rect(left+12,sheet,width-24,494),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
                 GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under low bars. Follow hazard warnings.",skin.Text);
                 DrawOptions(xPos,sheet+146,w);
-                if(GUI.Button(new Rect(xPos,sheet+252,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
-                if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+252,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))
+                if(GUI.Button(new Rect(xPos,sheet+306,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
+                if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+306,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))
                 { progress.NextOutfit(); runner.SetOutfit(progress.Outfit); SaveProgress(); }
                 bool allowPreview=GUI.enabled; GUI.enabled=allowPreview && voices && sound && speech.Ready;
-                if(GUI.Button(new Rect(xPos,sheet+306,w*.67f-5,44),weather.RainIntensity>.12f ? "TEST RAIN VOICE":"TEST HINDI VOICE",skin.Secondary))
+                if(GUI.Button(new Rect(xPos,sheet+360,w*.67f-5,44),"TEST "+speech.LanguageName.ToUpperInvariant()+" VOICE",skin.Secondary))
                     if(speech.Speak(weather.RainIntensity>.12f ? RoadBanter.RainPreview:RoadBanter.Preview)) audioPlayer.DuckSpeech();
                 GUI.enabled=allowPreview && speech.CanRetry;
-                if(GUI.Button(new Rect(xPos+w*.67f+5,sheet+306,w*.33f-5,44),"RETRY",skin.Secondary))
+                if(GUI.Button(new Rect(xPos+w*.67f+5,sheet+360,w*.33f-5,44),"RETRY",skin.Secondary))
                 {
                     speech.Dispose(); audioPlayer.EndSpeechDuck();
-                    speech=new AndroidSpeech(); speech.SetEnabled(voices && sound);
+                    speech=new AndroidSpeech(dialogueLanguage); speech.SetEnabled(voices && sound);
                 }
                 GUI.enabled=allowPreview;
                 string voiceStatus=!voices ? "Voices are OFF. Turn Voices ON to hear dialogue.":
                     !sound ? "Sound is OFF. Turn Sound ON to hear dialogue.":speech.Status;
-                GUI.Label(new Rect(xPos,sheet+358,w,72),voiceStatus+"\nKeep looking for updates for new content.",skin.Caption);
+                GUI.Label(new Rect(xPos,sheet+412,w,72),voiceStatus+"\nKeep looking for updates for new content.",skin.Caption);
             }
             else
             {
@@ -333,7 +341,7 @@ namespace IndianRunner
                     {
                         GUI.Box(new Rect(left+14,top+131,width-28,78),GUIContent.none,skin.Card);
                         GUI.Label(new Rect(left+26,top+133,width-52,22),banter.Current.Speaker,skin.Subtitle);
-                        GUI.Label(new Rect(left+24,top+157,width-48,46),banter.Current.Caption,skin.Text);
+                        GUI.Label(new Rect(left+24,top+157,width-48,46),banter.Current.Subtitle(speech.UsesEnglish),skin.Text);
                     }
                     GUI.Box(new Rect(left+14,bottom-85,width-28,40),powerSummary,skin.Chip);
                     if (clock < 12) GUI.Label(new Rect(left+20,bottom-40,width-40,30),"SWIPE TO MOVE  |  UP TO JUMP  |  DOWN TO SLIDE",skin.Caption);

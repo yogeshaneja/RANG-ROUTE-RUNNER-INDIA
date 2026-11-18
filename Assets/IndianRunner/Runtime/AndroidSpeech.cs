@@ -3,11 +3,16 @@ using UnityEngine;
 
 namespace IndianRunner
 {
-    // Uses only an installed embedded Hindi voice. Never opens a store/download,
+    public enum DialogueLanguage { Auto, English, Hindi }
+
+    // Uses only installed embedded Hindi/English voices. Never opens a store/download,
     // never selects a network voice, and needs no account or bundled recordings.
     public sealed class AndroidSpeech : IDisposable
     {
         private bool enabled=true;
+        private readonly DialogueLanguage preference;
+        public bool UsesEnglish { get; private set; }
+        public string LanguageName => UsesEnglish ? "English" : "Hindi";
         public bool Ready { get; private set; }
         public string Status { get; private set; }
         public bool CanRetry
@@ -38,10 +43,12 @@ namespace IndianRunner
             public void onInit(int status) { owner.initResult=status; }
         }
 #endif
-        public AndroidSpeech()
+        public AndroidSpeech(DialogueLanguage language=DialogueLanguage.Auto)
         {
+            preference=language;
+            UsesEnglish=language!=DialogueLanguage.Hindi;
 #if UNITY_ANDROID && !UNITY_EDITOR
-            Status="Preparing offline Hindi voice..."; startedAt=Time.realtimeSinceStartup;
+            Status="Preparing offline dialogue voice..."; startedAt=Time.realtimeSinceStartup;
             try
             {
                 using(var player=new AndroidJavaClass("com.unity3d.player.UnityPlayer")) activity=player.GetStatic<AndroidJavaObject>("currentActivity");
@@ -52,11 +59,11 @@ namespace IndianRunner
                     {
                         if(disposed) return;
                         try { engine=new AndroidJavaObject("android.speech.tts.TextToSpeech",activity,listener); }
-                        catch(Exception error) { Debug.LogWarning("Hindi voice initialization: "+error); initResult=-1; }
+                        catch(Exception error) { Debug.LogWarning("Dialogue voice initialization: "+error); initResult=-1; }
                     }
                 }));
             }
-            catch(Exception error) { configured=true; Status="No speech engine. Check phone text-to-speech settings."; Debug.LogWarning("Hindi voice activity: "+error); }
+            catch(Exception error) { configured=true; Status="No speech engine. Check phone text-to-speech settings."; Debug.LogWarning("Dialogue voice activity: "+error); }
 #else
             Status="Voices play on Android; captions preview here.";
 #endif
@@ -68,43 +75,37 @@ namespace IndianRunner
             if(disposed || configured) return;
             if(initResult==int.MinValue)
             {
-                if(Time.realtimeSinceStartup-startedAt>15) { configured=true; Status="Hindi voice setup timed out. Check phone speech settings."; }
+                if(Time.realtimeSinceStartup-startedAt>15) { configured=true; Status="Voice setup timed out. Check phone speech settings."; }
                 return;
             }
             lock(gate)
             {
                 if(disposed) return;
-                if(initResult!=0) { configured=true; Status="Hindi speech engine unavailable on this phone."; return; }
+                if(initResult!=0) { configured=true; Status="Speech engine unavailable on this phone."; return; }
                 if(engine==null) return;
                 configured=true;
                 try
                 {
-                    using(var voices=engine.Call<AndroidJavaObject>("getVoices"))
+                    // Auto keeps the regional Hindi banter when available, but
+                    // immediately falls back to installed English without downloads.
+                    bool hindi=preference!=DialogueLanguage.English && TrySelectVoice("hi");
+                    bool english=!hindi && TrySelectVoice("en");
+                    if(!hindi && !english)
                     {
-                        if(voices!=null) using(var iterator=voices.Call<AndroidJavaObject>("iterator"))
-                        {
-                            while(iterator.Call<bool>("hasNext")) using(var voice=iterator.Call<AndroidJavaObject>("next"))
-                            using(var locale=voice.Call<AndroidJavaObject>("getLocale"))
-                            using(var features=voice.Call<AndroidJavaObject>("getFeatures"))
-                            {
-                                if(locale.Call<string>("getLanguage")!="hi" || voice.Call<bool>("isNetworkConnectionRequired")) continue;
-                                if(features!=null && features.Call<bool>("contains","notInstalled")) continue;
-                                if(engine.Call<int>("setVoice",voice)!=0) continue;
-                                // Match the game's media volume rather than relying on an engine's
-                                // default stream. Do not change the user's device volume.
-                                using(var builder=new AndroidJavaObject("android.media.AudioAttributes$Builder"))
-                                using(var usage=builder.Call<AndroidJavaObject>("setUsage",1)) // USAGE_MEDIA
-                                using(var content=builder.Call<AndroidJavaObject>("setContentType",1)) // CONTENT_TYPE_SPEECH
-                                using(var attributes=builder.Call<AndroidJavaObject>("build"))
-                                    if(engine.Call<int>("setAudioAttributes",attributes)!=0)
-                                        throw new InvalidOperationException("TextToSpeech rejected media audio attributes.");
-                                Ready=true; Status="Offline Hindi ready. Turn up MEDIA volume, then test."; break;
-                            }
-                        }
+                        Status="No offline English voice. Check phone text-to-speech settings; tap RETRY.";
+                        return;
                     }
-                    if(!Ready) Status="Hindi voice missing. Add Hindi in phone text-to-speech settings, then RETRY.";
+                    UsesEnglish=english;
+                    using(var builder=new AndroidJavaObject("android.media.AudioAttributes$Builder"))
+                    using(var usage=builder.Call<AndroidJavaObject>("setUsage",1)) // USAGE_MEDIA
+                    using(var content=builder.Call<AndroidJavaObject>("setContentType",1)) // CONTENT_TYPE_SPEECH
+                    using(var attributes=builder.Call<AndroidJavaObject>("build"))
+                        if(engine.Call<int>("setAudioAttributes",attributes)!=0)
+                            throw new InvalidOperationException("TextToSpeech rejected media audio attributes.");
+                    Ready=true;
+                    Status=(english && preference!=DialogueLanguage.English ? "Hindi unavailable; using offline English." : "Offline "+LanguageName+" ready.")+" Turn up MEDIA volume, then test.";
                 }
-                catch(Exception error) { Ready=false; Status="Voice setup failed. See Unity/Android logs; tap RETRY."; Debug.LogWarning("Hindi voice configuration: "+error); }
+                catch(Exception error) { Ready=false; Status="Voice setup failed. See Unity/Android logs; tap RETRY."; Debug.LogWarning("Dialogue voice configuration: "+error); }
             }
 #endif
         }
@@ -131,7 +132,7 @@ namespace IndianRunner
                         // interface, so do not infer a String/HashMap overload.
                         var method=AndroidJNIHelper.GetMethodID(engine.GetRawClass(),"speak",
                             "(Ljava/lang/CharSequence;ILandroid/os/Bundle;Ljava/lang/String;)I");
-                        object[] arguments={line.Hindi,0,parameters,"rang-route-banter"}; // QUEUE_FLUSH
+                        object[] arguments={line.Text(UsesEnglish),0,parameters,"rang-route-banter"}; // QUEUE_FLUSH
                         var nativeArguments=AndroidJNIHelper.CreateJNIArgArray(arguments);
                         int result;
                         try
@@ -149,22 +150,42 @@ namespace IndianRunner
                         {
                             // Queued is not a playback/completion callback. Never
                             // report that the user has actually heard the sentence.
-                            Status="Voice requested. Silent? Check MEDIA volume / Hindi speech data.";
+                            Status="Voice requested. Silent? Check MEDIA volume / speech data.";
                             return true;
                         }
-                        Ready=false; Status="Voice request rejected ("+result+"). Check Hindi data; tap RETRY.";
-                        Debug.LogWarning("Hindi voice speak returned "+result);
+                        Ready=false; Status="Voice request rejected ("+result+"). Check speech data; tap RETRY.";
+                        Debug.LogWarning("Dialogue voice speak returned "+result);
                     }
                 }
                 catch(Exception error)
                 {
                     Ready=false; Status="Voice playback failed. See Unity/Android logs; tap RETRY.";
-                    Debug.LogWarning("Hindi voice playback: "+error);
+                    Debug.LogWarning("Dialogue voice playback: "+error);
                 }
             }
 #endif
             return false;
         }
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private bool TrySelectVoice(string language)
+        {
+            using(var voices=engine.Call<AndroidJavaObject>("getVoices"))
+            {
+                if(voices==null) return false;
+                using(var iterator=voices.Call<AndroidJavaObject>("iterator"))
+                    while(iterator.Call<bool>("hasNext"))
+                    using(var voice=iterator.Call<AndroidJavaObject>("next"))
+                    using(var locale=voice.Call<AndroidJavaObject>("getLocale"))
+                    using(var features=voice.Call<AndroidJavaObject>("getFeatures"))
+                    {
+                        if(locale.Call<string>("getLanguage")!=language || voice.Call<bool>("isNetworkConnectionRequired")) continue;
+                        if(features!=null && features.Call<bool>("contains","notInstalled")) continue;
+                        if(engine.Call<int>("setVoice",voice)==0) return true;
+                    }
+            }
+            return false;
+        }
+#endif
         public void Stop()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR

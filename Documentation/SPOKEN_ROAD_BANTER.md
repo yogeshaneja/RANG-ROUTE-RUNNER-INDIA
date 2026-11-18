@@ -1,57 +1,54 @@
-# Spoken road banter
+# Spoken road banter — Hindi and English
 
-Android now has actual synthesized spoken dialogue through its installed Hindi text-to-speech engine, alongside short Roman Hindi captions. This is separate from the existing generated engine/animal sound effects. No audio recordings, voice account, paid API, external runtime request or automatic voice download is added.
+Android uses its installed offline text-to-speech engine for 16 original dialogue lines: three each for motorcycle riders, peacocks, camels, elephants and a festival caller, plus the rain-only umbrella visitor. Every line has Hindi text, a Roman Hindi caption and an English translation. Captions and speech use the selected voice language together. This setting covers dialogue, not full interface translation.
 
-## Characters and lines
+## Language selection
 
-There are 15 original lines, three each for motorcycle riders, peacocks, camels, elephants and a fictional festival caller, plus one fixed rain-only umbrella visitor line (16 total). Each group has a different pitch/rate profile; these are variations of the same installed Hindi voice, not five recorded actors or a verified Rajasthani/Marwari accent. The regional wording is playful Rajasthan-flavoured Hindi draft dialogue. Animal speech is deliberately cartoon dialogue, in addition to the existing animal effects.
+At Start, tap DIALOGUE to cycle through the saved choices:
 
-Examples:
+| Choice | Voice selection |
+| --- | --- |
+| AUTO (default) | Installed offline Hindi first; otherwise installed offline English. |
+| ENGLISH | Installed offline English, with English speech and captions. |
+| HINDI | Prefer installed offline Hindi; fall back to English if unavailable. |
 
-- Motorcycle rider: “ज़रा किनारे हो जा, महाराजा!” — Zara kinaare ho ja, Maharaja!
-- Peacock: “पहले म्हारा नाच देख ले, छोरा!” — Pehle mhara naach dekh le, chhora!
-- Camel: “ओ छोरा, म्हारी चाल तो शाही है!” — O chhora, mhari chaal toh shaahi hai!
-- Elephant: “ज़रा हट जा, बड़ा मेहमान आया है!” — Zara hat ja, bada mehmaan aaya hai!
-- Festival caller: “नाच बाद में, पहले रास्ता दे!” — Naach baad mein, pehle raasta de!
+The app accepts any installed English locale (such as en-IN, en-GB or en-US). It filters out network-required voices and voices marked not installed. It never sends Hindi Unicode to an English voice. If no suitable voice is installed, gameplay/captions continue with an explicit setup hint. English support avoids needing a Hindi pack, but still requires the phone to have a working offline English voice. No download, recording, account, network service or extra package is added.
 
-Lines trigger near the passing encounter, are deduplicated per encounter, rotate within each speaker group and have a nine-second global cooldown. Captions last 4.5 seconds and sit below safety warnings, above the road/runner view. They use Roman Hindi because full Devanagari shaping has not yet been verified in the prototype IMGUI font. The native speech engine receives the actual Hindi Unicode text.
+The umbrella visitor's English line is “Look, it is raining! It is raining, it is raining!” Her Hindi line remains “देखो, बारिश हो रही है! इट्स रेनिंग, इट्स रेनिंग!” The previously rejected invitation is not used.
 
-## Phone setup and controls
+The six character groups vary pitch and rate; they are synthetic variations of the installed voice, not separate recorded actors or verified regional accents. Hindi dialogue is playful Rajasthan-flavoured Hindi draft wording, not verified Marwari. Animal dialogue is intentionally cartoon speech alongside natural sound effects.
 
-Pull the latest feature branch and Build and Run the updated Android APK. At Start, keep Sound and Voices enabled, wait for “Offline Hindi ready”, then press TEST HINDI VOICE. The test speaks the motorcycle rider's first line without needing a run. Gameplay selects other lines/speakers automatically.
+## Setup and controls
 
-The engine must have an installed embedded Hindi voice. The app filters out network-required voices and those marked not installed. If none is available it shows a message to add offline Hindi speech data in the phone's text-to-speech settings; it keeps the rest of the game and captions working. Install the pack manually if needed, return to Start and tap RETRY. Retry disposes the old engine and initializes a fresh one, including after a timeout or a playback failure. Selection/status is checked on each app launch and explicit retry; there is no forced settings screen, store launch or download.
+Pull feature/rajasthan-unity-prototype, let Unity compile, and Build and Run again. At Start, keep Sound and Voices ON. Select DIALOGUE ENGLISH to explicitly use English, or leave AUTO for automatic fallback. Wait for the ready/fallback status, increase phone MEDIA volume, then tap TEST ENGLISH VOICE or TEST HINDI VOICE. During rain the test uses the umbrella visitor's line; otherwise it uses the first rider line.
 
-Sound OFF also mutes spoken lines; Voices OFF mutes only the spoken banter. Music remains separately controlled. Voice preference saves locally. Music ducks briefly when a native speech request is accepted. Pause, lost focus, backgrounding, restart, game over and return-to-start stop speech; old sentences are not resumed/queued. Disposal shuts down only this game's TextToSpeech instance. Unity Editor/desktop previews captions; spoken playback is Android-only in this implementation.
+RETRY disposes the old speech engine and creates a fresh one using the saved language choice. Use it after changing phone speech settings or recovering from a timeout/failure. Changing DIALOGUE also stops old speech and replaces the engine immediately. Selection, mute flags and language persist locally. Nothing automatically opens a store or settings screen.
 
-## Android integration
+Sound OFF also mutes dialogue; Voices OFF mutes only speech. Music is separate. Accepted speech requests briefly duck music. Pause, lost focus, background, restart, game over and return to Start stop speech. Old sentences are not queued for later. Unity Editor/desktop is caption-only; AUTO previews English captions there and HINDI previews Roman Hindi.
 
-AndroidSpeech uses built-in Unity Android JNI and the Android TextToSpeech API. Initialization runs on the activity UI thread; the preserved OnInit proxy only records status, with voice selection on the main Unity update. Failure/timeouts are nonfatal. Calls use an explicitly selected embedded Hindi voice. Playback uses the API 21+ CharSequence/int/Bundle/String signature with an explicit JNI method descriptor, a typed float volume and QUEUE_FLUSH. Media/speech audio attributes align playback with the phone media volume; a zero media volume shows a prompt without changing the device volume. JNI argument references are released in a finally block. Native setup/playback exceptions are logged instead of swallowed. A successful queue return is labelled “Voice requested”, not proof of audible playback; asynchronous engine synthesis errors still require device logs because no UtteranceProgressListener is installed.
+## Integration and limits
 
-RunnerSpeechManifest adds the Android 11+ TTS service discovery query to the generated Gradle library manifest. It is idempotent and preserves Unity's Activity/GameActivity and existing permissions/queries. It does not replace the project manifest, add INTERNET permission, introduce a Java/Android plugin or require an extra Unity package. The existing native Android JNI module is reused. Existing 17 Unity sound clips/four AudioSources remain; speech is played by the phone service outside Unity's audio mixer, so lifecycle/muting is handled explicitly.
+AndroidSpeech uses Unity's existing Android JNI module and the Android TextToSpeech API. Construction is on the activity UI thread; the preserved OnInit proxy records its result, and voice selection occurs on the Unity update. The selected voice must be embedded, installed and match hi or en. Selection happens only at initialization/retry, not per frame.
 
-API references checked during implementation:
+Playback uses the API 21+ CharSequence/int/Bundle/String signature with an explicit JNI descriptor, typed float volume and QUEUE_FLUSH. Media/speech audio attributes follow media volume without changing it. JNI argument references are released in a finally block. Setup/playback exceptions log under `Dialogue voice`. A successful request only means queued, not that sound was heard. Asynchronous synthesis errors still require device logs because no UtteranceProgressListener is installed.
+
+RunnerSpeechManifest adds the Android 11+ TTS_SERVICE discovery query to Unity's generated Gradle library manifest, preserving existing manifest data and permissions. There is no new INTERNET permission, Java plugin, audio recording, speech model or bundled clip. Existing Unity sound-effect/music pools remain unchanged.
+
+Lines still deduplicate per encounter, rotate within their group, and use a nine-second global cooldown. Captions last 4.5 seconds below safety warnings. The rain visitor keeps her reserved dialogue slot and rain-only trigger. No gameplay, obstacle or weather timing changes are part of this update.
+
+## Required phone checks
+
+1. Compile in Unity and verify the Start language/test/retry controls and captions in portrait.
+2. Build and Run on Android; verify the merged manifest retains TTS_SERVICE discovery.
+3. With no Hindi pack but offline English installed, launch with AUTO: expect an English fallback status, English test voice and English gameplay captions/speech.
+4. With both languages installed, AUTO prefers Hindi. Explicit ENGLISH must use English despite Hindi being present. Check HINDI and automatic fallback too.
+5. Switch language while a preview speaks: the old sentence must stop. Confirm choice survives restart, RETRY retains it, and Sound/Voices mute independently.
+6. Verify rain visitor, motorcycle, peacock, camel, elephant and caller speech/caption alignment, cooldown, music ducking and lifecycle stops.
+7. Test airplane mode, zero media volume, connected Bluetooth routing, no installed voice and failed initialization. If the phone's own English speech sample works but the game does not, collect the Start status and `Dialogue voice` Android Logcat entries.
+
+Source parsing is not a Unity compile, Android build or audible playback test. Native engine selection, pronunciation, rendering, offline behaviour and device performance need real-device verification.
+
+API references:
 - https://developer.android.com/reference/android/speech/tts/TextToSpeech
+- https://developer.android.com/reference/android/speech/tts/Voice
 - https://developer.android.com/reference/android/speech/tts/TextToSpeech.Engine
-- https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/android/ipostgenerategradleandroidproject
-
-## Required local acceptance
-
-1. Pull, let Unity compile and press Play. Check captions, voice status/control layout and existing core/live-startup checks. Editor silence is expected; native speech is Android-only.
-2. Build and Run. Verify the generated/merged manifest contains exactly one TTS_SERVICE discovery action and preserves the configured Activity and existing permissions.
-3. On the real phone, test the Hindi voice from Start. Listen to pronunciation, volume, timing and character pitch/rate; verify the music dips/restores. This is synthetic Hindi, so native-speaker review is still needed for regional phrasing/pronunciation.
-4. Follow passing motorcycles and living scenery/hazards; verify speaker/caption matches the encounter, lines rotate and do not repeat every frame. No caption should cover a safety warning or the runner.
-5. Toggle Voices and Sound independently, including while speech plays. Pause/background/restart/quit mid-line and ensure no lingering speech or stale queued sentence. Confirm settings persist.
-6. With an installed offline Hindi pack, test a fresh launch in airplane mode. Also test a phone without Hindi data: the game/captions should continue and show the setup hint. Check APK build/IL2CPP callback preservation and sustained phone performance.
-
-No Unity compilation, Android Gradle build, installed-engine selection, actual speech audition or real-device offline test was possible in this workspace. Source/API-contract checks and independent scheduler/manifest simulations do not establish native runtime success.
-
-The rain-visitor update adds a sixth pitch/rate group, a reserved speech slot and TEST RAIN VOICE while rain is active. See RAIN_UMBRELLA_VISITOR.md for the revised Hindi/English phrase and spawning rules.
-
-## Caption-only troubleshooting update
-
-The Start card has separate TEST and RETRY controls and shows explicit muted/setup/failure status. TEST is available only with Sound ON, Voices ON and a selected offline Hindi voice. RETRY is available after initialization finishes or times out, even when no voice was found. In the Unity Editor, Android speech remains intentionally unavailable and the status says so. No recorded audio fallback, speech-model download, new dependency, network voice or extra music file is added.
-
-For a silent real device: check the Start status, keep Sound and Voices ON, increase **media** volume, and test Hindi from the phone's text-to-speech settings. If the phone's own sample is silent, install/enable offline Hindi speech data manually. Then return to the game and tap RETRY followed by TEST. Also check whether audio is routed to connected Bluetooth headphones. If the game still stays silent despite the phone's own Hindi sample working, capture Android Logcat messages beginning `Hindi voice` and include the visible status.
-
-Source parsing and JNI-signature review can be performed here; a Unity Android build and actual speech playback must still be verified on a real device.
