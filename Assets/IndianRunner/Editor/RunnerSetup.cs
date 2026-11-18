@@ -141,6 +141,9 @@ namespace IndianRunner.Editor
                     foreach(int neighbour in new[]{row-1,row+1}) for(int lane=0;lane<3;lane++)
                         Require(RunRules.ObstacleFor(neighbour,lane,seed) == 0,"Moving hazard needs empty recovery rows");
                 }
+                if(RunRules.RestBuffer(row))
+                    for(int lane=0;lane<3;lane++) Require(RunRules.ObstacleFor(row,lane,seed)==0,"Rest garden or transition contains a hazard");
+                if(RunRules.PouchRow(row)) Require(RunRules.RestRow(row),"Pouch pickup must be in a safe garden");
                 checkedRows++;
             }
             Require(RunRules.Speed(0) == 9 && RunRules.Speed(100000) == RunRules.MaxSpeed, "Speed bounds");
@@ -158,6 +161,17 @@ namespace IndianRunner.Editor
             // Relative sweeps include both player movement and obstacle motion.
             Require(TrackWorld.SegmentBox(new Vector3(0,0,3),new Vector3(0,0,-3),new Vector3(-.84f,-2.03f,-1.4f),new Vector3(.84f,1.97f,1.4f)),"Motorcycle sweep missed");
             Require(TrackWorld.SegmentBox(new Vector3(0,-4,0),new Vector3(0,-.8f,0),new Vector3(-1.26f,-2.03f,-1.26f),new Vector3(1.26f,.74f,1.26f)),"Descending ship sweep missed");
+            Require(RunRules.DynamicKind(8)==0 && RunRules.DynamicKind(32)==RajasthanObstacles.Spaceship,"Spaceship rarity schedule");
+            Require(RunRules.RestDistance(280) && !RunRules.RestDistance(364),"Rest garden boundaries");
+            var progress=new FestivalProgress();
+            Require(!progress.Claim(),"Incomplete goals granted a reward");
+            progress.Add(30,5,499); Require(progress.Completed==2 && !progress.Ready,"Distance goal completed early");
+            Require(progress.Add(0,0,500) && progress.Ready,"Completed goals not ready");
+            Require(progress.Claim() && progress.Set==1 && progress.Unlocked==2 && progress.Outfit==1,"First outfit reward missing");
+            Require(!progress.Claim() && progress.Tokens==0 && progress.Distance==0,"Reward claimed twice or counters not reset");
+            var loaded=new FestivalProgress(progress.Set,progress.Tokens,progress.Slides,progress.Distance,progress.Outfit);
+            Require(loaded.Outfit==1 && loaded.Unlocked==2,"Outfit lost in progress snapshot");
+            var invalid=new FestivalProgress(-8,-1,-1,-1,99); Require(invalid.Set==0 && invalid.Outfit==0 && invalid.Tokens==0,"Invalid snapshot not clamped");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
         [MenuItem("Indian Runner/4 - Check live startup (Play Mode)")]

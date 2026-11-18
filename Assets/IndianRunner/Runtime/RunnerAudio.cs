@@ -10,7 +10,7 @@ namespace IndianRunner
         private readonly AudioSource effects, music, approach, animals;
         private readonly List<AudioClip> owned = new List<AudioClip>();
         private readonly AudioClip[] pickups = new AudioClip[4];
-        private readonly AudioClip jump, stumble, engine, saucer, camel, elephant;
+        private readonly AudioClip jump, stumble, engine, saucer, camel, elephant, celebration;
         private bool paused, musicEnabled;
         private int pickupIndex, approachKind, lastAnimalKey = -1;
         private float lastPickup = -1, duckUntil;
@@ -27,6 +27,7 @@ namespace IndianRunner
             saucer=Cue("Airy spaceship hum loop",4,1,110);
             camel=Cue("Soft stylised camel call",5,.85f,105);
             elephant=Cue("Distant stylised elephant trumpet",6,1.2f,235);
+            celebration=Cue("Original festival welcome arpeggio",7,.90f,587.33f);
             music.clip=Compose();
         }
         private static AudioSource Source(GameObject owner,float volume)
@@ -59,13 +60,15 @@ namespace IndianRunner
             effects.PlayOneShot(pickups[pickupIndex++%pickups.Length],.72f);
             lastPickup=now; duckUntil=now+.22f;
         }
+        public void Celebrate() { effects.PlayOneShot(celebration,.52f); }
         public void Jump() => effects.PlayOneShot(jump,.65f);
         public void Stumble() { approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.8f); }
-        public void Tick(float dt,int kind=0,float ahead=100,float pan=0,int encounterKey=-1)
+        public void Tick(float dt,int kind=0,float ahead=100,float pan=0,int encounterKey=-1,bool scenic=false)
         {
             if(paused) return;
             float smoothing=1-Mathf.Exp(-7*dt);
-            float musicTarget=musicEnabled ? (Time.unscaledTime<duckUntil ? .16f : .23f) : 0;
+            float musicTarget=musicEnabled ? (Time.unscaledTime<duckUntil ? .16f : scenic ? .25f : .23f) : 0;
+            music.pitch=Mathf.Lerp(music.pitch,scenic ? 1.04f : 1,smoothing);
             music.volume=Mathf.Lerp(music.volume,musicTarget,smoothing);
             if(!musicEnabled && music.volume<.001f) music.Stop();
             bool motor=kind==RajasthanObstacles.Motorcycle, ship=kind==RajasthanObstacles.Spaceship;
@@ -108,7 +111,14 @@ namespace IndianRunner
                 else if(type==3) value=(Sin(60*t)+.36f*Sin(120*t)+.17f*Sin(180*t))*(.72f+.28f*Sin(30*t))*.38f;
                 else if(type==4) value=(Sin(110*t+ .4f*Sin(2*t))+.25f*Sin(220*t))*.32f;
                 else if(type==5) { float p=hz*t+2*Sin(3*t); value=(Sin(p)+.35f*Sin(p*2)+.12f*Sin(p*3))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2)*.35f; }
-                else { float p=hz*t+3*Sin(.7f*t); value=(Sin(p)+.35f*Sin(p*2)+.16f*Sin(p*3))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),1.5f)*.42f; }
+                else if(type==6) { float p=hz*t+3*Sin(.7f*t); value=(Sin(p)+.35f*Sin(p*2)+.16f*Sin(p*3))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),1.5f)*.42f; }
+                else
+                {
+                    int note=Mathf.Min(4,(int)(t/.18f)); float local=t-note*.18f;
+                    int semitone=note==0 ? 0 : note==1 ? 4 : note==2 ? 7 : note==3 ? 12 : 16;
+                    float f=hz*Mathf.Pow(2,semitone/12f);
+                    value=(Sin(f*local)+.20f*Sin(f*2*local))*Mathf.Sin(Mathf.PI*local/.18f)*Mathf.Exp(-local*8)*.4f;
+                }
                 // Loops are periodic at one second, so they need no destructive edge fade.
                 data[i]=value*(type==3 || type==4 ? 1 : envelope);
             }

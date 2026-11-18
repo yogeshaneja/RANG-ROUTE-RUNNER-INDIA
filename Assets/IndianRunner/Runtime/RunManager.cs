@@ -18,6 +18,10 @@ namespace IndianRunner
         private bool reduced, music, sound;
         private RunnerSkin skin;
         private RunFeedback feedback;
+        private FestivalProgress progress;
+        private bool showingGoals, inRest;
+        private float magnetUntil;
+        private string goalsSummary = "", powerSummary = "";
         private float menuClock, introDuration, milestoneUntil;
         private Vector3 introCameraPosition;
         private Quaternion introCameraRotation;
@@ -33,6 +37,7 @@ namespace IndianRunner
             Application.targetFrameRate = 60;
             Screen.orientation = ScreenOrientation.Portrait;
             best = PlayerPrefs.GetInt("runner.best", 0);
+            progress = new FestivalProgress(PlayerPrefs.GetInt("festival.set",0),PlayerPrefs.GetInt("festival.tokens",0),PlayerPrefs.GetInt("festival.slides",0),PlayerPrefs.GetInt("festival.distance",0),PlayerPrefs.GetInt("festival.outfit",0));
             reduced = PlayerPrefs.GetInt("runner.reduced", 0) == 1;
             music = PlayerPrefs.GetInt("runner.music", 1) == 1;
             sound = PlayerPrefs.GetInt("runner.sound", 1) == 1;
@@ -47,20 +52,20 @@ namespace IndianRunner
             sunlight.shadows = LightShadows.None; lightObject.transform.rotation = Quaternion.Euler(48, -32, 0);
             world = new TrackWorld(transform); world.Reset(seed);
             feedback = new RunFeedback(transform);
-            runner = new RunnerModel(transform);
+            runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
             weather = new WeatherController(transform, gameCamera, sunlight);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
-            state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced);
+            state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); RefreshHud();
         }
         public void ValidateStartup()
         {
-            if (world == null || runner == null || weather == null || audioPlayer == null || feedback == null || gameCamera == null)
+            if (progress == null || world == null || runner == null || weather == null || audioPlayer == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
             world.ValidatePool();
         }
         private void StartRun()
         {
-            bool fromMenu = state == State.Menu;
+            bool fromMenu = state == State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
             introCameraPosition = gameCamera.transform.position; introCameraRotation = gameCamera.transform.rotation;
             introDuration = reduced ? 0 : fromMenu ? .7f : .25f;
             milestoneUntil = 0; milestoneText = ""; nextMilestone = 100; feedback.Reset();
@@ -78,7 +83,7 @@ namespace IndianRunner
             // Clamp large stalls so an OS hitch cannot skip a reaction window.
             float dt = Mathf.Min(Time.deltaTime, .05f);
             input.Read(Screen.safeArea.yMax - 100 * Screen.width / 480f);
-            if (input.Pause)
+            if (input.Pause && !showingGoals)
             {
                 if (state == State.Running) Pause();
                 else if (state == State.Paused) Resume();
@@ -115,13 +120,30 @@ namespace IndianRunner
                 if (height <= 0) { height = 0; verticalSpeed = 0; }
             }
             distance += RunRules.Speed(distance) * dt;
-            int gained = world.CollectAndCollide(previous, new Vector3(x, height, distance), sliding ? .82f : 2.05f, out bool hit);
+            int gained = world.CollectAndCollide(previous, new Vector3(x, height, distance), sliding ? .82f : 2.05f, out bool hit, clock<magnetUntil);
             coins += gained;
             if (gained > 0) { audioPlayer.Coin(); feedback.Coin(x,height,reduced); }
+            if(world.PouchesCollected>0 && !hit)
+            {
+                magnetUntil=clock+8; audioPlayer.Celebrate();
+                milestoneText="FESTIVAL POUCH - tokens come to you!"; milestoneUntil=clock+2;
+            }
+            if(progress.Add(gained,world.SlidesCleared,distance))
+            {
+                SaveProgress(); audioPlayer.Celebrate();
+                milestoneText=progress.Ready ? "THREE GOALS COMPLETE - outfit reward ready!" : "GOAL COMPLETE - beautiful running!";
+                milestoneUntil=clock+2.5f;
+            }
+            bool restNow=RunRules.RestDistance(distance);
+            if(restNow && !inRest && !hit)
+            {
+                audioPlayer.Celebrate(); milestoneText="FESTIVAL GARDEN - enjoy the colours"; milestoneUntil=clock+2;
+            }
+            inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
-            world.Position(distance, seed, clock, reduced); feedback.Tick(dt);
-            if(!hit) audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey);
-            if (distance >= nextMilestone)
+            world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
+            if(!hit) audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
+            if (distance >= nextMilestone && clock >= milestoneUntil)
             {
                 milestoneText = nextMilestone + " m  -  GREAT RUN"; milestoneUntil = clock+1.5f; nextMilestone += 100;
             }
@@ -145,6 +167,8 @@ namespace IndianRunner
         {
             hudScore = CurrentScore.ToString("N0"); hudCoins = coins.ToString();
             hudStatus = $"{(int)distance} m    {weather.Description}";
+            goalsSummary = progress.Ready ? "ALL 3 GOALS DONE - reward at Start" : $"GOALS {progress.Completed}/3  |  {progress.Tokens}/{progress.TokenGoal} tokens";
+            powerSummary = clock<magnetUntil ? $"POUCH POWER  {Mathf.CeilToInt(magnetUntil-clock)}s" : inRest ? "FESTIVAL GARDEN  |  BREATHE & COLLECT" : goalsSummary;
         }
         private void PositionCamera(float dt = 0)
         {
@@ -166,7 +190,7 @@ namespace IndianRunner
         }
         private void ReturnToMenu()
         {
-            SaveBest(); state = State.Menu;
+            SaveBest(); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
@@ -181,8 +205,16 @@ namespace IndianRunner
             runEndMessage = world.ContactMessage.Length > 0 ? world.ContactMessage : camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
             SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
+        private void SaveProgress()
+        {
+            if(progress==null) return;
+            PlayerPrefs.SetInt("festival.set",progress.Set); PlayerPrefs.SetInt("festival.tokens",progress.Tokens);
+            PlayerPrefs.SetInt("festival.slides",progress.Slides); PlayerPrefs.SetInt("festival.distance",progress.Distance);
+            PlayerPrefs.SetInt("festival.outfit",progress.Outfit); PlayerPrefs.Save();
+        }
         private void SaveBest()
         {
+            SaveProgress();
             if (CurrentScore > best) { best = CurrentScore; PlayerPrefs.SetInt("runner.best", best); PlayerPrefs.Save(); }
         }
         private void SaveSettings()
@@ -208,6 +240,25 @@ namespace IndianRunner
             if (GUI.Button(new Rect(xPos,yPos+52,half,43),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
             if (GUI.Button(new Rect(xPos+half+10,yPos+52,half,43),"Sky  "+weather.Selection,skin.Toggle)) WeatherChoice();
         }
+        private void DrawGoals(float left,float top,float width,float screenHeight)
+        {
+            float y=Mathf.Max(top+80,(screenHeight-390)/2);
+            GUI.Box(new Rect(left+16,y,width-32,390),GUIContent.none,skin.Card);
+            GUI.Label(new Rect(left+28,y+12,width-56,38),"FESTIVAL GOALS  "+(progress.Set+1),skin.Subtitle);
+            GUI.Label(new Rect(left+34,y+61,width-68,30),$"MIRROR TOKENS   {progress.Tokens} / {progress.TokenGoal}",skin.Text);
+            GUI.Label(new Rect(left+34,y+99,width-68,30),$"SLIDE UNDER AWNINGS   {progress.Slides} / {progress.SlideGoal}",skin.Text);
+            GUI.Label(new Rect(left+34,y+137,width-68,30),$"DISTANCE IN ONE RUN   {progress.Distance} / {progress.DistanceGoal} m",skin.Text);
+            string reward=progress.Set<3 ? "Reward: "+FestivalProgress.OutfitName(progress.Set+1)+" kurta" : "Reward: another festival badge";
+            GUI.Label(new Rect(left+34,y+184,width-68,42),reward+"\nProgress saves across runs, fully offline.",skin.Caption);
+            GUI.enabled=progress.Ready && state==State.Menu;
+            if(GUI.Button(new Rect(left+34,y+241,width-68,48),progress.Ready ? state==State.Menu ? "CLAIM REWARD & NEXT GOALS" : "CLAIM FROM THE START SCREEN" : "COMPLETE ALL THREE TO UNLOCK",skin.Primary))
+            {
+                if(progress.Claim()) { runner.SetOutfit(progress.Outfit); SaveProgress(); audioPlayer.Celebrate(); RefreshHud(); }
+            }
+            GUI.enabled=true;
+            GUI.Label(new Rect(left+34,y+299,width-68,23),$"{progress.Unlocked}/4 colours | {progress.Badges} badges | change outfit at Start",skin.Caption);
+            if(GUI.Button(new Rect(left+34,y+334,width-68,40),"BACK",skin.Secondary)) showingGoals=false;
+        }
         private void OnGUI()
         {
             if (skin == null) skin = new RunnerSkin();
@@ -218,18 +269,22 @@ namespace IndianRunner
             float center = left+width/2,bottom = screenHeight-safe.yMin/scale-12;
             var oldMatrix = GUI.matrix; var oldColour = GUI.color;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale,scale,1));
+            GUI.enabled=!showingGoals;
             if (state == State.Menu)
             {
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
                 GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
-                float sheet = bottom-318;
-                GUI.Box(new Rect(left+12,sheet,width-24,318),GUIContent.none,skin.Card);
+                float sheet = bottom-360;
+                GUI.Box(new Rect(left+12,sheet,width-24,360),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
                 GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under awnings. Follow hazard warnings.",skin.Text);
                 DrawOptions(xPos,sheet+146,w);
-                GUI.Label(new Rect(xPos,sheet+252,w,50),"Keep looking for updates for new content.",skin.Caption);
+                if(GUI.Button(new Rect(xPos,sheet+252,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
+                if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+252,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))
+                { progress.NextOutfit(); runner.SetOutfit(progress.Outfit); SaveProgress(); }
+                GUI.Label(new Rect(xPos,sheet+306,w,40),"Keep looking for updates for new content.",skin.Caption);
             }
             else
             {
@@ -250,13 +305,14 @@ namespace IndianRunner
                         GUI.Box(new Rect(center-160,top+82,320,42),GUIContent.none,skin.Card);
                         GUI.Label(new Rect(center-152,top+84,304,38),milestoneText,skin.Subtitle);
                     }
+                    GUI.Box(new Rect(left+14,bottom-85,width-28,40),powerSummary,skin.Chip);
                     if (clock < 12) GUI.Label(new Rect(left+20,bottom-40,width-40,30),"SWIPE TO MOVE  |  UP TO JUMP  |  DOWN TO SLIDE",skin.Caption);
                 }
                 else
                 {
                     GUI.color = new Color(0,0,0,.30f); GUI.DrawTexture(new Rect(0,0,Screen.width/scale,screenHeight),Texture2D.whiteTexture); GUI.color = oldColour;
-                    float panel = Mathf.Max(top+100,(screenHeight-440)/2);
-                    GUI.Box(new Rect(left+12,panel,width-24,440),GUIContent.none,skin.Card);
+                    float panel = Mathf.Max(top+100,(screenHeight-494)/2);
+                    GUI.Box(new Rect(left+12,panel,width-24,494),GUIContent.none,skin.Card);
                     GUI.Label(new Rect(left+25,panel+15,width-50,50),state == State.Paused ? "TAKE A BREATHER" : "GOOD RUN!",skin.Subtitle);
                     GUI.Label(new Rect(left+25,panel+61,width-50,60),hudScore,skin.Title);
                     GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} tokens",skin.Caption);
@@ -266,8 +322,11 @@ namespace IndianRunner
                     if (GUI.Button(new Rect(left+32,panel+286,width-64,46),"BACK TO START",skin.Secondary)) ReturnToMenu();
                     if (GUI.Button(new Rect(left+32,panel+350,(width-74)/2,45),"Music  "+(music ? "ON" : "OFF"),skin.Toggle)) { music = !music; SaveSettings(); }
                     if (GUI.Button(new Rect(center+5,panel+350,(width-74)/2,45),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
+                    if(GUI.Button(new Rect(left+32,panel+408,width-64,45),"VIEW FESTIVAL GOALS",skin.Secondary)) showingGoals=true;
                 }
             }
+            GUI.enabled=true;
+            if(showingGoals) DrawGoals(left,top,width,screenHeight);
             GUI.color = oldColour; GUI.matrix = oldMatrix;
         }
     }

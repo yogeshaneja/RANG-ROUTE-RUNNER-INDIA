@@ -48,6 +48,37 @@ namespace IndianRunner
             }
             return root;
         }
+        public static Transform Pouch(Transform parent)
+        {
+            var root=new GameObject("Pooled embroidered token-attracting pouch").transform; root.SetParent(parent,false);
+            var pink=PrimitiveArt.Mat(new Color(.95f,.08f,.40f));
+            var gold=PrimitiveArt.Mat(new Color(1,.72f,.08f));
+            var turquoise=PrimitiveArt.Mat(new Color(.03f,.76f,.70f));
+            NaturalMesh.Lathe(root,"Festival pouch",new[]{new Vector3(.12f,-.28f,.10f),new Vector3(.28f,-.15f,.16f),new Vector3(.24f,.15f,.15f),new Vector3(.14f,.28f,.10f)},pink,16);
+            NaturalMesh.Oval(root,"Golden pouch tie",new Vector3(0,.21f,0),new Vector3(.34f,.08f,.23f),gold,14);
+            var mirror=PrimitiveArt.Box(root,"Turquoise diamond embroidery",new Vector3(0,0,-.17f),new Vector3(.21f,.21f,.035f),turquoise); mirror.localRotation=Quaternion.Euler(0,0,45);
+            foreach(float side in new[]{-1f,1f}) NaturalMesh.Branch(root,"Gold drawstring",new Vector3(side*.12f,.22f,0),new Vector3(side*.24f,.45f,0),.025f,gold);
+            PrimitiveArt.CombineScenery(root); root.gameObject.SetActive(false); return root;
+        }
+        public static Transform RestGarden(Transform parent)
+        {
+            var root=new GameObject("Pooled festival garden - safe roadside decoration").transform; root.SetParent(parent,false);
+            var gold=PrimitiveArt.Mat(new Color(1,.67f,.055f)); var pink=PrimitiveArt.Mat(new Color(.97f,.13f,.48f));
+            var turquoise=PrimitiveArt.Mat(new Color(.02f,.74f,.67f)); var green=PrimitiveArt.Mat(new Color(.15f,.48f,.16f));
+            foreach(float side in new[]{-1f,1f})
+            {
+                NaturalMesh.Branch(root,"Festival garden pole",new Vector3(side*5.15f,0,0),new Vector3(side*5.15f,4.3f,0),.06f,gold);
+                for(int i=0;i<6;i++)
+                {
+                    var flag=PrimitiveArt.Box(root,"Bright roadside bunting",new Vector3(side*5.15f,3.8f-i*.10f,1+i*.60f),new Vector3(.035f,.48f,.43f),i%3==0 ? gold : i%3==1 ? pink : turquoise);
+                    flag.localRotation=Quaternion.Euler(20,0,20);
+                    float z=-5+i*2;
+                    NaturalMesh.Branch(root,"Flower stem",new Vector3(side*4.9f,.05f,z),new Vector3(side*4.9f,.57f,z),.045f,green);
+                    NaturalMesh.Oval(root,"Marigold or pink garden flower",new Vector3(side*4.9f,.66f,z),new Vector3(.46f,.30f,.46f),i%2==0 ? gold : pink,10);
+                }
+            }
+            PrimitiveArt.CombineScenery(root); root.gameObject.SetActive(false); return root;
+        }
         public static void Elephant(Transform parent,Vector3 position)
         {
             var root=new GameObject("Decorated roadside elephant - scenery").transform; root.SetParent(parent,false);

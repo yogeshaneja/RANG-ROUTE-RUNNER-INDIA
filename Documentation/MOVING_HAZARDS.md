@@ -6,7 +6,7 @@ Crossing camels have rounded bodies/necks/heads, ears, muzzle/nostrils, tail/tuf
 
 Motorcycles drive towards the player in a fixed lane, with tyres, hubs, red tank, engine, fork, headlamp and helmeted rider. The relative approach rate is 1.65 times runner speed; they meet the runner at their scheduled row. Spaceships descend smoothly from 9 m to 0.8 m above the road between 40 m and 8 m ahead. An amber ground rectangle marks the landing footprint; an on-screen warning names the reserved escape lane. Decorative saucer rotation is disabled with reduced effects; gameplay descent is retained.
 
-First encounters are a motorcycle at 126 m and spaceship at 238 m. Each repeats every 336 m. They replace the other obstacles in their row, and both neighbouring rows are empty. Coins remain in a different lane. Warnings begin 45 m ahead (2.5 seconds at maximum speed). Camel rows do not overlap these recovery rows.
+First encounters are a motorcycle at 126 m and spaceship at 910 m. The rare spaceship repeats every 2,016 m; motorcycles are scheduled every 336 m, skipping festival gardens and their transition rows. They replace the other obstacles in their row, and both neighbouring rows are empty. Coins remain in a different lane. Warnings begin 45 m ahead (2.5 seconds at maximum speed). Camel rows do not overlap these recovery rows.
 
 Contact ends the run with a hazard-specific message. Collision sweeps the player relative to each moving object, including ship altitude. Gameplay has no physics colliders or per-encounter instantiation. All hazard slots are allocated at startup and reused; no new external assets/packages were added.
 

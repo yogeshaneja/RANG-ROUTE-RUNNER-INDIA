@@ -8,7 +8,7 @@ namespace IndianRunner
         private readonly Transform torso, head, scarf, leftArm, rightArm, leftElbow, rightElbow;
         private readonly Transform[] thighs = new Transform[2], calves = new Transform[2], feet = new Transform[2];
         private readonly Transform shadow;
-        private readonly Material shadowMaterial;
+        private readonly Material shadowMaterial, outfitMaterial;
         private float lastClock, gaitPhase, slideBlend, jumpBlend, locomotionBlend;
         private const float UpperLeg = .45f, LowerLeg = .43f;
         private static Transform Pivot(Transform parent, string name, Vector3 position)
@@ -20,7 +20,8 @@ namespace IndianRunner
             Root = Pivot(parent, "Original articulated Indian runner", Vector3.zero);
             var skin = PrimitiveArt.Mat(new Color(.55f, .32f, .20f));
             var skinLight = PrimitiveArt.Mat(new Color(.64f, .39f, .25f));
-            var kurta = PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.08f,.55f,.61f),new Vector2(2,3));
+            outfitMaterial = new Material(PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.08f,.55f,.61f),new Vector2(2,3)));
+            var kurta = outfitMaterial;
             var trim = PrimitiveArt.Mat(new Color(.86f, .66f, .29f));
             var trousers = PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(1,.98f,.91f),new Vector2(2,3));
             var hair = PrimitiveArt.Mat(new Color(.055f, .038f, .028f));
@@ -167,6 +168,12 @@ namespace IndianRunner
             calves[i].localRotation = Quaternion.Euler(knee,0,0);
             feet[i].localRotation = Quaternion.Euler(-upper-knee,0,0);
         }
-        public void Dispose() { if (shadowMaterial != null) Object.Destroy(shadowMaterial); }
+        public void SetOutfit(int index)
+        {
+            Color colour=index==1 ? new Color(1,.57f,.055f) : index==2 ? new Color(.96f,.12f,.43f) : index==3 ? new Color(.12f,.27f,.94f) : new Color(.08f,.55f,.61f);
+            if(outfitMaterial.HasProperty("_BaseColor")) outfitMaterial.SetColor("_BaseColor",colour);
+            if(outfitMaterial.HasProperty("_Color")) outfitMaterial.SetColor("_Color",colour);
+        }
+        public void Dispose() { if (shadowMaterial != null) Object.Destroy(shadowMaterial); Object.Destroy(outfitMaterial); }
     }
 }

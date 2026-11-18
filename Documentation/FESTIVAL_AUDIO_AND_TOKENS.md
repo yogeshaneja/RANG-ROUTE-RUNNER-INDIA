@@ -8,7 +8,7 @@ The old single-tone cues and short motif are replaced with an original 20-second
 
 Pickups play a gentle four-note chime sequence with a short retrigger limit; jumps have a soft rising swish and game over has a short rounded drum. A pooled engine source fades/pans in as a motorcycle approaches and lowers pitch after passing; the spaceship uses a separate airy hum on the same source. Camel calls and occasional roadside-elephant trumpets are stylised synthesized effects, not realistic animal recordings or spoken voice acting. They trigger once per nearby encounter and duck the music briefly. Music/effects retain separate controls; pause freezes audio, restart clears encounter sounds and returning to menu stops vehicle/animal sounds.
 
-All 11 clips are generated once at startup (four pickup variations, jump, stumble, engine, spaceship, camel, elephant, music), tracked for disposal and played through four AudioSources. No network, downloads, paid services or third-party audio rights are required. There is no clip creation/allocation in the per-frame audio Tick method. Mixer levels are conservative, but final loudness/timbre must be auditioned on the target phone.
+All 12 clips are generated once at startup (four pickup variations, jump, stumble, engine, spaceship, camel, elephant, festival arpeggio, music), tracked for disposal and played through four AudioSources. No network, downloads, paid services or third-party audio rights are required. There is no clip creation/allocation in the per-frame audio Tick method. Mixer levels are conservative, but final loudness/timbre must be auditioned on the target phone.
 
 ## Larger decorated scenery and obstacles
 
@@ -25,3 +25,5 @@ The main runner and the safe-route rules are preserved. At the enlarged camel en
 5. Play beyond 600 m to exercise recycling; inspect elephants beside the road, camel saddle details and sustained frame time/memory on the real Android phone. Build and Run again to update the installed APK.
 
 No Unity Editor/audio-device audition or Android performance measurement was available in the implementation workspace.
+
+The subsequent goals/gardens pass adds safe festival sections, pouch power, outfit rewards, a welcome arpeggio and a rare spaceship schedule. See FESTIVAL_GOALS_AND_GARDENS.md for current timing and acceptance checks.

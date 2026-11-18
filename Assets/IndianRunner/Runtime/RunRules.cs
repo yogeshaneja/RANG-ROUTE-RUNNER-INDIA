@@ -29,9 +29,14 @@ namespace IndianRunner
         public static float LaneX(int lane) => (Math.Max(0, Math.Min(2, lane)) - 1) * LaneWidth;
         public static int SafeLane(int row, int seed) => (int)(Mix((uint)row ^ (uint)seed) % 3);
         public static int Kind(int row, int lane, int seed) => 1 + (int)(Mix((uint)(row * 7 + lane + 71) ^ (uint)seed) % ObstacleKinds);
-        public static bool HasCamel(int row, int seed) => row >= 2 && !NearDynamic(row) && row % 4 == 2 && SafeLane(row, seed) != 1;
+        public static bool HasCamel(int row, int seed) => row >= 2 && !NearDynamic(row) && !RestBuffer(row) && row % 4 == 2 && SafeLane(row, seed) != 1;
         // Empty neighbouring rows leave time to enter/leave the warned lane.
-        public static int DynamicKind(int row) => row >= 4 && row % 12 == 4 ? 6 : row >= 8 && row % 12 == 8 ? 7 : 0;
+        public static bool RestRow(int row) => row >= 10 && row%18 >= 10 && row%18 <= 12;
+        public static bool RestBuffer(int row) => row >= 9 && row%18 >= 9 && row%18 <= 13;
+        public static bool RestDistance(float distance) => RestRow((int)Math.Max(0,distance/RowSpacing));
+        public static bool PouchRow(int row) => row >= 11 && row%18 == 11;
+        // Rare fantasy surprise: first at 910 m, then every 2,016 m. Skip rest buffers.
+        public static int DynamicKind(int row) => RestBuffer(row) ? 0 : row >= 32 && row%72 == 32 ? 7 : row >= 4 && row%12 == 4 ? 6 : 0;
         public static bool NearDynamic(int row) => DynamicKind(row-1) != 0 || DynamicKind(row) != 0 || DynamicKind(row+1) != 0;
         public static int HazardLane(int row, int seed) => (SafeLane(row, seed)+1)%3;
         // Bike meets the runner at its row, but travels towards them before and after.
@@ -49,7 +54,7 @@ namespace IndianRunner
         }
         public static int ObstacleFor(int row, int lane, int seed)
         {
-            if (row < 2 || lane == SafeLane(row, seed)) return 0;
+            if (row < 2 || RestBuffer(row) || lane == SafeLane(row, seed)) return 0;
             if (DynamicKind(row) != 0) return lane == HazardLane(row,seed) ? DynamicKind(row) : 0;
             if (NearDynamic(row)) return 0;
             if (HasCamel(row, seed)) return lane == 1 ? 5 : 0;

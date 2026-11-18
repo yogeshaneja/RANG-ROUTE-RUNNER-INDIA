@@ -14,7 +14,8 @@ namespace IndianRunner
             public readonly RajasthanObstacles.Instance[] Obstacles = new RajasthanObstacles.Instance[3];
             public bool CamelCrossing;
             public int DynamicKind, HazardLane;
-            public Transform LandingMarker;
+            public Transform LandingMarker, Pouch, Garden;
+            public bool HasPouch, PouchTaken, SlideTaken;
             public readonly Transform[] Coins = new Transform[5];
             public readonly bool[] Taken = new bool[5];
             public int Safe;
@@ -39,6 +40,8 @@ namespace IndianRunner
             public float Phase;
         }
         private readonly List<Kite> kites = new List<Kite>();
+        public int PouchesCollected { get; private set; }
+        public int SlidesCleared { get; private set; }
         public string WarningMessage { get; private set; } = "";
         public int SoundKind { get; private set; }
         public int SoundKey { get; private set; } = -1;
@@ -111,6 +114,7 @@ namespace IndianRunner
                     }
                     PrimitiveArt.CombineScenery(row.LandingMarker);
                     row.LandingMarker.gameObject.SetActive(false);
+                    row.Pouch=RajasthanDecor.Pouch(tile.Root); row.Garden=RajasthanDecor.RestGarden(tile.Root);
                     for (int c = 0; c < 5; c++)
                         row.Coins[c] = decor.Token(tile.Root);
                 }
@@ -123,6 +127,7 @@ namespace IndianRunner
             {
                 if (row.LandingMarker == null || row.LandingMarker.parent != tile.Root)
                     throw new System.InvalidOperationException("Pooled row is missing its landing marker.");
+                if(row.Pouch==null || row.Garden==null) throw new System.InvalidOperationException("Pooled row is missing festival props.");
                 foreach (var obstacle in row.Obstacles)
                     if (obstacle == null || obstacle.Root == null)
                         throw new System.InvalidOperationException("Pooled row is missing an obstacle slot.");
@@ -149,6 +154,11 @@ namespace IndianRunner
                 var row = tile.Rows[r]; int rowNumber = index * 2 + r;
                 row.Z = index * TileLength + RunRules.RowSpacing * .5f + r * RunRules.RowSpacing;
                 row.Safe = RunRules.SafeLane(rowNumber, seed);
+                row.HasPouch=RunRules.PouchRow(rowNumber); row.PouchTaken=row.SlideTaken=false;
+                row.Pouch.gameObject.SetActive(row.HasPouch);
+                row.Pouch.localPosition=new Vector3(RunRules.LaneX(row.Safe),1.1f,row.Z-index*TileLength);
+                row.Garden.gameObject.SetActive(RunRules.RestRow(rowNumber));
+                row.Garden.localPosition=new Vector3(0,0,row.Z-index*TileLength);
                 row.CamelCrossing = RunRules.HasCamel(rowNumber, seed);
                 row.DynamicKind = RunRules.DynamicKind(rowNumber); row.HazardLane = RunRules.HazardLane(rowNumber,seed);
                 row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship);
@@ -171,7 +181,7 @@ namespace IndianRunner
             }
         }
         // Relative-world movement avoids unbounded runner/world coordinates.
-        public void Position(float distance, int seed, float clock, bool reduced)
+        public void Position(float distance, int seed, float clock, bool reduced, bool magnet = false, float playerX = 0, float playerHeight = 0)
         {
             WarningMessage = ""; float nearestCamel = RunRules.CamelWarningDistance;
             SoundKind=0; SoundKey=-1; SoundAhead=100; SoundPan=0;
@@ -212,8 +222,19 @@ namespace IndianRunner
                 }
                 // Do not update coin transforms on segments outside the playable view.
                 if (tile.Root.localPosition.z < -52 || tile.Root.localPosition.z > 115) continue;
-                foreach (var row in tile.Rows) foreach (var coin in row.Coins)
-                    if (coin.gameObject.activeSelf) coin.localRotation = coinRotation;
+                foreach (var row in tile.Rows)
+                {
+                    if(row.HasPouch && !row.PouchTaken) row.Pouch.localRotation=Quaternion.Euler(0,reduced ? 0 : Mathf.Sin(clock*2)*15,0);
+                    for(int c=0;c<row.Coins.Length;c++)
+                    {
+                        var coin=row.Coins[c]; if(!coin.gameObject.activeSelf) continue;
+                        float z=row.Z-tile.Index*TileLength+(c-2)*2.2f;
+                        float ahead=row.Z+(c-2)*2.2f-distance;
+                        float pull=magnet && !reduced && ahead>=0 && ahead<6 && Mathf.Abs(RunRules.LaneX(row.Safe)-playerX)<3.2f ? 1-ahead/6 : 0;
+                        coin.localPosition=new Vector3(Mathf.Lerp(RunRules.LaneX(row.Safe),playerX,pull),Mathf.Lerp(1.1f,playerHeight+.9f,pull),z);
+                        coin.localRotation=coinRotation;
+                    }
+                }
             }
             Quaternion birdRotation = Quaternion.Euler(0, 0, reduced ? 0 : Mathf.Sin(clock * 4) * 12);
             foreach (var bird in birds)
@@ -231,9 +252,9 @@ namespace IndianRunner
             if(ahead < -10 || ahead > 52 || Mathf.Abs(ahead) >= Mathf.Abs(SoundAhead)) return;
             SoundKind=kind; SoundAhead=ahead; SoundPan=pan; SoundKey=key;
         }
-        public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit)
+        public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit, bool magnet = false)
         {
-            int collected = 0; hit = false; CamelContact = false; ContactMessage = "";
+            int collected = 0; PouchesCollected=SlidesCleared=0; hit = false; CamelContact = false; ContactMessage = "";
             foreach (var tile in tiles) foreach (var row in tile.Rows)
             {
                 if (row.Z < previousFoot.z - 6 || row.Z > foot.z + 7) continue;
@@ -283,12 +304,21 @@ namespace IndianRunner
                         hit |= HitBox(previousFoot, foot, playerHeight, x, row.Z, halfWidth*visualScale, halfDepth*visualScale, 0, top*visualScale);
                     }
                 }
+                if(!hit && playerHeight<1 && !row.SlideTaken && previousFoot.z<row.Z && foot.z>=row.Z)
+                {
+                    for(int lane=0;lane<3;lane++)
+                        if(row.Kind[lane]==RajasthanObstacles.Awning && Mathf.Abs(foot.x-RunRules.LaneX(lane))<.40f)
+                        { row.SlideTaken=true; SlidesCleared++; break; }
+                }
+                if(row.HasPouch && !row.PouchTaken && SegmentBox(previousFoot,foot,
+                    new Vector3(RunRules.LaneX(row.Safe)-.75f,-.4f,row.Z-.6f),new Vector3(RunRules.LaneX(row.Safe)+.75f,1.8f,row.Z+.6f)))
+                { row.PouchTaken=true; row.Pouch.gameObject.SetActive(false); PouchesCollected++; }
                 for (int c = 0; c < 5; c++)
                 {
                     if (row.Taken[c]) continue;
                     float z = row.Z + (c - 2) * 2.2f;
-                    var min = new Vector3(RunRules.LaneX(row.Safe) - .7f, -.5f, z - .5f);
-                    var max = new Vector3(RunRules.LaneX(row.Safe) + .7f, 1.6f, z + .5f);
+                    var min = new Vector3(RunRules.LaneX(row.Safe) - (magnet ? 3.2f : .7f), -.5f, z - .5f);
+                    var max = new Vector3(RunRules.LaneX(row.Safe) + (magnet ? 3.2f : .7f), magnet ? 3f : 1.6f, z + .5f);
                     if (!SegmentBox(previousFoot, foot, min, max)) continue;
                     row.Taken[c] = true; row.Coins[c].gameObject.SetActive(false); collected++;
                 }
