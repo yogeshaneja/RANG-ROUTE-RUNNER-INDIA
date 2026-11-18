@@ -181,6 +181,16 @@ namespace IndianRunner.Editor
             var loaded=new FestivalProgress(progress.Set,progress.Tokens,progress.Slides,progress.Distance,progress.Outfit);
             Require(loaded.Outfit==1 && loaded.Unlocked==2,"Outfit lost in progress snapshot");
             var invalid=new FestivalProgress(-8,-1,-1,-1,99); Require(invalid.Set==0 && invalid.Outfit==0 && invalid.Tokens==0,"Invalid snapshot not clamped");
+            var chatter=new RoadBanter(); chatter.Reset(7301);
+            Require(!chatter.Tick(1,RajasthanObstacles.Motorcycle,9,11),"Voice triggered outside passing range");
+            Require(chatter.Tick(1,RajasthanObstacles.Motorcycle,8,11),"Rider dialogue missing");
+            string firstCaption=chatter.Current.Caption;
+            Require(chatter.Visible(2) && !chatter.Tick(2,RajasthanObstacles.Motorcycle,7,11),"Repeated voice for same encounter");
+            Require(!chatter.Tick(3,RajasthanObstacles.Camel,6,22),"Voice cooldown ignored");
+            Require(chatter.Tick(10,RajasthanObstacles.Camel,7,33),"Animal dialogue missing after cooldown");
+            Require(!chatter.Visible(15),"Subtitle expiry ignored");
+            chatter.Reset(7301);
+            Require(!chatter.Visible(0) && chatter.Tick(1,RajasthanObstacles.Motorcycle,0,11) && chatter.Current.Caption==firstCaption,"Voice reset is not deterministic");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
         [MenuItem("Indian Runner/4 - Check live startup (Play Mode)")]

@@ -13,7 +13,7 @@ namespace IndianRunner
         private readonly AudioClip jump, stumble, engine, saucer, camel, elephant, celebration, rolling, procession, cloth, peacock, repairs;
         private bool paused, musicEnabled;
         private int pickupIndex, approachKind, lastAnimalKey = -1;
-        private float lastPickup = -1, duckUntil;
+        private float lastPickup = -1, duckUntil, speechDuckUntil;
 
         public RunnerAudio(GameObject owner)
         {
@@ -55,7 +55,7 @@ namespace IndianRunner
         public void ResetRun()
         {
             effects.Stop(); animals.Stop(); approach.Stop(); approach.volume=0;
-            approachKind=0; lastAnimalKey=-1; pickupIndex=0; lastPickup=-1; duckUntil=0;
+            approachKind=0; lastAnimalKey=-1; pickupIndex=0; lastPickup=-1; duckUntil=speechDuckUntil=0;
         }
         public void Coin()
         {
@@ -65,6 +65,8 @@ namespace IndianRunner
             effects.PlayOneShot(pickups[pickupIndex++%pickups.Length],.72f);
             lastPickup=now; duckUntil=now+.22f;
         }
+        public void DuckSpeech() { speechDuckUntil=Time.unscaledTime+4.5f; }
+        public void EndSpeechDuck() { speechDuckUntil=0; }
         public void Celebrate() { effects.PlayOneShot(celebration,.52f); }
         public void Jump() => effects.PlayOneShot(jump,.65f);
         public void Stumble() { approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.8f); }
@@ -72,7 +74,7 @@ namespace IndianRunner
         {
             if(paused) return;
             float smoothing=1-Mathf.Exp(-7*dt);
-            float musicTarget=musicEnabled ? (Time.unscaledTime<duckUntil ? .16f : scenic ? .25f : .23f) : 0;
+            float musicTarget=musicEnabled ? (Time.unscaledTime<speechDuckUntil ? .12f : Time.unscaledTime<duckUntil ? .16f : scenic ? .25f : .23f) : 0;
             music.pitch=Mathf.Lerp(music.pitch,scenic ? 1.04f : 1,smoothing);
             music.volume=Mathf.Lerp(music.volume,musicTarget,smoothing);
             if(!musicEnabled && music.volume<.001f) music.Stop();

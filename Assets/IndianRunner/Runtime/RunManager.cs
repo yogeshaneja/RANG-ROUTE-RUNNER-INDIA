@@ -10,12 +10,14 @@ namespace IndianRunner
         private RunnerModel runner;
         private WeatherController weather;
         private RunnerAudio audioPlayer;
+        private AndroidSpeech speech;
+        private readonly RoadBanter banter=new RoadBanter();
         private readonly RunnerInput input = new RunnerInput();
         private Camera gameCamera;
         private float distance, x, height, verticalSpeed, slideUntil, clock;
         private float laneStartX, laneTargetX, laneElapsed, laneDuration, cameraX;
         private int lane = 1, coins, best, seed = 7301;
-        private bool reduced, music, sound;
+        private bool reduced, music, sound, voices;
         private RunnerSkin skin;
         private RunFeedback feedback;
         private FestivalProgress progress;
@@ -41,6 +43,7 @@ namespace IndianRunner
             reduced = PlayerPrefs.GetInt("runner.reduced", 0) == 1;
             music = PlayerPrefs.GetInt("runner.music", 1) == 1;
             sound = PlayerPrefs.GetInt("runner.sound", 1) == 1;
+            voices = PlayerPrefs.GetInt("runner.voices",1)==1;
             var cameraObject = new GameObject("Runner Camera"); cameraObject.transform.SetParent(transform, false);
             gameCamera = cameraObject.AddComponent<Camera>(); gameCamera.clearFlags = CameraClearFlags.SolidColor;
             gameCamera.fieldOfView = 62; gameCamera.allowMSAA = true; gameCamera.nearClipPlane = .15f; gameCamera.farClipPlane = 210;
@@ -55,11 +58,12 @@ namespace IndianRunner
             runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
             weather = new WeatherController(transform, gameCamera, sunlight);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
+            speech=new AndroidSpeech(); speech.SetEnabled(voices && sound); banter.Reset(seed);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); RefreshHud();
         }
         public void ValidateStartup()
         {
-            if (progress == null || world == null || runner == null || weather == null || audioPlayer == null || feedback == null || gameCamera == null)
+            if (progress == null || world == null || runner == null || weather == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
             world.ValidatePool(); runner.ValidateRig();
         }
@@ -73,7 +77,7 @@ namespace IndianRunner
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
             runEndMessage = "Try the open lane for a safe route.";
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
-            world.Reset(seed); world.Position(0, seed, 0, reduced); audioPlayer.ResetRun(); state = State.Running;
+            world.Reset(seed); world.Position(0, seed, 0, reduced); audioPlayer.ResetRun(); banter.Reset(seed); speech.Stop(); state = State.Running;
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = fromMenu && !reduced ? Quaternion.Euler(0,180,0) : Quaternion.identity;
             runner.Animate(0, false, false, 0, reduced); PositionCamera();
             input.ResetGesture(); audioPlayer.Paused(false); RefreshHud();
@@ -81,7 +85,7 @@ namespace IndianRunner
         private void Update()
         {
             // Clamp large stalls so an OS hitch cannot skip a reaction window.
-            float dt = Mathf.Min(Time.deltaTime, .05f);
+            float dt = Mathf.Min(Time.deltaTime, .05f); speech.Tick();
             input.Read(Screen.safeArea.yMax - 100 * Screen.width / 480f);
             if (input.Pause && !showingGoals)
             {
@@ -142,7 +146,11 @@ namespace IndianRunner
             inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
-            if(!hit) audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
+            if(!hit)
+            {
+                audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
+                if(banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
+            }
             if (distance >= nextMilestone && clock >= milestoneUntil)
             {
                 milestoneText = nextMilestone + " m  -  GREAT RUN"; milestoneUntil = clock+1.5f; nextMilestone += 100;
@@ -190,18 +198,18 @@ namespace IndianRunner
         }
         private void ReturnToMenu()
         {
-            SaveBest(); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
+            SaveBest(); speech.Stop(); banter.Reset(seed); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
             runner.Animate(0,false,false,0,reduced); audioPlayer.ResetRun(); audioPlayer.Paused(false); PositionCamera(); RefreshHud();
             input.ResetGesture();
         }
-        private void Pause() { state = State.Paused; SaveBest(); RefreshHud(); input.ResetGesture(); audioPlayer.Paused(true); }
+        private void Pause() { state = State.Paused; SaveBest(); RefreshHud(); input.ResetGesture(); speech.Stop(); audioPlayer.EndSpeechDuck(); audioPlayer.Paused(true); }
         private void Resume() { state = State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
         private void EndRun(bool camelContact)
         {
-            state = State.GameOver;
+            state = State.GameOver; speech.Stop(); audioPlayer.EndSpeechDuck();
             runEndMessage = world.ContactMessage.Length > 0 ? world.ContactMessage : camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
             SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
@@ -220,23 +228,27 @@ namespace IndianRunner
         private void SaveSettings()
         {
             PlayerPrefs.SetInt("runner.reduced", reduced ? 1 : 0); PlayerPrefs.SetInt("runner.music", music ? 1 : 0);
-            PlayerPrefs.SetInt("runner.sound", sound ? 1 : 0); PlayerPrefs.Save(); audioPlayer.Settings(sound, music);
+            PlayerPrefs.SetInt("runner.sound", sound ? 1 : 0); PlayerPrefs.SetInt("runner.voices",voices ? 1:0); PlayerPrefs.Save(); audioPlayer.Settings(sound, music);
+            speech.SetEnabled(voices && sound); if(!voices || !sound) audioPlayer.EndSpeechDuck();
             if (state == State.Paused) audioPlayer.Paused(true);
         }
-        private void OnApplicationPause(bool paused) { if (paused && state == State.Running) Pause(); }
-        private void OnApplicationFocus(bool focus) { if (!focus && state == State.Running) Pause(); }
+        private void OnApplicationPause(bool paused) { if(paused) speech?.Stop(); if (paused && state == State.Running) Pause(); }
+        private void OnApplicationFocus(bool focus) { if(!focus) speech?.Stop(); if (!focus && state == State.Running) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void OnDestroy() { speech?.Dispose(); skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
         private void WeatherChoice()
         {
             weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);
             weather.Tick(state == State.Menu ? menuClock : clock,10,reduced); world.SetWeather(weather.Cloudiness); RefreshHud();
         }
+        private string VoiceLabel => !voices ? "VOICES OFF" : !sound ? "VOICES MUTED":"VOICES ON";
         private void DrawOptions(float xPos, float yPos, float width)
         {
             float half = (width-10)/2;
-            if (GUI.Button(new Rect(xPos,yPos,half,43),"Music  "+(music ? "ON" : "OFF"),skin.Toggle)) { music = !music; SaveSettings(); }
-            if (GUI.Button(new Rect(xPos+half+10,yPos,half,43),"Sound  "+(sound ? "ON" : "OFF"),skin.Toggle)) { sound = !sound; SaveSettings(); }
+            float third=(width-16)/3;
+            if (GUI.Button(new Rect(xPos,yPos,third,43),"Music "+(music ? "ON":"OFF"),skin.Toggle)) { music=!music; SaveSettings(); }
+            if (GUI.Button(new Rect(xPos+third+8,yPos,third,43),"Sound "+(sound ? "ON":"OFF"),skin.Toggle)) { sound=!sound; SaveSettings(); }
+            if (GUI.Button(new Rect(xPos+(third+8)*2,yPos,third,43),VoiceLabel,skin.Toggle)) { voices=!voices; SaveSettings(); }
             if (GUI.Button(new Rect(xPos,yPos+52,half,43),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
             if (GUI.Button(new Rect(xPos+half+10,yPos+52,half,43),"Sky  "+weather.Selection,skin.Toggle)) WeatherChoice();
         }
@@ -275,8 +287,8 @@ namespace IndianRunner
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
                 GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
-                float sheet = bottom-360;
-                GUI.Box(new Rect(left+12,sheet,width-24,360),GUIContent.none,skin.Card);
+                float sheet = bottom-400;
+                GUI.Box(new Rect(left+12,sheet,width-24,400),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
                 GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under low bars. Follow hazard warnings.",skin.Text);
@@ -284,7 +296,11 @@ namespace IndianRunner
                 if(GUI.Button(new Rect(xPos,sheet+252,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
                 if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+252,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))
                 { progress.NextOutfit(); runner.SetOutfit(progress.Outfit); SaveProgress(); }
-                GUI.Label(new Rect(xPos,sheet+306,w,40),"Keep looking for updates for new content.",skin.Caption);
+                bool allowPreview=GUI.enabled; GUI.enabled=allowPreview && voices && sound && speech.Ready;
+                if(GUI.Button(new Rect(xPos,sheet+306,w,34),"TEST HINDI VOICE",skin.Secondary))
+                    if(speech.Speak(RoadBanter.Preview)) audioPlayer.DuckSpeech();
+                GUI.enabled=allowPreview;
+                GUI.Label(new Rect(xPos,sheet+348,w,43),speech.Status+"\nKeep looking for updates for new content.",skin.Caption);
             }
             else
             {
@@ -305,6 +321,12 @@ namespace IndianRunner
                         GUI.Box(new Rect(center-160,top+82,320,42),GUIContent.none,skin.Card);
                         GUI.Label(new Rect(center-152,top+84,304,38),milestoneText,skin.Subtitle);
                     }
+                    if(banter.Visible(clock))
+                    {
+                        GUI.Box(new Rect(left+14,top+131,width-28,78),GUIContent.none,skin.Card);
+                        GUI.Label(new Rect(left+26,top+133,width-52,22),banter.Current.Speaker,skin.Subtitle);
+                        GUI.Label(new Rect(left+24,top+157,width-48,46),banter.Current.Caption,skin.Text);
+                    }
                     GUI.Box(new Rect(left+14,bottom-85,width-28,40),powerSummary,skin.Chip);
                     if (clock < 12) GUI.Label(new Rect(left+20,bottom-40,width-40,30),"SWIPE TO MOVE  |  UP TO JUMP  |  DOWN TO SLIDE",skin.Caption);
                 }
@@ -322,7 +344,9 @@ namespace IndianRunner
                     if (GUI.Button(new Rect(left+32,panel+286,width-64,46),"BACK TO START",skin.Secondary)) ReturnToMenu();
                     if (GUI.Button(new Rect(left+32,panel+350,(width-74)/2,45),"Music  "+(music ? "ON" : "OFF"),skin.Toggle)) { music = !music; SaveSettings(); }
                     if (GUI.Button(new Rect(center+5,panel+350,(width-74)/2,45),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
-                    if(GUI.Button(new Rect(left+32,panel+408,width-64,45),"VIEW FESTIVAL GOALS",skin.Secondary)) showingGoals=true;
+                    float actions=width-74;
+                    if(GUI.Button(new Rect(left+32,panel+408,actions*.63f,45),"FESTIVAL GOALS",skin.Secondary)) showingGoals=true;
+                    if(GUI.Button(new Rect(left+42+actions*.63f,panel+408,actions*.37f,45),VoiceLabel,skin.Toggle)) { voices=!voices; SaveSettings(); }
                 }
             }
             GUI.enabled=true;
