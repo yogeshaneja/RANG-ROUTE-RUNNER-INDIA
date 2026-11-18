@@ -287,8 +287,8 @@ namespace IndianRunner
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
                 GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
-                float sheet = bottom-400;
-                GUI.Box(new Rect(left+12,sheet,width-24,400),GUIContent.none,skin.Card);
+                float sheet = bottom-440;
+                GUI.Box(new Rect(left+12,sheet,width-24,440),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
                 GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under low bars. Follow hazard warnings.",skin.Text);
@@ -297,10 +297,18 @@ namespace IndianRunner
                 if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+252,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))
                 { progress.NextOutfit(); runner.SetOutfit(progress.Outfit); SaveProgress(); }
                 bool allowPreview=GUI.enabled; GUI.enabled=allowPreview && voices && sound && speech.Ready;
-                if(GUI.Button(new Rect(xPos,sheet+306,w,34),weather.RainIntensity>.12f ? "TEST RAIN VOICE":"TEST HINDI VOICE",skin.Secondary))
+                if(GUI.Button(new Rect(xPos,sheet+306,w*.67f-5,44),weather.RainIntensity>.12f ? "TEST RAIN VOICE":"TEST HINDI VOICE",skin.Secondary))
                     if(speech.Speak(weather.RainIntensity>.12f ? RoadBanter.RainPreview:RoadBanter.Preview)) audioPlayer.DuckSpeech();
+                GUI.enabled=allowPreview && speech.CanRetry;
+                if(GUI.Button(new Rect(xPos+w*.67f+5,sheet+306,w*.33f-5,44),"RETRY",skin.Secondary))
+                {
+                    speech.Dispose(); audioPlayer.EndSpeechDuck();
+                    speech=new AndroidSpeech(); speech.SetEnabled(voices && sound);
+                }
                 GUI.enabled=allowPreview;
-                GUI.Label(new Rect(xPos,sheet+348,w,43),speech.Status+"\nKeep looking for updates for new content.",skin.Caption);
+                string voiceStatus=!voices ? "Voices are OFF. Turn Voices ON to hear dialogue.":
+                    !sound ? "Sound is OFF. Turn Sound ON to hear dialogue.":speech.Status;
+                GUI.Label(new Rect(xPos,sheet+358,w,72),voiceStatus+"\nKeep looking for updates for new content.",skin.Caption);
             }
             else
             {

@@ -10,6 +10,17 @@ namespace IndianRunner
         private bool enabled=true;
         public bool Ready { get; private set; }
         public string Status { get; private set; }
+        public bool CanRetry
+        {
+            get
+            {
+#if UNITY_ANDROID && !UNITY_EDITOR
+                return configured && !disposed;
+#else
+                return false;
+#endif
+            }
+        }
 #if UNITY_ANDROID && !UNITY_EDITOR
         private readonly object gate=new object();
         private AndroidJavaObject engine,activity;
@@ -41,11 +52,11 @@ namespace IndianRunner
                     {
                         if(disposed) return;
                         try { engine=new AndroidJavaObject("android.speech.tts.TextToSpeech",activity,listener); }
-                        catch(Exception) { initResult=-1; }
+                        catch(Exception error) { Debug.LogWarning("Hindi voice initialization: "+error); initResult=-1; }
                     }
                 }));
             }
-            catch(Exception) { configured=true; Status="Hindi speech engine unavailable on this phone."; }
+            catch(Exception error) { configured=true; Status="No speech engine. Check phone text-to-speech settings."; Debug.LogWarning("Hindi voice activity: "+error); }
 #else
             Status="Voices play on Android; captions preview here.";
 #endif
@@ -79,13 +90,21 @@ namespace IndianRunner
                                 if(locale.Call<string>("getLanguage")!="hi" || voice.Call<bool>("isNetworkConnectionRequired")) continue;
                                 if(features!=null && features.Call<bool>("contains","notInstalled")) continue;
                                 if(engine.Call<int>("setVoice",voice)!=0) continue;
-                                Ready=true; Status="Offline Hindi voice ready."; break;
+                                // Match the game's media volume rather than relying on an engine's
+                                // default stream. Do not change the user's device volume.
+                                using(var builder=new AndroidJavaObject("android.media.AudioAttributes$Builder"))
+                                using(var usage=builder.Call<AndroidJavaObject>("setUsage",1)) // USAGE_MEDIA
+                                using(var content=builder.Call<AndroidJavaObject>("setContentType",1)) // CONTENT_TYPE_SPEECH
+                                using(var attributes=builder.Call<AndroidJavaObject>("build"))
+                                    if(engine.Call<int>("setAudioAttributes",attributes)!=0)
+                                        throw new InvalidOperationException("TextToSpeech rejected media audio attributes.");
+                                Ready=true; Status="Offline Hindi ready. Turn up MEDIA volume, then test."; break;
                             }
                         }
                     }
-                    if(!Ready) Status="Add an offline Hindi voice in phone speech settings.";
+                    if(!Ready) Status="Hindi voice missing. Add Hindi in phone text-to-speech settings, then RETRY.";
                 }
-                catch(Exception) { Ready=false; Status="Offline Hindi voice unavailable. Check phone speech settings."; }
+                catch(Exception error) { Ready=false; Status="Voice setup failed. See Unity/Android logs; tap RETRY."; Debug.LogWarning("Hindi voice configuration: "+error); }
             }
 #endif
         }
@@ -100,28 +119,52 @@ namespace IndianRunner
                 {
                     engine.Call<int>("setPitch",Mathf.Clamp(line.Pitch,.6f,1.3f));
                     engine.Call<int>("setSpeechRate",Mathf.Clamp(line.Rate,.8f,1.15f));
-                    // String/HashMap overload remains available on supported Android
-                    // versions and maps cleanly through Unity's JNI bridge.
-                    using(var parameters=new AndroidJavaObject("java.util.HashMap"))
+                    using(var audio=activity.Call<AndroidJavaObject>("getSystemService","audio"))
                     {
-                        enginePut(parameters,"volume","0.65");
-                        enginePut(parameters,"utteranceId","rang-route-banter");
-                        int result=engine.Call<int>("speak",line.Hindi,0,parameters); // QUEUE_FLUSH
-                        if(result==0) return true;
-                        Ready=false; Status="Offline Hindi voice needs speech data.";
+                        if(audio!=null && audio.Call<int>("getStreamVolume",3)==0) // STREAM_MUSIC
+                        { Status="Phone MEDIA volume is zero. Turn it up, then test again."; return false; }
+                    }
+                    using(var parameters=new AndroidJavaObject("android.os.Bundle"))
+                    {
+                        parameters.Call("putFloat","volume",.9f);
+                        // Use the API 21+ signature explicitly: CharSequence is an
+                        // interface, so do not infer a String/HashMap overload.
+                        var method=AndroidJNIHelper.GetMethodID(engine.GetRawClass(),"speak",
+                            "(Ljava/lang/CharSequence;ILandroid/os/Bundle;Ljava/lang/String;)I");
+                        object[] arguments={line.Hindi,0,parameters,"rang-route-banter"}; // QUEUE_FLUSH
+                        var nativeArguments=AndroidJNIHelper.CreateJNIArgArray(arguments);
+                        int result;
+                        try
+                        {
+                            result=AndroidJNI.CallIntMethod(engine.GetRawObject(),method,nativeArguments);
+                            var exception=AndroidJNI.ExceptionOccurred();
+                            if(exception!=IntPtr.Zero)
+                            {
+                                AndroidJNI.ExceptionClear(); AndroidJNI.DeleteLocalRef(exception);
+                                throw new InvalidOperationException("Android TextToSpeech.speak raised a Java exception.");
+                            }
+                        }
+                        finally { AndroidJNIHelper.DeleteJNIArgArray(arguments,nativeArguments); }
+                        if(result==0)
+                        {
+                            // Queued is not a playback/completion callback. Never
+                            // report that the user has actually heard the sentence.
+                            Status="Voice requested. Silent? Check MEDIA volume / Hindi speech data.";
+                            return true;
+                        }
+                        Ready=false; Status="Voice request rejected ("+result+"). Check Hindi data; tap RETRY.";
+                        Debug.LogWarning("Hindi voice speak returned "+result);
                     }
                 }
-                catch(Exception) { Ready=false; Status="Voice playback failed. Check phone speech settings."; }
+                catch(Exception error)
+                {
+                    Ready=false; Status="Voice playback failed. See Unity/Android logs; tap RETRY.";
+                    Debug.LogWarning("Hindi voice playback: "+error);
+                }
             }
 #endif
             return false;
         }
-#if UNITY_ANDROID && !UNITY_EDITOR
-        private static void enginePut(AndroidJavaObject map,string key,string value)
-        {
-            using(var previous=map.Call<AndroidJavaObject>("put",key,value)) { }
-        }
-#endif
         public void Stop()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
