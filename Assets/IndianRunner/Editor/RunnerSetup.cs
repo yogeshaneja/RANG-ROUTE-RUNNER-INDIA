@@ -103,9 +103,9 @@ namespace IndianRunner.Editor
             float lastProgress = 0;
             for (int step = 1; step <= 600; step++)
             {
-                float progress = RunRules.LaneProgress(step / 600f);
-                Require(progress >= lastProgress && progress <= 1, "Lane easing overshoot");
-                lastProgress = progress;
+                float laneProgress = RunRules.LaneProgress(step / 600f);
+                Require(laneProgress >= lastProgress && laneProgress <= 1, "Lane easing overshoot");
+                lastProgress = laneProgress;
             }
             int checkedRows = 0;
             float maxLaneTravel = RunRules.LaneTravelTime(RunRules.LaneWidth * 2);
