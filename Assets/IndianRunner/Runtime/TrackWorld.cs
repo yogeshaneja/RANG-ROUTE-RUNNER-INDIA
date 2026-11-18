@@ -12,7 +12,7 @@ namespace IndianRunner
             public float Z;
             public readonly int[] Kind = new int[3];
             public readonly RajasthanObstacles.Instance[] Obstacles = new RajasthanObstacles.Instance[3];
-            public bool CamelCrossing;
+            public bool CamelCrossing, Roadworks;
             public int DynamicKind, HazardLane;
             public Transform LandingMarker, Pouch, Garden;
             public bool HasPouch, PouchTaken, SlideTaken;
@@ -160,8 +160,9 @@ namespace IndianRunner
                 row.Garden.gameObject.SetActive(RunRules.RestRow(rowNumber));
                 row.Garden.localPosition=new Vector3(0,0,row.Z-index*TileLength);
                 row.CamelCrossing = RunRules.HasCamel(rowNumber, seed);
+                row.Roadworks=RunRules.RoadworksRow(rowNumber) && !RunRules.NearDynamic(rowNumber);
                 row.DynamicKind = RunRules.DynamicKind(rowNumber); row.HazardLane = RunRules.HazardLane(rowNumber,seed);
-                row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship);
+                row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship || row.DynamicKind == RajasthanObstacles.FallingCloth || row.DynamicKind == RajasthanObstacles.Peacock);
                 row.LandingMarker.localPosition = new Vector3(RunRules.LaneX(row.HazardLane),0,row.Z-index*TileLength);
                 for (int lane = 0; lane < 3; lane++)
                 {
@@ -190,23 +191,37 @@ namespace IndianRunner
             {
                 if ((tile.Index + 1) * TileLength - distance < -18) Configure(tile, nextIndex++, seed);
                 tile.Root.localPosition = new Vector3(0, 0, tile.Index * TileLength - distance);
-                if(tile.HasElephant) ConsiderSound(8,tile.Index*TileLength+31-distance,.65f,tile.Index*2+1);
+                if(tile.HasElephant) ConsiderSound(RajasthanObstacles.ElephantSound,tile.Index*TileLength+31-distance,.65f,tile.Index*2+1);
                 foreach (var row in tile.Rows)
                 {
                     float ahead = row.Z-distance;
                     if(row.CamelCrossing) ConsiderSound(RajasthanObstacles.Camel,ahead,RunRules.CamelX(row.Safe,ahead)/8,row.Z.GetHashCode());
-                    if(row.DynamicKind != 0)
+                    if(row.Roadworks)
                     {
-                        ConsiderSound(row.DynamicKind,row.DynamicKind == RajasthanObstacles.Motorcycle ? ahead*1.65f : ahead,RunRules.LaneX(row.HazardLane)/5,row.Z.GetHashCode());
-                        var hazard = row.Obstacles[row.HazardLane].Root;
-                        hazard.localPosition = new Vector3(RunRules.LaneX(row.HazardLane),RunRules.HazardY(row.DynamicKind,ahead),RunRules.HazardZ(row.DynamicKind,row.Z,distance)-tile.Index*TileLength);
-                        if(row.DynamicKind == RajasthanObstacles.Spaceship) hazard.localRotation=Quaternion.Euler(0,reduced ? 0 : clock*24,0);
-                        row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship && ahead < 48 && ahead > -5);
-                        if(ahead > 0 && ahead <= nearestCamel)
+                        ConsiderSound(RajasthanObstacles.Roadworks,ahead,0,row.Z.GetHashCode());
+                        if(ahead>0 && ahead<=nearestCamel)
                         {
                             nearestCamel=ahead;
-                            string laneName=row.Safe == 0 ? "LEFT" : row.Safe == 1 ? "MIDDLE" : "RIGHT";
-                            WarningMessage=(row.DynamicKind == RajasthanObstacles.Motorcycle ? "MOTORCYCLE AHEAD" : "SPACESHIP DESCENDING")+" - take "+laneName+" lane";
+                            WarningMessage=FestivalObstacles.Warning(RajasthanObstacles.Roadworks)+" - "+LaneName(row.Safe)+" lane clear";
+                        }
+                    }
+                    if(row.DynamicKind != 0)
+                    {
+                        ConsiderSound(row.DynamicKind,RunRules.HazardZ(row.DynamicKind,row.Z,distance)-distance,RunRules.LaneX(row.HazardLane)/5,row.Z.GetHashCode());
+                        for(int lane=0;lane<3;lane++)
+                        {
+                            if(row.Kind[lane]!=row.DynamicKind) continue;
+                            var hazard=row.Obstacles[lane].Root;
+                            hazard.localPosition=new Vector3(RunRules.HazardX(row.DynamicKind,lane,ahead),RunRules.HazardY(row.DynamicKind,ahead),RunRules.HazardZ(row.DynamicKind,row.Z,distance)-tile.Index*TileLength);
+                            if(row.DynamicKind==RajasthanObstacles.Spaceship) hazard.localRotation=Quaternion.Euler(0,reduced ? 0:clock*24,0);
+                            // Rolling is gameplay motion: reduced effects preserves it.
+                            if(row.DynamicKind==RajasthanObstacles.Wheel) hazard.localRotation=Quaternion.Euler(-distance*1.45f/.62f*Mathf.Rad2Deg,0,0);
+                        }
+                        row.LandingMarker.gameObject.SetActive((row.DynamicKind==RajasthanObstacles.Spaceship || row.DynamicKind==RajasthanObstacles.FallingCloth || row.DynamicKind==RajasthanObstacles.Peacock) && ahead<48 && ahead>-5);
+                        if(ahead>0 && ahead<=nearestCamel)
+                        {
+                            nearestCamel=ahead;
+                            WarningMessage=FestivalObstacles.Warning(row.DynamicKind)+" - take "+LaneName(row.Safe)+" lane";
                         }
                     }
                     if (!row.CamelCrossing) continue;
@@ -247,6 +262,7 @@ namespace IndianRunner
                 kite.Root.localRotation = Quaternion.Euler(0, 0, wind * 9);
             }
         }
+        private static string LaneName(int lane) => lane==0 ? "LEFT" : lane==1 ? "MIDDLE":"RIGHT";
         private void ConsiderSound(int kind,float ahead,float pan,int key)
         {
             if(ahead < -10 || ahead > 52 || Mathf.Abs(ahead) >= Mathf.Abs(SoundAhead)) return;
@@ -261,19 +277,14 @@ namespace IndianRunner
                 for (int lane = 0; lane < 3; lane++)
                 {
                     int kind = row.Kind[lane]; if (kind == 0) continue;
-                    if (kind == RajasthanObstacles.Motorcycle || kind == RajasthanObstacles.Spaceship)
+                    if (row.DynamicKind!=0 && kind==row.DynamicKind)
                     {
-                        float hazardX=RunRules.LaneX(lane);
-                        var a=previousFoot-new Vector3(hazardX,RunRules.HazardY(kind,row.Z-previousFoot.z),RunRules.HazardZ(kind,row.Z,previousFoot.z));
-                        var b=foot-new Vector3(hazardX,RunRules.HazardY(kind,row.Z-foot.z),RunRules.HazardZ(kind,row.Z,foot.z));
-                        float scale=RajasthanObstacles.VisualScale(kind);
-                        float width=(kind == RajasthanObstacles.Motorcycle ? .50f : .92f)*scale;
-                        float depth=(kind == RajasthanObstacles.Motorcycle ? 1.06f : .92f)*scale;
-                        float top=(kind == RajasthanObstacles.Motorcycle ? 1.97f : .74f)*scale;
-                        if(SegmentBox(a,b,new Vector3(-width-RunRules.PlayerHalfWidth,-playerHeight+.02f,-depth-RunRules.PlayerHalfWidth),new Vector3(width+RunRules.PlayerHalfWidth,top,depth+RunRules.PlayerHalfWidth)))
-                        {
-                            hit=true; ContactMessage=kind == RajasthanObstacles.Motorcycle ? "Motorcycle contact. Follow the warning and change lane." : "Spaceship contact. Avoid its marked landing lane.";
-                        }
+                        float before=row.Z-previousFoot.z, after=row.Z-foot.z;
+                        var a=previousFoot-new Vector3(RunRules.HazardX(kind,lane,before),RunRules.HazardBaseY(kind,before),RunRules.HazardZ(kind,row.Z,previousFoot.z));
+                        var b=foot-new Vector3(RunRules.HazardX(kind,lane,after),RunRules.HazardBaseY(kind,after),RunRules.HazardZ(kind,row.Z,foot.z));
+                        var shape=FestivalObstacles.Shape(kind)*RajasthanObstacles.VisualScale(kind);
+                        if(SegmentBox(a,b,new Vector3(-shape.x-RunRules.PlayerHalfWidth,-playerHeight+.02f,-shape.z-RunRules.PlayerHalfWidth),new Vector3(shape.x+RunRules.PlayerHalfWidth,shape.y,shape.z+RunRules.PlayerHalfWidth)))
+                        { hit=true; ContactMessage=FestivalObstacles.Contact(kind); }
                         continue;
                     }
                     if (kind == RajasthanObstacles.Camel)
@@ -288,13 +299,23 @@ namespace IndianRunner
                         continue;
                     }
                     float x = RunRules.LaneX(lane), visualScale=RajasthanObstacles.VisualScale(kind);
-                    if (kind == RajasthanObstacles.Awning)
+                    if (kind == RajasthanObstacles.Awning || kind == RajasthanObstacles.Scaffold)
                     {
                         hit |= HitBox(previousFoot, foot, playerHeight, x, row.Z, .9f*visualScale, .75f*visualScale, 1.25f*visualScale, 2.32f*visualScale);
                         // The two visible posts are solid even during a slide; the centre
                         // opening stays clear. This avoids invisible/ghost support legs.
                         hit |= HitBox(previousFoot, foot, playerHeight, x - .82f*visualScale, row.Z, .06f*visualScale, .06f*visualScale, 0, 2.5f*visualScale);
                         hit |= HitBox(previousFoot, foot, playerHeight, x + .82f*visualScale, row.Z, .06f*visualScale, .06f*visualScale, 0, 2.5f*visualScale);
+                        if(kind==RajasthanObstacles.Scaffold)
+                        {
+                            hit |= HitBox(previousFoot,foot,playerHeight,x-.82f,row.Z,.095f,.095f,2.475f,2.625f);
+                            hit |= HitBox(previousFoot,foot,playerHeight,x+.82f,row.Z,.095f,.095f,2.475f,2.625f);
+                        }
+                    }
+                    else if(kind==RajasthanObstacles.Roadworks)
+                    {
+                        var shape=FestivalObstacles.Shape(kind);
+                        hit |= HitBox(previousFoot,foot,playerHeight,x,row.Z,shape.x,shape.z,0,shape.y);
                     }
                     else
                     {
@@ -307,7 +328,7 @@ namespace IndianRunner
                 if(!hit && playerHeight<1 && !row.SlideTaken && previousFoot.z<row.Z && foot.z>=row.Z)
                 {
                     for(int lane=0;lane<3;lane++)
-                        if(row.Kind[lane]==RajasthanObstacles.Awning && Mathf.Abs(foot.x-RunRules.LaneX(lane))<.40f)
+                        if((row.Kind[lane]==RajasthanObstacles.Awning || row.Kind[lane]==RajasthanObstacles.Scaffold) && Mathf.Abs(foot.x-RunRules.LaneX(lane))<.40f)
                         { row.SlideTaken=true; SlidesCleared++; break; }
                 }
                 if(row.HasPouch && !row.PouchTaken && SegmentBox(previousFoot,foot,

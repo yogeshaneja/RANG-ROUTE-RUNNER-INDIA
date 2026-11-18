@@ -246,7 +246,7 @@ namespace IndianRunner
             GUI.Box(new Rect(left+16,y,width-32,390),GUIContent.none,skin.Card);
             GUI.Label(new Rect(left+28,y+12,width-56,38),"FESTIVAL GOALS  "+(progress.Set+1),skin.Subtitle);
             GUI.Label(new Rect(left+34,y+61,width-68,30),$"MIRROR TOKENS   {progress.Tokens} / {progress.TokenGoal}",skin.Text);
-            GUI.Label(new Rect(left+34,y+99,width-68,30),$"SLIDE UNDER AWNINGS   {progress.Slides} / {progress.SlideGoal}",skin.Text);
+            GUI.Label(new Rect(left+34,y+99,width-68,30),$"SLIDE UNDER LOW BARRIERS   {progress.Slides} / {progress.SlideGoal}",skin.Text);
             GUI.Label(new Rect(left+34,y+137,width-68,30),$"DISTANCE IN ONE RUN   {progress.Distance} / {progress.DistanceGoal} m",skin.Text);
             string reward=progress.Set<3 ? "Reward: "+FestivalProgress.OutfitName(progress.Set+1)+" kurta" : "Reward: another festival badge";
             GUI.Label(new Rect(left+34,y+184,width-68,42),reward+"\nProgress saves across runs, fully offline.",skin.Caption);
@@ -279,7 +279,7 @@ namespace IndianRunner
                 GUI.Box(new Rect(left+12,sheet,width-24,360),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
-                GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under awnings. Follow hazard warnings.",skin.Text);
+                GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under low bars. Follow hazard warnings.",skin.Text);
                 DrawOptions(xPos,sheet+146,w);
                 if(GUI.Button(new Rect(xPos,sheet+252,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
                 if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+252,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))

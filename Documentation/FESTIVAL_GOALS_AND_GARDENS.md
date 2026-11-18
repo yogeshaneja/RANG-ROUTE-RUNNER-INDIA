@@ -2,11 +2,11 @@
 
 ## Three goals and local rewards
 
-The first set asks for 30 mirror-work tokens, five successful slides underneath awnings, and 500 metres in one run. Tokens and valid awning passes accumulate across runs; the distance counter retains the longest run in the current set rather than adding separate runs together. Progress saves locally on goal completion, pause/background, game over, return to start and application quit. Current best-score and audio settings remain compatible.
+The first set asks for 30 mirror-work tokens, five successful slides underneath awnings or repair scaffolds, and 500 metres in one run. Tokens and valid awning passes accumulate across runs; the distance counter retains the longest run in the current set rather than adding separate runs together. Progress saves locally on goal completion, pause/background, game over, return to start and application quit. Current best-score and audio settings remain compatible.
 
 Open GOALS from Start, pause or results. Once all three are complete, claim from Start. Claiming is unavailable during an active/paused/finished run, prevents double claims, resets the goal counters for the next set and equips the new colour. Complete successive sets to unlock marigold, festival pink and royal blue, alongside the original turquoise. Tap the outfit-name button at Start to cycle unlocked colours. Body/sleeves use one owned material, so changing the boy's outfit does not recolour scenery. Subsequent sets award locally counted festival badges; goal difficulty rises to bounded caps.
 
-Only crossing an awning's centre while sliding and avoiding contact counts toward the slide goal. Repeated down swipes on empty road do not count. Distance progress is bounded and saved snapshots clamp invalid counters/outfit selections.
+Only crossing an awning or repair scaffold's centre while sliding and avoiding contact counts toward the low-barrier goal. Repeated down swipes on empty road do not count. Distance progress is bounded and saved snapshots clamp invalid counters/outfit selections.
 
 ## Gardens and the festival pouch
 
@@ -29,3 +29,5 @@ The spaceship first appears at 910 metres and repeats every 2,016 metres, with i
 - At 910 m test spaceship contact versus the marked escape lane. Profile sustained frame time/memory on the actual Android device; inspect material/mesh rendering, bright colours, UI text and sound through both speaker/headphones. Rebuild with Build and Run to update the phone APK.
 
 Implementation validation here is source parsing and independent numerical/state simulation. Unity compilation, Editor play, actual audio audition, Android rendering and performance remain unverified in this workspace.
+
+The subsequent five-encounter pass adds rolling wheels, falling textiles, peacock displays, road repairs and procession carts. Garden/transition buffers remain clear. See FIVE_THEMED_ENCOUNTERS.md for current encounter timing, sounds, collision rules and local playtests.

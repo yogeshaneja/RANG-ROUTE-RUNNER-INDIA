@@ -6,14 +6,15 @@ namespace IndianRunner
     // Shared geometry is built once. Every pooled slot reuses these meshes/materials.
     public sealed class RajasthanObstacles
     {
-        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7;
-        public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 ? 1 : 1.12f;
+        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13;
+        public const int MaxKind=13, ElephantSound=100;
+        public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {
             public Mesh Mesh;
             public Material Material;
         }
-        private readonly Part[][] models = new Part[8][];
+        private readonly Part[][] models = new Part[MaxKind+1][];
         private Part[] camelLeg;
         public int MaxParts { get; private set; }
 
@@ -28,7 +29,7 @@ namespace IndianRunner
             foreach(var r in legRoot.GetComponentsInChildren<MeshRenderer>()) if(r.enabled)
                 legParts.Add(new Part {Mesh=r.GetComponent<MeshFilter>().sharedMesh,Material=r.sharedMaterial});
             camelLeg = legParts.ToArray(); Object.Destroy(legRoot.gameObject);
-            for (int kind = 1; kind <= 7; kind++)
+            for (int kind = 1; kind <= MaxKind; kind++)
             {
                 var root = new GameObject("Shared Rajasthan obstacle " + kind).transform;
                 Build(root, kind);
@@ -92,8 +93,9 @@ namespace IndianRunner
                     bool active = i < parts.Length; renderers[i].enabled = active;
                     if (!active) continue;
                     filters[i].sharedMesh = parts[i].Mesh; renderers[i].sharedMaterial = parts[i].Material;
+                    filters[i].transform.localPosition = kind==Wheel ? new Vector3(0,-.62f,0) : Vector3.zero;
                 }
-                Root.name = kind == Matkas ? "Matka pottery stack - jump" : kind == Fabric ? "Fabric bundles - jump" : kind == Cart ? "Wooden bazaar cart - dodge" : kind == Awning ? "Market awning - slide" : kind == Camel ? "Decorated camel crossing - dodge" : kind == Motorcycle ? "Oncoming motorcycle - dodge" : "Descending spaceship - dodge";
+                Root.name = kind == Matkas ? "Matka pottery stack - jump" : kind == Fabric ? "Fabric bundles - jump" : kind == Cart ? "Wooden bazaar cart - dodge" : kind == Awning ? "Market awning - slide" : kind == Camel ? "Decorated camel crossing - dodge" : kind == Motorcycle ? "Oncoming motorcycle - dodge" : kind==Spaceship ? "Descending spaceship - dodge" : FestivalObstacles.Warning(kind);
             }
             public void Walk(float distance)
             {
@@ -107,6 +109,7 @@ namespace IndianRunner
         }
         private static void Build(Transform root, int kind)
         {
+            if(kind>=Wheel) { FestivalObstacles.Build(root,kind); return; }
             var clay = PrimitiveArt.Mat(new Color(.73f, .26f, .12f));
             var gold = PrimitiveArt.Mat(new Color(1, .71f, .13f));
             var teal = PrimitiveArt.Mat(new Color(.02f, .60f, .61f));

@@ -120,7 +120,7 @@ namespace IndianRunner.Editor
                 {
                     if (!RunRules.IsBlocked(row, lane, seed)) clear++;
                     int kind = RunRules.ObstacleFor(row, lane, seed);
-                    Require(kind >= 0 && kind <= RajasthanObstacles.Spaceship, "Unknown obstacle kind");
+                    Require(kind >= 0 && kind <= RajasthanObstacles.MaxKind, "Unknown obstacle kind");
                 }
                 Require(clear >= 1 && !RunRules.IsBlocked(row, safe, seed), "Every generated obstacle row needs a reserved safe lane");
                 if (RunRules.HasCamel(row, seed))
@@ -137,7 +137,11 @@ namespace IndianRunner.Editor
                 {
                     int target=RunRules.HazardLane(row,seed);
                     Require(target != safe,"Dynamic hazard blocks coin lane");
-                    Require(Mathf.Abs(RunRules.LaneX(target)-RunRules.LaneX(safe)) > .92f*RajasthanObstacles.VisualScale(RajasthanObstacles.Spaceship)+RunRules.PlayerHalfWidth,"Dynamic swept width blocks escape lane");
+                    int moving=RunRules.DynamicKind(row);
+                    var bounds=FestivalObstacles.Shape(moving)*RajasthanObstacles.VisualScale(moving);
+                    for(int lane=0;lane<3;lane++) if(RunRules.ObstacleFor(row,lane,seed)==moving)
+                        for(int sample=0;sample<=10;sample++)
+                            Require(Mathf.Abs(RunRules.HazardX(moving,lane,45-sample*5)-RunRules.LaneX(safe))>bounds.x+RunRules.PlayerHalfWidth,"Dynamic sweep blocks escape lane");
                     foreach(int neighbour in new[]{row-1,row+1}) for(int lane=0;lane<3;lane++)
                         Require(RunRules.ObstacleFor(neighbour,lane,seed) == 0,"Moving hazard needs empty recovery rows");
                 }
@@ -161,8 +165,13 @@ namespace IndianRunner.Editor
             // Relative sweeps include both player movement and obstacle motion.
             Require(TrackWorld.SegmentBox(new Vector3(0,0,3),new Vector3(0,0,-3),new Vector3(-.84f,-2.03f,-1.4f),new Vector3(.84f,1.97f,1.4f)),"Motorcycle sweep missed");
             Require(TrackWorld.SegmentBox(new Vector3(0,-4,0),new Vector3(0,-.8f,0),new Vector3(-1.26f,-2.03f,-1.26f),new Vector3(1.26f,.74f,1.26f)),"Descending ship sweep missed");
-            Require(RunRules.DynamicKind(8)==0 && RunRules.DynamicKind(32)==RajasthanObstacles.Spaceship,"Spaceship rarity schedule");
+            Require(RunRules.DynamicKind(32)==RajasthanObstacles.Spaceship,"Spaceship rarity schedule");
             Require(RunRules.RestDistance(280) && !RunRules.RestDistance(364),"Rest garden boundaries");
+            Require(RunRules.DynamicKind(2)==RajasthanObstacles.Wheel && RunRules.DynamicKind(8)==RajasthanObstacles.FallingCloth,"Intro encounter schedule");
+            Require(RunRules.DynamicKind(14)==RajasthanObstacles.Peacock && RunRules.DynamicKind(20)==RajasthanObstacles.Procession,"Peacock/procession schedule");
+            Require(RunRules.RoadworksRow(18),"Roadwork schedule");
+            Require(RunRules.HazardBaseY(RajasthanObstacles.Wheel,20)==0,"Wheel collision base must stay on road while mesh rotates about axle");
+            Require(RunRules.HazardY(RajasthanObstacles.FallingCloth,40)>6 && RunRules.HazardY(RajasthanObstacles.FallingCloth,10)==0,"Fabric drop endpoints");
             var progress=new FestivalProgress();
             Require(!progress.Claim(),"Incomplete goals granted a reward");
             progress.Add(30,5,499); Require(progress.Completed==2 && !progress.Ready,"Distance goal completed early");
