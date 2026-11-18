@@ -6,15 +6,18 @@ namespace IndianRunner
 {
     public enum DialogueLanguage { Auto, English, Hindi }
 
-    // Uses only installed embedded Hindi/English voices. Never opens a store/download,
-    // never selects a network voice, and needs no account or bundled recordings.
+    // Play bundled dialogue recordings first. Optional installed offline speech
+    // fills missing clips; never downloads voices or selects a network voice.
     public sealed class AndroidSpeech : IDisposable
     {
         private bool enabled=true;
         private readonly DialogueLanguage preference;
         public bool UsesEnglish { get; private set; }
         public string LanguageName => UsesEnglish ? "English" : "Hindi";
-        public bool Ready { get; private set; }
+        private bool nativeReady;
+        private readonly Dictionary<string,AudioClip> clips=new Dictionary<string,AudioClip>();
+        private readonly AudioSource recordedSource;
+        public bool Ready => clips.Count>0 || nativeReady;
         public string Status { get; private set; }
         public bool CanRetry
         {
@@ -54,10 +57,23 @@ namespace IndianRunner
             public void onInit(int status) { owner.initResult=status; }
         }
 #endif
-        public AndroidSpeech(DialogueLanguage language=DialogueLanguage.Auto)
+        public AndroidSpeech(DialogueLanguage language=DialogueLanguage.Hindi,GameObject audioHost=null)
         {
-            preference=language;
-            UsesEnglish=language!=DialogueLanguage.Hindi;
+            // Legacy Auto preferences now mean Hindi. Public UI has two choices.
+            preference=language==DialogueLanguage.English ? DialogueLanguage.English:DialogueLanguage.Hindi;
+            UsesEnglish=preference==DialogueLanguage.English;
+            if(audioHost!=null)
+            {
+                recordedSource=audioHost.AddComponent<AudioSource>();
+                recordedSource.playOnAwake=false; recordedSource.loop=false;
+                recordedSource.spatialBlend=0; recordedSource.volume=.9f; recordedSource.priority=32;
+                foreach(var line in RoadBanter.AllLines)
+                {
+                    var clip=Resources.Load<AudioClip>("Dialogue/"+(UsesEnglish ? "en/":"hi/")+line.AudioKey);
+                    if(clip!=null) clips[line.AudioKey]=clip;
+                }
+                if(clips.Count==16) { Status=LanguageName+" recordings ready."; return; }
+            }
 #if UNITY_ANDROID && !UNITY_EDITOR
             Status="Preparing offline dialogue voice..."; startedAt=Time.realtimeSinceStartup;
             try
@@ -76,14 +92,14 @@ namespace IndianRunner
             }
             catch(Exception error) { configured=true; Status="No speech engine. Check phone text-to-speech settings."; Debug.LogWarning("Dialogue voice activity: "+error); }
 #else
-            Status="Voices play on Android; captions preview here.";
+            Status=clips.Count>0 ? LanguageName+" recordings loaded ("+clips.Count+"/16).":"Recordings not supplied. Phone-generated voices play on Android.";
 #endif
         }
         public void SetEnabled(bool value) { enabled=value; if(!value) Stop(); }
         public void Tick()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            if(disposed || configured) return;
+            if(clips.Count==16 || disposed || configured) return;
             if(initResult==int.MinValue)
             {
                 if(Time.realtimeSinceStartup-startedAt>15) { configured=true; Status="Voice setup timed out. Check phone speech settings."; }
@@ -97,13 +113,13 @@ namespace IndianRunner
                 configured=true;
                 try
                 {
-                    // Auto keeps the regional Hindi banter when available, but
-                    // immediately falls back to installed English without downloads.
+                    // Keep the selected language; do not silently replace Hindi dialogue
+                    // with English while recordings are being added.
                     bool hindi=preference!=DialogueLanguage.English && TrySelectVoice("hi");
-                    bool english=!hindi && TrySelectVoice("en");
+                    bool english=preference==DialogueLanguage.English && TrySelectVoice("en");
                     if(!hindi && !english)
                     {
-                        Status="No offline English voice. Check phone text-to-speech settings; tap RETRY.";
+                        Status=LanguageName+" recordings not supplied; phone voice unavailable. Try "+(UsesEnglish ? "Hindi":"English")+".";
                         return;
                     }
                     UsesEnglish=english;
@@ -113,16 +129,25 @@ namespace IndianRunner
                     using(var attributes=builder.Call<AndroidJavaObject>("build"))
                         if(engine.Call<int>("setAudioAttributes",attributes)!=0)
                             throw new InvalidOperationException("TextToSpeech rejected media audio attributes.");
-                    Ready=true;
-                    Status=(english && preference!=DialogueLanguage.English ? "Hindi unavailable; using offline English." : "Offline "+LanguageName+" ready.")+" Turn up MEDIA volume, then test.";
+                    nativeReady=true;
+                    Status="Phone-generated "+LanguageName+" ready. Dialogue recordings are not complete yet.";
                 }
-                catch(Exception error) { Ready=false; Status="Voice setup failed. See Unity/Android logs; tap RETRY."; Debug.LogWarning("Dialogue voice configuration: "+error); }
+                catch(Exception error) { nativeReady=false; Status="Voice setup failed. See Unity/Android logs; tap PLAY VOICE."; Debug.LogWarning("Dialogue voice configuration: "+error); }
             }
 #endif
         }
         public bool Speak(RoadBanter.Line line)
         {
-            if(!enabled || !Ready) return false;
+            if(!enabled) return false;
+            if(recordedSource!=null && clips.TryGetValue(line.AudioKey,out var recording))
+            {
+                Stop(); recordedSource.clip=recording; recordedSource.pitch=1;
+                recordedSource.Play(); Status="Playing "+LanguageName+" recording.";
+                return true;
+            }
+            if(recordedSource!=null) recordedSource.Stop();
+            if(!nativeReady)
+            { Status="This "+LanguageName+" recording is not supplied; no phone voice is ready."; return false; }
 #if UNITY_ANDROID && !UNITY_EDITOR
             lock(gate)
             {
@@ -170,45 +195,21 @@ namespace IndianRunner
                         {
                             // Queued is not a playback/completion callback. Never
                             // report that the user has actually heard the sentence.
-                            Status="Voice requested. Silent? Check MEDIA volume / speech data.";
+                            Status="Phone-generated "+LanguageName+" voice requested. Check MEDIA volume if silent.";
                             return true;
                         }
-                        Ready=false; Status="Voice request rejected ("+result+"). Check speech data; tap RETRY.";
+                        nativeReady=false; Status="Voice request rejected ("+result+"). Check speech data; tap PLAY VOICE.";
                         Debug.LogWarning("Dialogue voice speak returned "+result);
                     }
                 }
                 catch(Exception error)
                 {
-                    Ready=false; Status="Voice playback failed. See Unity/Android logs; tap RETRY.";
+                    nativeReady=false; Status="Voice playback failed. See Unity/Android logs; tap PLAY VOICE.";
                     Debug.LogWarning("Dialogue voice playback: "+error);
                 }
             }
 #endif
             return false;
-        }
-        public string CastLabel(VoiceRole role)
-        {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if(Ready && catalog.Count>0) return catalog[cast[(int)role]].Name;
-#endif
-            return "Installed voices appear on Android";
-        }
-        public bool CycleVoice(VoiceRole role)
-        {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            lock(gate)
-            {
-                if(disposed || !Ready) return false;
-                Stop();
-                if(catalog.Count<2)
-                { Status="Only one offline "+LanguageName+" voice is installed; characters share it."; return false; }
-                int slot=(int)role; cast[slot]=(cast[slot]+1)%catalog.Count;
-                PlayerPrefs.SetString(castKey+role,catalog[cast[slot]].Name); PlayerPrefs.Save();
-                return true;
-            }
-#else
-            return false;
-#endif
         }
 #if UNITY_ANDROID && !UNITY_EDITOR
         private static int NamedGender(string name)
@@ -281,6 +282,7 @@ namespace IndianRunner
 #endif
         public void Stop()
         {
+            if(recordedSource!=null) recordedSource.Stop();
 #if UNITY_ANDROID && !UNITY_EDITOR
             lock(gate)
             {
@@ -291,10 +293,16 @@ namespace IndianRunner
         }
         public void Dispose()
         {
+            if(recordedSource!=null)
+            {
+                recordedSource.Stop(); recordedSource.clip=null;
+                UnityEngine.Object.Destroy(recordedSource);
+            }
+            clips.Clear();
 #if UNITY_ANDROID && !UNITY_EDITOR
             lock(gate)
             {
-                disposed=true; Ready=false;
+                disposed=true; nativeReady=false;
                 if(engine!=null)
                 {
                     try { engine.Call<int>("stop"); engine.Call("shutdown"); } catch(Exception) { }

@@ -189,7 +189,7 @@ namespace IndianRunner.Editor
             foreach(VoiceRole voiceRole in Enum.GetValues(typeof(VoiceRole)))
             {
                 var sample=RoadBanter.Sample(voiceRole);
-                Require(sample.Role==voiceRole && !string.IsNullOrEmpty(sample.English),"Character voice role or English sample missing");
+                Require(sample.Role==voiceRole && sample.Variant==1 && !string.IsNullOrEmpty(sample.English),"Character voice role or English sample missing");
                 Require(sample.Pitch>=.88f && sample.Pitch<=1.12f && sample.Rate>=.90f && sample.Rate<=1.12f,"Character voice outside natural delivery range");
             }
             var chatter=new RoadBanter(); chatter.Reset(7301);

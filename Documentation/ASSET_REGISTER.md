@@ -53,3 +53,7 @@ Prompts and generation details for the three images are in ARTWORK.md. They are 
 - Rain visitor: original adult female roadside character in lehenga/blouse/dupatta, double-sided alternating umbrella panels and gold ribs, created by RainVisitorArt.cs and shared in the existing pool. Uses existing original cotton texture and cached materials. One user-requested revised weather line is synthesized by the installed offline Hindi engine; no song recording, purchased character, actress recording, external TTS or new package is bundled.
 
 - Lightweight pass: the original RajasthanBazaar.jpg and RajasthanHorizon.jpg and their metadata are archived byte-for-byte in Documentation/ArtArchive, outside Unity's build Assets tree. Their original ownership/licences are unchanged. The active realistic horizon/sandstone/cotton art and all current models/audio/voices are retained; no new external assets or dependencies.
+
+### Dialogue recording status
+
+No Hindi/English dialogue recordings have been supplied or generated. DIALOGUE_RECORDINGS.csv specifies 16 original bilingual lines and intended filenames. The runtime supports recorded AudioClips, but none are shipped by this change. Recordings, provenance/license and actor consent entries must be added when actual audio is available. Existing phone-generated speech remains an optional temporary fallback.
