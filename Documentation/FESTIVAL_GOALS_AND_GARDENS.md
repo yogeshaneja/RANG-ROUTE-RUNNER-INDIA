@@ -31,3 +31,11 @@ The spaceship first appears at 910 metres and repeats every 2,016 metres, with i
 Implementation validation here is source parsing and independent numerical/state simulation. Unity compilation, Editor play, actual audio audition, Android rendering and performance remain unverified in this workspace.
 
 The subsequent five-encounter pass adds rolling wheels, falling textiles, peacock displays, road repairs and procession carts. Garden/transition buffers remain clear. See FIVE_THEMED_ENCOUNTERS.md for current encounter timing, sounds, collision rules and local playtests.
+
+## Easier reward update
+
+The first set now needs **10 mirror tokens, one practice slide and 150 m in a run** (previously 30 tokens, five actual barrier slides and 500 m). A practice slide counts once when a new grounded slide begins, excluding the collision frame; holding/repeating input during the same slide does not add progress. No obstacle has to be found for the first slide goal. Later sets still require successful slides under awnings/scaffolds, with easier targets: tokens = 10 + min(set,20) × 5; slides = 1 + min(set,10); distance = 150 + min(set,20) × 50. Set 1 is 15 tokens, two barrier slides and 200 m.
+
+Existing local progress is retained and capped at the new lower targets when loaded, so players who already exceeded them can claim the reward. Claiming still requires 3/3 and is available only from Start. It grants exactly one outfit/badge, saves it, closes Goals and displays a six-second surprise message above the runner. The new outfit is applied immediately. There is no automatic unlock, paid reward or progress reset. First-set slide text now explicitly says PRACTICE A SLIDE.
+
+Phone checks: restart with old saved progress, finish the easier practice target, verify 2/3 before 150 m and 3/3 at 150 m after token/slide goals are met, return to Start and claim once. Confirm the outfit appears, the reveal clears, the next targets update, a second claim is blocked, and a new launch retains the unlock. Later-set slide progress must still require actual barrier clearance.

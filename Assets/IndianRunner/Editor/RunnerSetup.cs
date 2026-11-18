@@ -177,13 +177,21 @@ namespace IndianRunner.Editor
             Require(RunRules.HazardY(RajasthanObstacles.FallingCloth,40)>6 && RunRules.HazardY(RajasthanObstacles.FallingCloth,10)==0,"Fabric drop endpoints");
             var progress=new FestivalProgress();
             Require(!progress.Claim(),"Incomplete goals granted a reward");
-            progress.Add(30,5,499); Require(progress.Completed==2 && !progress.Ready,"Distance goal completed early");
-            Require(progress.Add(0,0,500) && progress.Ready,"Completed goals not ready");
+            progress.Add(10,1,149); Require(progress.Completed==2 && !progress.Ready,"Distance goal completed early");
+            Require(progress.Add(0,0,150) && progress.Ready,"Completed goals not ready");
             Require(progress.Claim() && progress.Set==1 && progress.Unlocked==2 && progress.Outfit==1,"First outfit reward missing");
             Require(!progress.Claim() && progress.Tokens==0 && progress.Distance==0,"Reward claimed twice or counters not reset");
+            var migrated=new FestivalProgress(0,30,5,499);
+            Require(migrated.Ready && migrated.Tokens==10 && migrated.Slides==1 && migrated.Distance==150,"Existing saved progress lost after easier goals");
             var loaded=new FestivalProgress(progress.Set,progress.Tokens,progress.Slides,progress.Distance,progress.Outfit);
             Require(loaded.Outfit==1 && loaded.Unlocked==2,"Outfit lost in progress snapshot");
             var invalid=new FestivalProgress(-8,-1,-1,-1,99); Require(invalid.Set==0 && invalid.Outfit==0 && invalid.Tokens==0,"Invalid snapshot not clamped");
+            foreach(VoiceRole voiceRole in Enum.GetValues(typeof(VoiceRole)))
+            {
+                var sample=RoadBanter.Sample(voiceRole);
+                Require(sample.Role==voiceRole && !string.IsNullOrEmpty(sample.English),"Character voice role or English sample missing");
+                Require(sample.Pitch>=.88f && sample.Pitch<=1.12f && sample.Rate>=.90f && sample.Rate<=1.12f,"Character voice outside natural delivery range");
+            }
             var chatter=new RoadBanter(); chatter.Reset(7301);
             Require(!chatter.Tick(1,RajasthanObstacles.Motorcycle,9,11),"Voice triggered outside passing range");
             Require(chatter.Tick(1,RajasthanObstacles.Motorcycle,8,11),"Rider dialogue missing");

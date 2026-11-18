@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace IndianRunner
@@ -34,6 +35,16 @@ namespace IndianRunner
         private volatile bool disposed;
         private bool configured;
         private float startedAt;
+        private sealed class InstalledVoice
+        {
+            public AndroidJavaObject Voice;
+            public string Name, Country;
+            public int Quality, Latency, Gender;
+        }
+        private readonly List<InstalledVoice> catalog=new List<InstalledVoice>();
+        private readonly int[] cast=new int[6];
+        private int activeVoice=-1;
+        private string castKey="";
         [UnityEngine.Scripting.Preserve]
         private sealed class InitListener : AndroidJavaProxy
         {
@@ -118,8 +129,17 @@ namespace IndianRunner
                 if(disposed || engine==null) return false;
                 try
                 {
-                    engine.Call<int>("setPitch",Mathf.Clamp(line.Pitch,.6f,1.3f));
-                    engine.Call<int>("setSpeechRate",Mathf.Clamp(line.Rate,.8f,1.15f));
+                    int choice=cast[(int)line.Role];
+                    if(choice!=activeVoice)
+                    {
+                        if(engine.Call<int>("setVoice",catalog[choice].Voice)!=0)
+                            throw new InvalidOperationException("Selected character voice is unavailable. Retry or choose another cast voice.");
+                        activeVoice=choice;
+                    }
+                    // Keep voices near their natural range. Extreme pitch shifts
+                    // make low-quality engines sound slowed down or squeaky.
+                    engine.Call<int>("setPitch",Mathf.Clamp(line.Pitch,.88f,1.12f));
+                    engine.Call<int>("setSpeechRate",Mathf.Clamp(line.Rate,.90f,1.12f));
                     using(var audio=activity.Call<AndroidJavaObject>("getSystemService","audio"))
                     {
                         if(audio!=null && audio.Call<int>("getStreamVolume",3)==0) // STREAM_MUSIC
@@ -166,24 +186,97 @@ namespace IndianRunner
 #endif
             return false;
         }
+        public string CastLabel(VoiceRole role)
+        {
 #if UNITY_ANDROID && !UNITY_EDITOR
+            if(Ready && catalog.Count>0) return catalog[cast[(int)role]].Name;
+#endif
+            return "Installed voices appear on Android";
+        }
+        public bool CycleVoice(VoiceRole role)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            lock(gate)
+            {
+                if(disposed || !Ready) return false;
+                Stop();
+                if(catalog.Count<2)
+                { Status="Only one offline "+LanguageName+" voice is installed; characters share it."; return false; }
+                int slot=(int)role; cast[slot]=(cast[slot]+1)%catalog.Count;
+                PlayerPrefs.SetString(castKey+role,catalog[cast[slot]].Name); PlayerPrefs.Save();
+                return true;
+            }
+#else
+            return false;
+#endif
+        }
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private static int NamedGender(string name)
+        {
+            // Android has no standard gender property. Only use explicit whole
+            // labels; opaque engine IDs are not treated as gender evidence.
+            var words=name.ToLowerInvariant().Split(new[]{'-','_',' ','.','#'},StringSplitOptions.RemoveEmptyEntries);
+            foreach(string word in words) if(word=="female" || word=="woman") return 2;
+            foreach(string word in words) if(word=="male" || word=="man") return 1;
+            return 0;
+        }
+        private void ClearVoices()
+        {
+            foreach(var voice in catalog) voice.Voice.Dispose();
+            catalog.Clear(); activeVoice=-1;
+        }
+        private int DefaultCast(VoiceRole role)
+        {
+            int gender=role==VoiceRole.Lady ? 2 : role==VoiceRole.Rider || role==VoiceRole.Caller ? 1 : 0;
+            int winner=0,best=int.MinValue;
+            for(int i=0;i<catalog.Count;i++)
+            {
+                var candidate=catalog[i];
+                int score=candidate.Quality*10+(candidate.Country=="IN" ? 250:0)-Math.Min(candidate.Latency,1000)/10;
+                if(gender!=0 && candidate.Gender!=0) score+=candidate.Gender==gender ? 10000:-10000;
+                // Break equivalent-quality ties into distinct character voices.
+                if(i==(int)role%catalog.Count) score+=5;
+                if(score>best) { best=score; winner=i; }
+            }
+            return winner;
+        }
         private bool TrySelectVoice(string language)
         {
+            ClearVoices();
             using(var voices=engine.Call<AndroidJavaObject>("getVoices"))
             {
                 if(voices==null) return false;
                 using(var iterator=voices.Call<AndroidJavaObject>("iterator"))
                     while(iterator.Call<bool>("hasNext"))
-                    using(var voice=iterator.Call<AndroidJavaObject>("next"))
-                    using(var locale=voice.Call<AndroidJavaObject>("getLocale"))
-                    using(var features=voice.Call<AndroidJavaObject>("getFeatures"))
                     {
-                        if(locale.Call<string>("getLanguage")!=language || voice.Call<bool>("isNetworkConnectionRequired")) continue;
-                        if(features!=null && features.Call<bool>("contains","notInstalled")) continue;
-                        if(engine.Call<int>("setVoice",voice)==0) return true;
+                        var voice=iterator.Call<AndroidJavaObject>("next"); bool retained=false;
+                        try
+                        {
+                            using(var locale=voice.Call<AndroidJavaObject>("getLocale"))
+                            using(var features=voice.Call<AndroidJavaObject>("getFeatures"))
+                            {
+                                if(locale.Call<string>("getLanguage")!=language || voice.Call<bool>("isNetworkConnectionRequired")) continue;
+                                if(features!=null && features.Call<bool>("contains","notInstalled")) continue;
+                                string name=voice.Call<string>("getName") ?? "";
+                                catalog.Add(new InstalledVoice { Voice=voice,Name=name,Country=locale.Call<string>("getCountry"),
+                                    Quality=voice.Call<int>("getQuality"),Latency=voice.Call<int>("getLatency"),Gender=NamedGender(name) });
+                                retained=true;
+                            }
+                        }
+                        finally { if(!retained) voice.Dispose(); }
                     }
             }
-            return false;
+            if(catalog.Count==0) return false;
+            catalog.Sort((a,b)=>StringComparer.Ordinal.Compare(a.Name,b.Name));
+            castKey="runner.voiceCast."+engine.Call<string>("getDefaultEngine")+"."+language+".";
+            for(int role=0;role<cast.Length;role++)
+            {
+                string saved=PlayerPrefs.GetString(castKey+(VoiceRole)role,"");
+                int restored=catalog.FindIndex(v=>v.Name==saved);
+                cast[role]=restored>=0 ? restored:DefaultCast((VoiceRole)role);
+            }
+            if(engine.Call<int>("setVoice",catalog[cast[0]].Voice)==0) { activeVoice=cast[0]; return true; }
+            ClearVoices(); return false;
         }
 #endif
         public void Stop()
@@ -207,6 +300,7 @@ namespace IndianRunner
                     try { engine.Call<int>("stop"); engine.Call("shutdown"); } catch(Exception) { }
                     engine.Dispose(); engine=null;
                 }
+                ClearVoices();
                 if(activity!=null) { activity.Dispose(); activity=null; }
             }
 #endif

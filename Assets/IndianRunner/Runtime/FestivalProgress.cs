@@ -10,9 +10,9 @@ namespace IndianRunner
         public int Slides { get; private set; }
         public int Distance { get; private set; }
         public int Outfit { get; private set; }
-        public int TokenGoal => 30+Math.Min(Set,20)*10;
-        public int SlideGoal => 5+Math.Min(Set,10);
-        public int DistanceGoal => 500+Math.Min(Set,20)*100;
+        public int TokenGoal => 10+Math.Min(Set,20)*5;
+        public int SlideGoal => 1+Math.Min(Set,10);
+        public int DistanceGoal => 150+Math.Min(Set,20)*50;
         public int Unlocked => Math.Min(4,Set+1);
         public int Badges => Math.Max(0,Set-3);
         public int Completed => (Tokens>=TokenGoal ? 1:0)+(Slides>=SlideGoal ? 1:0)+(Distance>=DistanceGoal ? 1:0);

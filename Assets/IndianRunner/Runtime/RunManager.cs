@@ -22,7 +22,10 @@ namespace IndianRunner
         private RunnerSkin skin;
         private RunFeedback feedback;
         private FestivalProgress progress;
-        private bool showingGoals, inRest;
+        private bool showingGoals, showingVoices, inRest;
+        private float rewardRevealUntil;
+        private string rewardRevealName="";
+        private static readonly string[] CastNames={"RIDER - MALE","PEACOCK","CAMEL","ELEPHANT","CALLER - MALE","LADY - FEMALE"};
         private float magnetUntil;
         private string goalsSummary = "", powerSummary = "";
         private float menuClock, introDuration, milestoneUntil;
@@ -71,7 +74,7 @@ namespace IndianRunner
         }
         private void StartRun()
         {
-            bool fromMenu = state == State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
+            bool fromMenu = state == State.Menu; showingGoals=showingVoices=false; magnetUntil=0; inRest=false;
             introCameraPosition = gameCamera.transform.position; introCameraRotation = gameCamera.transform.rotation;
             introDuration = reduced ? 0 : fromMenu ? .7f : .25f;
             milestoneUntil = 0; milestoneText = ""; nextMilestone = 100; feedback.Reset();
@@ -89,7 +92,7 @@ namespace IndianRunner
             // Clamp large stalls so an OS hitch cannot skip a reaction window.
             float dt = Mathf.Min(Time.deltaTime, .05f); speech.Tick();
             input.Read(Screen.safeArea.yMax - 100 * Screen.width / 480f);
-            if (input.Pause && !showingGoals)
+            if (input.Pause && !showingGoals && !showingVoices)
             {
                 if (state == State.Running) Pause();
                 else if (state == State.Paused) Resume();
@@ -113,7 +116,8 @@ namespace IndianRunner
                 }
             }
             if (input.Jump && height <= .001f && clock >= slideUntil) { verticalSpeed = RunRules.JumpVelocity; audioPlayer.Jump(); }
-            if (input.Slide && height <= .001f && clock >= slideUntil) slideUntil = clock + .7f;
+            bool startedSlide=input.Slide && height<=.001f && verticalSpeed<=0 && clock>=slideUntil;
+            if(startedSlide) slideUntil=clock+.7f;
             bool sliding = clock < slideUntil;
             laneElapsed += dt;
             float laneT = laneDuration > 0 ? Mathf.Clamp01(laneElapsed / laneDuration) : 1;
@@ -134,7 +138,7 @@ namespace IndianRunner
                 magnetUntil=clock+8; audioPlayer.Celebrate();
                 milestoneText="FESTIVAL POUCH - tokens come to you!"; milestoneUntil=clock+2;
             }
-            if(progress.Add(gained,world.SlidesCleared,distance))
+            if(progress.Add(gained,progress.Set==0 ? (startedSlide && !hit ? 1:0):world.SlidesCleared,distance))
             {
                 SaveProgress(); audioPlayer.Celebrate();
                 milestoneText=progress.Ready ? "THREE GOALS COMPLETE - outfit reward ready!" : "GOAL COMPLETE - beautiful running!";
@@ -200,7 +204,7 @@ namespace IndianRunner
         }
         private void ReturnToMenu()
         {
-            SaveBest(); speech.Stop(); banter.Reset(seed); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
+            SaveBest(); speech.Stop(); banter.Reset(seed); state = State.Menu; showingGoals=showingVoices=false; magnetUntil=0; inRest=false;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
@@ -253,27 +257,60 @@ namespace IndianRunner
             if (GUI.Button(new Rect(xPos+(third+8)*2,yPos,third,43),VoiceLabel,skin.Toggle)) { voices=!voices; SaveSettings(); }
             if (GUI.Button(new Rect(xPos,yPos+52,half,43),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }
             if (GUI.Button(new Rect(xPos+half+10,yPos+52,half,43),"Sky  "+weather.Selection,skin.Toggle)) WeatherChoice();
-            if(GUI.Button(new Rect(xPos,yPos+104,width,43),"DIALOGUE  "+dialogueLanguage.ToString().ToUpperInvariant()+"  >",skin.Toggle))
+            if(GUI.Button(new Rect(xPos,yPos+104,width*.72f-5,43),"DIALOGUE  "+dialogueLanguage.ToString().ToUpperInvariant()+"  >",skin.Toggle))
             {
                 dialogueLanguage=(DialogueLanguage)(((int)dialogueLanguage+1)%3);
                 speech.Dispose(); audioPlayer.EndSpeechDuck();
                 speech=new AndroidSpeech(dialogueLanguage); SaveSettings();
             }
+            if(GUI.Button(new Rect(xPos+width*.72f+5,yPos+104,width*.28f-5,43),"CAST",skin.Toggle)) showingVoices=true;
         }
+        private void DrawVoiceCast(float left,float top,float width,float screenHeight)
+        {
+            float y=Mathf.Max(top+55,(screenHeight-620)/2);
+            GUI.Box(new Rect(left+16,y,width-32,620),GUIContent.none,skin.Card);
+            GUI.Label(new Rect(left+28,y+12,width-56,34),"CHARACTER VOICES",skin.Subtitle);
+            GUI.Label(new Rect(left+30,y+48,width-60,45),"Listen and choose. Phone voice names may not label gender. Choices save for this language.",skin.Caption);
+            for(int role=0;role<CastNames.Length;role++)
+            {
+                float row=y+100+role*70;
+                GUI.Label(new Rect(left+30,row,width*.40f,42),CastNames[role],skin.Subtitle);
+                GUI.enabled=speech.Ready;
+                if(GUI.Button(new Rect(left+width*.48f,row,width*.20f-6,44),"NEXT",skin.Toggle))
+                {
+                    audioPlayer.EndSpeechDuck();
+                    if(speech.CycleVoice((VoiceRole)role) && voices && sound && speech.Speak(RoadBanter.Sample((VoiceRole)role))) audioPlayer.DuckSpeech();
+                }
+                GUI.enabled=speech.Ready && voices && sound;
+                if(GUI.Button(new Rect(left+width*.70f,row,width*.23f-6,44),"LISTEN",skin.Toggle))
+                    if(speech.Speak(RoadBanter.Sample((VoiceRole)role))) audioPlayer.DuckSpeech();
+                GUI.enabled=true;
+                GUI.Label(new Rect(left+30,row+44,width-60,23),speech.CastLabel((VoiceRole)role),skin.Caption);
+            }
+            GUI.Label(new Rect(left+30,y+526,width-60,34),!voices || !sound ? "Turn Sound and Voices ON to listen.":speech.Status,skin.Caption);
+            if(GUI.Button(new Rect(left+34,y+574,width-68,40),"BACK",skin.Secondary))
+            { showingVoices=false; speech.Stop(); audioPlayer.EndSpeechDuck(); }
+        }
+
         private void DrawGoals(float left,float top,float width,float screenHeight)
         {
             float y=Mathf.Max(top+80,(screenHeight-390)/2);
             GUI.Box(new Rect(left+16,y,width-32,390),GUIContent.none,skin.Card);
             GUI.Label(new Rect(left+28,y+12,width-56,38),"FESTIVAL GOALS  "+(progress.Set+1),skin.Subtitle);
             GUI.Label(new Rect(left+34,y+61,width-68,30),$"MIRROR TOKENS   {progress.Tokens} / {progress.TokenGoal}",skin.Text);
-            GUI.Label(new Rect(left+34,y+99,width-68,30),$"SLIDE UNDER LOW BARRIERS   {progress.Slides} / {progress.SlideGoal}",skin.Text);
+            GUI.Label(new Rect(left+34,y+99,width-68,30),$"{(progress.Set==0 ? "PRACTICE A SLIDE" : "SLIDE UNDER LOW BARRIERS")}   {progress.Slides} / {progress.SlideGoal}",skin.Text);
             GUI.Label(new Rect(left+34,y+137,width-68,30),$"DISTANCE IN ONE RUN   {progress.Distance} / {progress.DistanceGoal} m",skin.Text);
             string reward=progress.Set<3 ? "Reward: "+FestivalProgress.OutfitName(progress.Set+1)+" kurta" : "Reward: another festival badge";
             GUI.Label(new Rect(left+34,y+184,width-68,42),reward+"\nProgress saves across runs, fully offline.",skin.Caption);
             GUI.enabled=progress.Ready && state==State.Menu;
             if(GUI.Button(new Rect(left+34,y+241,width-68,48),progress.Ready ? state==State.Menu ? "CLAIM REWARD & NEXT GOALS" : "CLAIM FROM THE START SCREEN" : "COMPLETE ALL THREE TO UNLOCK",skin.Primary))
             {
-                if(progress.Claim()) { runner.SetOutfit(progress.Outfit); SaveProgress(); audioPlayer.Celebrate(); RefreshHud(); }
+                if(progress.Claim())
+                {
+                    runner.SetOutfit(progress.Outfit); SaveProgress(); audioPlayer.Celebrate(); RefreshHud();
+                    rewardRevealName=progress.Set<=3 ? FestivalProgress.OutfitName(progress.Outfit)+" KURTA":"FESTIVAL BADGE";
+                    rewardRevealUntil=menuClock+6; showingGoals=false;
+                }
             }
             GUI.enabled=true;
             GUI.Label(new Rect(left+34,y+299,width-68,23),$"{progress.Unlocked}/4 colours | {progress.Badges} badges | change outfit at Start",skin.Caption);
@@ -289,12 +326,14 @@ namespace IndianRunner
             float center = left+width/2,bottom = screenHeight-safe.yMin/scale-12;
             var oldMatrix = GUI.matrix; var oldColour = GUI.color;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale,scale,1));
-            GUI.enabled=!showingGoals;
+            GUI.enabled=!showingGoals && !showingVoices;
             if (state == State.Menu)
             {
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
                 GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
+                if(menuClock<rewardRevealUntil)
+                    GUI.Label(new Rect(left+24,top+158,width-48,62),"SURPRISE UNLOCKED!\n"+rewardRevealName,skin.Subtitle);
                 float sheet = bottom-494;
                 GUI.Box(new Rect(left+12,sheet,width-24,494),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
@@ -367,6 +406,7 @@ namespace IndianRunner
             }
             GUI.enabled=true;
             if(showingGoals) DrawGoals(left,top,width,screenHeight);
+            if(showingVoices) DrawVoiceCast(left,top,width,screenHeight);
             GUI.color = oldColour; GUI.matrix = oldMatrix;
         }
     }
