@@ -36,6 +36,9 @@ namespace IndianRunner
         public static bool RestDistance(float distance) => RestRow((int)Math.Max(0,distance/RowSpacing));
         public static bool PouchRow(int row) => row >= 11 && row%18 == 11;
         // Rare fantasy surprise: first at 910 m, then every 2,016 m. Skip rest buffers.
+        // Rain visitors replace one eligible row, preserving its existing escape lane.
+        public static bool RainVisitorRow(int row) => row>=6 && row%18==6 && !RestBuffer(row) && !NearDynamic(row) && !RoadworksRow(row);
+        public static bool CanAdmitRainVisitor(float intensity,float ahead) => intensity>.12f && ahead>=180 && ahead<=210;
         public static bool RoadworksRow(int row) => row>=18 && row%18==0;
         public static int DynamicKind(int row)
         {

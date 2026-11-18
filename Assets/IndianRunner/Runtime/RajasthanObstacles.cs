@@ -6,8 +6,8 @@ namespace IndianRunner
     // Shared geometry is built once. Every pooled slot reuses these meshes/materials.
     public sealed class RajasthanObstacles
     {
-        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13;
-        public const int MaxKind=13, ElephantSound=100;
+        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14;
+        public const int MaxKind=14, ElephantSound=100;
         public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {

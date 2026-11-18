@@ -4,7 +4,7 @@ Android now has actual synthesized spoken dialogue through its installed Hindi t
 
 ## Characters and lines
 
-There are 15 original lines, three each for motorcycle riders, peacocks, camels, elephants and a fictional festival caller. Each group has a different pitch/rate profile; these are variations of the same installed Hindi voice, not five recorded actors or a verified Rajasthani/Marwari accent. The regional wording is playful Rajasthan-flavoured Hindi draft dialogue. Animal speech is deliberately cartoon dialogue, in addition to the existing animal effects.
+There are 15 original lines, three each for motorcycle riders, peacocks, camels, elephants and a fictional festival caller, plus one fixed rain-only umbrella visitor line (16 total). Each group has a different pitch/rate profile; these are variations of the same installed Hindi voice, not five recorded actors or a verified Rajasthani/Marwari accent. The regional wording is playful Rajasthan-flavoured Hindi draft dialogue. Animal speech is deliberately cartoon dialogue, in addition to the existing animal effects.
 
 Examples:
 
@@ -45,3 +45,5 @@ API references checked during implementation:
 6. With an installed offline Hindi pack, test a fresh launch in airplane mode. Also test a phone without Hindi data: the game/captions should continue and show the setup hint. Check APK build/IL2CPP callback preservation and sustained phone performance.
 
 No Unity compilation, Android Gradle build, installed-engine selection, actual speech audition or real-device offline test was possible in this workspace. Source/API-contract checks and independent scheduler/manifest simulations do not establish native runtime success.
+
+The rain-visitor update adds a sixth pitch/rate group, a reserved speech slot and TEST RAIN VOICE while rain is active. See RAIN_UMBRELLA_VISITOR.md for the revised Hindi/English phrase and spawning rules.

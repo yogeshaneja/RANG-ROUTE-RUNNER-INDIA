@@ -13,6 +13,7 @@ namespace IndianRunner
         private readonly Transform[] clouds = new Transform[8];
         private float rain, shade;
         public float Cloudiness => shade;
+        public float RainIntensity => rain;
         public WeatherController(Transform parent, Camera cam, Light light)
         {
             camera = cam; sun = light;

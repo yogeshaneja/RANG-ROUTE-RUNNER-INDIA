@@ -10,6 +10,8 @@ namespace IndianRunner
         private sealed class Row
         {
             public float Z;
+            public int Number;
+            public bool RainVisitor;
             public readonly int[] Kind = new int[3];
             public readonly RajasthanObstacles.Instance[] Obstacles = new RajasthanObstacles.Instance[3];
             public bool CamelCrossing, Roadworks;
@@ -50,6 +52,9 @@ namespace IndianRunner
         public bool CamelContact { get; private set; }
         public string ContactMessage { get; private set; } = "";
         private int nextIndex;
+        private float rainIntensity;
+        public float UmbrellaAhead { get; private set; } = float.PositiveInfinity;
+        public void SetRain(float intensity) { rainIntensity=Mathf.Clamp01(intensity); }
         private readonly RajasthanScenery scenery;
         public TrackWorld(Transform parent)
         {
@@ -137,7 +142,7 @@ namespace IndianRunner
         }
         public void Reset(int seed)
         {
-            nextIndex = TileCount; WarningMessage = ""; CamelContact = false; ContactMessage = "";
+            nextIndex = TileCount; UmbrellaAhead=float.PositiveInfinity; WarningMessage = ""; CamelContact = false; ContactMessage = "";
             for (int i = 0; i < TileCount; i++) Configure(tiles[i], i, seed);
         }
         private static void Configure(Tile tile, int index, int seed)
@@ -152,6 +157,7 @@ namespace IndianRunner
             for (int r = 0; r < 2; r++)
             {
                 var row = tile.Rows[r]; int rowNumber = index * 2 + r;
+                row.Number=rowNumber; row.RainVisitor=false;
                 row.Z = index * TileLength + RunRules.RowSpacing * .5f + r * RunRules.RowSpacing;
                 row.Safe = RunRules.SafeLane(rowNumber, seed);
                 row.HasPouch=RunRules.PouchRow(rowNumber); row.PouchTaken=row.SlideTaken=false;
@@ -185,7 +191,7 @@ namespace IndianRunner
         public void Position(float distance, int seed, float clock, bool reduced, bool magnet = false, float playerX = 0, float playerHeight = 0)
         {
             WarningMessage = ""; float nearestCamel = RunRules.CamelWarningDistance;
-            SoundKind=0; SoundKey=-1; SoundAhead=100; SoundPan=0;
+            SoundKind=0; SoundKey=-1; SoundAhead=100; SoundPan=0; UmbrellaAhead=float.PositiveInfinity;
             Quaternion coinRotation = Quaternion.Euler(0, reduced ? 0 : Mathf.Sin(clock*1.7f)*24, reduced ? 0 : Mathf.Sin(clock*2)*5);
             foreach (var tile in tiles)
             {
@@ -195,6 +201,19 @@ namespace IndianRunner
                 foreach (var row in tile.Rows)
                 {
                     float ahead = row.Z-distance;
+                    if(!row.RainVisitor && RunRules.RainVisitorRow(row.Number) && RunRules.CanAdmitRainVisitor(rainIntensity,ahead))
+                    {
+                        row.RainVisitor=true; row.CamelCrossing=false; row.Roadworks=false;
+                        row.DynamicKind=RajasthanObstacles.UmbrellaLady; row.HazardLane=(row.Safe+1)%3;
+                        row.LandingMarker.localPosition=new Vector3(RunRules.LaneX(row.HazardLane),0,row.Z-tile.Index*TileLength);
+                        for(int lane=0;lane<3;lane++)
+                        {
+                            row.Kind[lane]=lane==row.HazardLane ? RajasthanObstacles.UmbrellaLady:0;
+                            row.Obstacles[lane].Configure(row.Kind[lane]);
+                            row.Obstacles[lane].Root.localPosition=new Vector3(RunRules.LaneX(lane),0,row.Z-tile.Index*TileLength);
+                        }
+                    }
+                    if(row.RainVisitor && ahead>0) UmbrellaAhead=Mathf.Min(UmbrellaAhead,ahead);
                     if(row.CamelCrossing) ConsiderSound(RajasthanObstacles.Camel,ahead,RunRules.CamelX(row.Safe,ahead)/8,row.Z.GetHashCode());
                     if(row.Roadworks)
                     {
@@ -217,7 +236,7 @@ namespace IndianRunner
                             // Rolling is gameplay motion: reduced effects preserves it.
                             if(row.DynamicKind==RajasthanObstacles.Wheel) hazard.localRotation=Quaternion.Euler(-distance*1.45f/.62f*Mathf.Rad2Deg,0,0);
                         }
-                        row.LandingMarker.gameObject.SetActive((row.DynamicKind==RajasthanObstacles.Spaceship || row.DynamicKind==RajasthanObstacles.FallingCloth || row.DynamicKind==RajasthanObstacles.Peacock) && ahead<48 && ahead>-5);
+                        row.LandingMarker.gameObject.SetActive((row.DynamicKind==RajasthanObstacles.Spaceship || row.DynamicKind==RajasthanObstacles.FallingCloth || row.DynamicKind==RajasthanObstacles.Peacock || row.DynamicKind==RajasthanObstacles.UmbrellaLady) && ahead<48 && ahead>-5);
                         if(ahead>0 && ahead<=nearestCamel)
                         {
                             nearestCamel=ahead;
@@ -277,6 +296,17 @@ namespace IndianRunner
                 for (int lane = 0; lane < 3; lane++)
                 {
                     int kind = row.Kind[lane]; if (kind == 0) continue;
+                    if(kind==RajasthanObstacles.UmbrellaLady)
+                    {
+                        float visitorX=RunRules.LaneX(lane);
+                        // Separate body, high canopy and shaft. Walking under a canopy
+                        // edge must not hit an invisible floor-to-roof rectangle.
+                        bool visitorHit=HitBox(previousFoot,foot,playerHeight,visitorX,row.Z,.36f,.30f,0,1.98f);
+                        visitorHit |= HitBox(previousFoot,foot,playerHeight,visitorX+.14f,row.Z,1.012f,1.012f,2.285f,2.68f);
+                        visitorHit |= HitBox(previousFoot,foot,playerHeight,visitorX+.14f,row.Z,.025f,.025f,1.05f,2.62f);
+                        if(visitorHit) { hit=true; ContactMessage=FestivalObstacles.Contact(kind); }
+                        continue;
+                    }
                     if (row.DynamicKind!=0 && kind==row.DynamicKind)
                     {
                         float before=row.Z-previousFoot.z, after=row.Z-foot.z;

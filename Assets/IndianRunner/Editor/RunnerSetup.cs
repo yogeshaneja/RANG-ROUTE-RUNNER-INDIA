@@ -148,6 +148,11 @@ namespace IndianRunner.Editor
                 if(RunRules.RestBuffer(row))
                     for(int lane=0;lane<3;lane++) Require(RunRules.ObstacleFor(row,lane,seed)==0,"Rest garden or transition contains a hazard");
                 if(RunRules.PouchRow(row)) Require(RunRules.RestRow(row),"Pouch pickup must be in a safe garden");
+                if(RunRules.RainVisitorRow(row))
+                {
+                    Require(!RunRules.RestBuffer(row) && !RunRules.NearDynamic(row) && !RunRules.RoadworksRow(row),"Rain visitor occupies a protected row");
+                    Require(Mathf.Abs(RunRules.LaneX((safe+1)%3)-RunRules.LaneX(safe))>1.16f+RunRules.PlayerHalfWidth,"Umbrella blocks the reserved lane");
+                }
                 checkedRows++;
             }
             Require(RunRules.Speed(0) == 9 && RunRules.Speed(100000) == RunRules.MaxSpeed, "Speed bounds");
@@ -191,6 +196,12 @@ namespace IndianRunner.Editor
             Require(!chatter.Visible(15),"Subtitle expiry ignored");
             chatter.Reset(7301);
             Require(!chatter.Visible(0) && chatter.Tick(1,RajasthanObstacles.Motorcycle,0,11) && chatter.Current.Caption==firstCaption,"Voice reset is not deterministic");
+            Require(RunRules.CanAdmitRainVisitor(.5f,180) && RunRules.CanAdmitRainVisitor(.5f,210),"Rain admission window lost");
+            Require(!RunRules.CanAdmitRainVisitor(0,200) && !RunRules.CanAdmitRainVisitor(1,179),"Rain visitor spawned dry or too close");
+            chatter.Reset(7301);
+            Require(!chatter.Tick(0,RajasthanObstacles.Motorcycle,8,1,true),"Other chatter did not leave room for rain line");
+            Require(chatter.Tick(0,RajasthanObstacles.UmbrellaLady,8,2,true) && chatter.Current.Caption.Contains("It's raining"),"Requested rain dialogue missing");
+            Require(!chatter.Tick(1,RajasthanObstacles.UmbrellaLady,7,2,true),"Rain dialogue repeats every frame");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
         [MenuItem("Indian Runner/4 - Check live startup (Play Mode)")]

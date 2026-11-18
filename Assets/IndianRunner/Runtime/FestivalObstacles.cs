@@ -14,10 +14,12 @@ namespace IndianRunner
             if(kind==RajasthanObstacles.Procession) return new Vector3(1.04f,3.35f,1.05f);
             if(kind==RajasthanObstacles.FallingCloth) return new Vector3(.82f,.94f,.60f);
             if(kind==RajasthanObstacles.Peacock) return new Vector3(1.12f,1.66f,.62f);
+            if(kind==RajasthanObstacles.UmbrellaLady) return new Vector3(1.16f,2.68f,1.05f);
             return new Vector3(.80f,1.18f,.72f);
         }
         public static string Warning(int kind)
         {
+            if(kind==RajasthanObstacles.UmbrellaLady) return "LADY WITH UMBRELLA";
             if(kind==RajasthanObstacles.Wheel) return "ROLLING WHEEL";
             if(kind==RajasthanObstacles.Procession) return "FESTIVAL PROCESSION";
             if(kind==RajasthanObstacles.FallingCloth) return "FABRIC FALLING - marked lane";
@@ -27,6 +29,7 @@ namespace IndianRunner
         }
         public static string Contact(int kind)
         {
+            if(kind==RajasthanObstacles.UmbrellaLady) return "Gentle umbrella stumble. Give her marked lane some room.";
             if(kind==RajasthanObstacles.Peacock) return "Peacock is unharmed. Give its marked lane some space.";
             if(kind==RajasthanObstacles.Wheel) return "Rolling wheel contact. Jump early or take the open lane.";
             if(kind==RajasthanObstacles.Procession) return "Leave room for the procession. Follow the token lane.";
@@ -52,6 +55,7 @@ namespace IndianRunner
         }
         public static void Build(Transform root,int kind)
         {
+            if(kind==RajasthanObstacles.UmbrellaLady) { RainVisitorArt.Build(root); return; }
             var gold=PrimitiveArt.Mat(new Color(1,.70f,.08f));
             var pink=PrimitiveArt.Mat(new Color(.94f,.06f,.38f));
             var teal=PrimitiveArt.Mat(new Color(.015f,.64f,.65f));

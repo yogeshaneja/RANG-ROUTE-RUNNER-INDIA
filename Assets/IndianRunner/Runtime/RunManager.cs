@@ -59,7 +59,7 @@ namespace IndianRunner
             weather = new WeatherController(transform, gameCamera, sunlight);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
             speech=new AndroidSpeech(); speech.SetEnabled(voices && sound); banter.Reset(seed);
-            state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); RefreshHud();
+            state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); world.SetRain(weather.RainIntensity); RefreshHud();
         }
         public void ValidateStartup()
         {
@@ -95,7 +95,7 @@ namespace IndianRunner
             if (state == State.Menu)
             {
                 menuClock += dt; runner.Animate(menuClock,false,false,0,reduced);
-                world.Position(0,seed,menuClock,reduced); weather.Tick(menuClock,dt,reduced); world.SetWeather(weather.Cloudiness); audioPlayer.Tick(dt);
+                world.Position(0,seed,menuClock,reduced); weather.Tick(menuClock,dt,reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity); audioPlayer.Tick(dt);
                 return;
             }
             if (state != State.Running) { audioPlayer.Tick(dt); return; }
@@ -149,7 +149,7 @@ namespace IndianRunner
             if(!hit)
             {
                 audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
-                if(banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
+                if((world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
             }
             if (distance >= nextMilestone && clock >= milestoneUntil)
             {
@@ -164,7 +164,7 @@ namespace IndianRunner
                 float turn = reduced ? 0 : Mathf.Clamp((x-previous.x)/Mathf.Max(.001f,dt)/RunRules.LaneSpeed,-1,1)*9;
                 runner.Root.localRotation = Quaternion.Slerp(runner.Root.localRotation, Quaternion.Euler(0,turn,lean), 1-Mathf.Exp(-16*dt));
             }
-            weather.Tick(clock, dt, reduced); world.SetWeather(weather.Cloudiness);
+            weather.Tick(clock, dt, reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity);
             PositionCamera(dt);
             if (clock >= nextHudUpdate || hit)
             {
@@ -239,7 +239,7 @@ namespace IndianRunner
         private void WeatherChoice()
         {
             weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);
-            weather.Tick(state == State.Menu ? menuClock : clock,10,reduced); world.SetWeather(weather.Cloudiness); RefreshHud();
+            weather.Tick(state == State.Menu ? menuClock : clock,10,reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity); RefreshHud();
         }
         private string VoiceLabel => !voices ? "VOICES OFF" : !sound ? "VOICES MUTED":"VOICES ON";
         private void DrawOptions(float xPos, float yPos, float width)
@@ -297,8 +297,8 @@ namespace IndianRunner
                 if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+252,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))
                 { progress.NextOutfit(); runner.SetOutfit(progress.Outfit); SaveProgress(); }
                 bool allowPreview=GUI.enabled; GUI.enabled=allowPreview && voices && sound && speech.Ready;
-                if(GUI.Button(new Rect(xPos,sheet+306,w,34),"TEST HINDI VOICE",skin.Secondary))
-                    if(speech.Speak(RoadBanter.Preview)) audioPlayer.DuckSpeech();
+                if(GUI.Button(new Rect(xPos,sheet+306,w,34),weather.RainIntensity>.12f ? "TEST RAIN VOICE":"TEST HINDI VOICE",skin.Secondary))
+                    if(speech.Speak(weather.RainIntensity>.12f ? RoadBanter.RainPreview:RoadBanter.Preview)) audioPlayer.DuckSpeech();
                 GUI.enabled=allowPreview;
                 GUI.Label(new Rect(xPos,sheet+348,w,43),speech.Status+"\nKeep looking for updates for new content.",skin.Caption);
             }
