@@ -134,3 +134,5 @@ Lightweight cleanup: final static mesh batches release construction copies and C
 Simple voice/reward refinement: the old CAST/AUTO setup is removed; Hindi defaults on and English remains selectable. Recording playback is wired but still needs the actual actor recordings. First reward remains 10 tokens, one practice slide and 150 m, with existing progress retained and an outfit reveal when claimed. See the spoken-banter and festival-goals guides. Native speech, recordings and phone behaviour need device verification.
 
 EXIT TO HOME is available on Start, Pause and Game Over in Android builds. It saves progress/settings and opens the phone Home screen while keeping the app available in Recents. Pull and Build and Run to install the update.
+
+Faster start/music: launch speed is now 11 instead of 9, retaining the 18 maximum. A new original 126 BPM festival groove adds stronger drums, claps, shaker and brighter melodic phrases; procession drums match its tempo. Music remains generated offline with no extra audio files. Pull and Build and Run to hear/play the change; phone mix and feel need local testing.

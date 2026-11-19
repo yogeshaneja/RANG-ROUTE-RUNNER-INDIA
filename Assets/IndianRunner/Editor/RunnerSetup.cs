@@ -153,7 +153,7 @@ namespace IndianRunner.Editor
                 }
                 checkedRows++;
             }
-            Require(RunRules.Speed(0) == 9 && RunRules.Speed(100000) == RunRules.MaxSpeed, "Speed bounds");
+            Require(RunRules.Speed(0) == RunRules.StartSpeed && RunRules.StartSpeed==11 && RunRules.Speed(100000) == RunRules.MaxSpeed, "Speed bounds");
             Require(RunRules.Score(100.5f, 3) == 130 && RunRules.Score(0, 0) == 0, "Score calculation");
             float airTime = 2 * RunRules.JumpVelocity / RunRules.Gravity;
             Require(airTime < betweenRows, "Jump recovery must fit between rows");

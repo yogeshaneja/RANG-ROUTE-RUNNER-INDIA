@@ -7,6 +7,8 @@ namespace IndianRunner
     public sealed class RunnerAudio
     {
         private const int Rate = 22050;
+        private const int MusicBpm = 126;
+        private const float MusicBeat = 60f/MusicBpm;
         private readonly AudioSource effects, music, approach, animals;
         private readonly List<AudioClip> owned = new List<AudioClip>();
         private readonly AudioClip[] pickups = new AudioClip[4];
@@ -29,7 +31,7 @@ namespace IndianRunner
             elephant=Cue("Distant stylised elephant trumpet",6,1.2f,235);
             celebration=Cue("Original festival welcome arpeggio",7,.90f,587.33f);
             rolling=Cue("Soft wooden wheel rumble loop",8,1,50);
-            procession=Cue("Original procession drum and bell loop",9,2.5f,80);
+            procession=Cue("Original procession drum and bell loop",9,MusicBeat*4,80);
             cloth=Cue("Soft falling textile rustle",10,.65f,420);
             peacock=Cue("Gentle stylised peacock call",11,.70f,660);
             repairs=Cue("Wooden roadwork warning knock",12,.50f,220);
@@ -74,8 +76,8 @@ namespace IndianRunner
         {
             if(paused) return;
             float smoothing=1-Mathf.Exp(-7*dt);
-            float musicTarget=musicEnabled ? (Time.unscaledTime<speechDuckUntil ? .12f : Time.unscaledTime<duckUntil ? .16f : scenic ? .25f : .23f) : 0;
-            music.pitch=Mathf.Lerp(music.pitch,scenic ? 1.04f : 1,smoothing);
+            float musicTarget=musicEnabled ? (Time.unscaledTime<speechDuckUntil ? .12f : Time.unscaledTime<duckUntil ? .20f : scenic ? .29f : .27f) : 0;
+            music.pitch=Mathf.Lerp(music.pitch,1,smoothing); // keep the groove in tune and on tempo
             music.volume=Mathf.Lerp(music.volume,musicTarget,smoothing);
             if(!musicEnabled && music.volume<.001f) music.Stop();
             bool motor=kind==RajasthanObstacles.Motorcycle, ship=kind==RajasthanObstacles.Spaceship;
@@ -129,47 +131,69 @@ namespace IndianRunner
                 else if(type==8) value=(Sin(50*t)+.18f*Sin(100*t))*(.65f+.35f*Sin(10*t))*.25f;
                 else if(type==9)
                 {
-                    float local=t-Mathf.Floor(t/.625f)*.625f;
+                    float local=t-Mathf.Floor(t/MusicBeat)*MusicBeat;
                     value=Sin(80*local)*Mathf.Exp(-local*19)*Mathf.Min(1,local/.008f)*.32f+Sin(1320*t)*(.5f+.5f*Sin(2*t))*.025f;
                 }
                 else if(type==10) value=(.055f*Sin(2400*t+.2f*Sin(37*t))+.035f*Sin(3100*t)+.12f*Sin(hz*t-130*t*t))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2);
                 else if(type==11) value=(Sin(hz*t+1.5f*Sin(3*t))+.15f*Sin(hz*2*t))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2)*.25f;
                 else value=(Sin(hz*t)+.15f*Sin(330*t))*Mathf.Exp(-t*14)*.35f;
-                // Loop clips use complete periods (1 s, or four 96 BPM procession beats).
+                // Procession uses four beats at the same tempo as the background track.
                 data[i]=value*(type==3 || type==4 || type==8 || type==9 ? 1 : envelope);
+                if(type==9) data[i]*=Mathf.Clamp01(Mathf.Min(t,duration-t)/.005f);
             }
             return Clip(name,data);
         }
         private AudioClip Compose()
         {
-            // Original 8-bar pentatonic instrumental: plucks, breathy lead, soft
-            // hand-drum-like rhythm and drone. No recording or traditional-song claim.
-            const float beat=.625f; // 96 BPM, 20 seconds; exact loop boundaries.
-            var data=new float[Rate*20];
-            int[] melody={0,2,4,7,9,7,4,2,0,4,7,9,12,9,7,4,2,4,7,4,2,0,-3,0,4,7,9,7,4,2,0,-1};
+            // Original upbeat eight-bar festival groove, not a traditional-song
+            // recording. At 126 BPM every beat is exactly 10,500 mono samples.
+            const int samplesPerBeat=Rate*60/MusicBpm;
+            var data=new float[samplesPerBeat*32];
+            int[] melody={
+                0,4,7,9,7,4,2,-99, 0,2,4,7,12,9,7,-99,
+                4,7,9,12,9,7,4,2, 0,2,4,7,4,2,0,-99,
+                7,9,12,14,12,9,7,-99, 4,7,9,12,9,7,4,-99,
+                2,4,7,9,7,4,2,0, 4,7,9,7,4,2,0,-99};
+            int[] roots={0,0,7,7,5,5,0,7};
+            var frequencies=new float[melody.Length];
+            var bassFrequencies=new float[roots.Length];
+            for(int note=0;note<melody.Length;note++)
+                frequencies[note]=melody[note]==-99 ? 0:293.6648f*Mathf.Pow(2,melody[note]/12f);
+            for(int bar=0;bar<roots.Length;bar++) bassFrequencies[bar]=73.4162f*Mathf.Pow(2,roots[bar]/12f);
+            uint noiseState=0x7241ab9u; float previousNoise=0;
             for(int i=0;i<data.Length;i++)
             {
-                float t=(float)i/Rate, b=t/beat;
-                int note=Mathf.Min(31,(int)b); float local=t-note*beat;
-                float hz=293.6648f*Mathf.Pow(2,melody[note]/12f);
-                float attack=Mathf.SmoothStep(0,1,Mathf.Min(1,local/.024f));
-                float release=Mathf.SmoothStep(0,1,Mathf.Min(1,(beat-local)/.06f));
-                float pluck=(Sin(hz*local)+.23f*Sin(2*hz*local)+.08f*Sin(3*hz*local))*Mathf.Exp(-local*6)*attack*release*.17f;
-                float lead=Sin(hz*local+.012f*Sin(5*local))*Mathf.Sin(Mathf.PI*local/beat)*.085f;
-                float drumLocal=t-Mathf.Floor(b*2)*beat*.5f;
-                bool bass=((int)(b*2))%4==0;
-                float drum=Sin((bass ? 76 : 155)*drumLocal+1.2f*(1-Mathf.Exp(-drumLocal*35)))*Mathf.Exp(-drumLocal*(bass ? 19 : 35))*Mathf.Min(1,drumLocal/.004f)*(bass ? .19f : .08f);
-                float drone=(Sin(146.8f*t)+.30f*Sin(220*t))*.028f;
-                float shimmer=Sin(1760*drumLocal)*Mathf.Exp(-drumLocal*65)*Mathf.Min(1,drumLocal/.003f)*.018f;
-                data[i]=pluck+lead+drum+drone+shimmer;
+                // Sample-index timing keeps off-beats and the procession loop
+                // aligned without accumulating float/tempo drift.
+                int beatIndex=i/samplesPerBeat, bar=beatIndex/4;
+                int eighth=i/(samplesPerBeat/2), sixteenth=i/(samplesPerBeat/4);
+                float beatLocal=(float)(i%samplesPerBeat)/Rate;
+                float halfLocal=(float)(i%(samplesPerBeat/2))/Rate;
+                float tickLocal=(float)(i%(samplesPerBeat/4))/Rate;
+                float noteTime=MusicBeat*.5f, hz=frequencies[eighth];
+                float attack=Mathf.Clamp01(halfLocal/.008f);
+                float release=Mathf.Clamp01((noteTime-halfLocal)/.025f);
+                float pluck=hz>0 ? (Sin(hz*halfLocal)+.28f*Sin(2*hz*halfLocal)+.09f*Sin(3*hz*halfLocal))*Mathf.Exp(-halfLocal*10)*attack*release*.16f:0;
+                float answer=hz>0 && bar%4>=2 ? Sin(hz*halfLocal+.018f*Sin(5*halfLocal))*Mathf.Sin(Mathf.PI*halfLocal/noteTime)*.035f:0;
+                float bassHz=bassFrequencies[bar];
+                float bass=(Sin(bassHz*beatLocal)+.16f*Sin(bassHz*2*beatLocal))*Mathf.Sin(Mathf.PI*beatLocal/MusicBeat)*.095f;
+                float lowDrum=Sin(58*beatLocal+1.7f*(1-Mathf.Exp(-beatLocal*45)))*Mathf.Exp(-beatLocal*19)*Mathf.Clamp01(beatLocal/.003f)*(beatIndex%2==0 ? .25f:.09f);
+                float highDrum=Sin(168*halfLocal+.55f*(1-Mathf.Exp(-halfLocal*45)))*Mathf.Exp(-halfLocal*32)*Mathf.Clamp01(halfLocal/.003f)*(eighth%4==3 ? .13f:.055f);
+                noiseState^=noiseState<<13; noiseState^=noiseState>>17; noiseState^=noiseState<<5;
+                float noise=(noiseState&0xffff)/32767.5f-1;
+                float brightNoise=(noise-previousNoise)*.5f; previousNoise=noise;
+                float clap=beatIndex%2==1 ? brightNoise*Mathf.Exp(-beatLocal*38)*Mathf.Clamp01(beatLocal/.003f)*.18f:0;
+                float shaker=brightNoise*Mathf.Exp(-tickLocal*85)*Mathf.Clamp01(tickLocal/.002f)*(sixteenth%4==2 ? .065f:.035f);
+                data[i]=pluck+answer+bass+lowDrum+highDrum+clap+shaker;
             }
-            // A 25 ms release takes the ending to zero, matching the silent first sample.
-            int fade=Rate/40;
+            // Short edge fades prevent a click when the full musical phrase loops.
+            int fade=Rate/200;
             for(int i=0;i<fade;i++)
             {
-                data[data.Length-fade+i]*=Mathf.SmoothStep(1,0,(float)(i+1)/fade);
+                float gain=Mathf.SmoothStep(0,1,(float)i/fade);
+                data[i]*=gain; data[data.Length-1-i]*=gain;
             }
-            return Clip("Original Thar evening - layered instrumental",data);
+            return Clip("Original Thar festival dash - 126 BPM",data);
         }
         public void Dispose() { foreach(var clip in owned) Object.Destroy(clip); owned.Clear(); }
     }

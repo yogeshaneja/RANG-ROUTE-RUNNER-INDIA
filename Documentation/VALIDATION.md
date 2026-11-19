@@ -193,3 +193,11 @@ Added EXIT TO HOME to Start, Pause and Game Over. Saves best score, festival pro
 Phone acceptance: use the button from Start, Pause and Game Over; expect the actual launcher even if the game was opened over another app. Reopen from icon/Recents, verify saved progress/settings and a paused run, and confirm no dialogue continues after leaving. Android may reclaim background processes, so restoration of a live run after process death is not promised. Unity build, launcher behaviour and rendered layout require device verification.
 
 Workspace verification: all 23 C# files passed syntax parsing and Git whitespace checks passed. Start and pause/result button bounds fit their enlarged cards by inspection. No Unity compilation, rendered phone layout or launcher transition was executed here.
+
+### Upbeat music and faster start
+
+Changed original music from 96 to 126 BPM with a denser eight-bar melodic/percussion arrangement, stronger music level, lighter token ducking and matching four-beat procession tempo. Precomputed note frequencies; retained 22,050 Hz mono and the same AudioSource count. The shorter loop has 336,000 samples (15.238 s), down from 441,000. Starting speed is 11 instead of 9 with the same 18 cap and distance-based acceleration. Updated Editor speed-bound expectation; this Unity check was not run here.
+
+Independent numerical design model: finite audio samples, peak 0.381 (under the 0.78 clip limit), RMS 0.081, zero-valued loop endpoints and exact four-beat procession alignment. This models the synthesis design, not compiled C# playback. At unchanged max speed the row-bound allowance is 1.396 s, exceeding the two-lane change time 0.568 s plus 0.7 s reaction; jump recovery 0.75 s also fits. No Unity build, actual audio audition or phone performance test was possible. Verify mix/loop seams, dialogue/warning audibility, music mute/pause/restart and faster-start controls on Android.
+
+Source verification for this update: all 23 C# files passed syntax parsing; Git whitespace checks passed. These source checks and numerical design checks do not establish a Unity compilation or audible/device runtime result.

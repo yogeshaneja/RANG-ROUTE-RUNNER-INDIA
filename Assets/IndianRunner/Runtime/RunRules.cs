@@ -7,6 +7,7 @@ namespace IndianRunner
     {
         public const float LaneWidth = 2.65f;
         public const float LaneSpeed = 14f;
+        public const float StartSpeed = 11f;
         public const float MaxSpeed = 18f;
         public const float RowSpacing = 28f;
         public const float JumpVelocity = 9f;
@@ -24,7 +25,7 @@ namespace IndianRunner
             float t = Math.Max(0, Math.Min(1, progress));
             return t * t * (3 - 2 * t);
         }
-        public static float Speed(float distance) => Math.Min(MaxSpeed, 9f + distance / 180f);
+        public static float Speed(float distance) => Math.Min(MaxSpeed, StartSpeed + Math.Max(0,distance) / 180f);
         public static int Score(float distance, int coins) => (int)Math.Max(0, distance) + coins * 10;
         public static float LaneX(int lane) => (Math.Max(0, Math.Min(2, lane)) - 1) * LaneWidth;
         public static int SafeLane(int row, int seed) => (int)(Mix((uint)row ^ (uint)seed) % 3);

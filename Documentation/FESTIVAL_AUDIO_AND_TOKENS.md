@@ -4,7 +4,7 @@ The road pickups are now original mirror-work-inspired ornaments: turquoise fabr
 
 ## Original offline audio
 
-The old single-tone cues and short motif are replaced with an original 20-second, 96 BPM instrumental loop using pentatonic plucks, a breathy lead, soft hand-drum-like pulses, a drone and restrained shimmer. Notes have attack/release envelopes and the loop ends at zero. This is synthesized original music, not a recording of traditional performers or a claim to reproduce an authentic regional instrument.
+The old single-tone cues and short motif are replaced with an original 15.238-second, 126 BPM eight-bar instrumental loop using brighter pentatonic plucks, answering lead phrases, moving bass, stronger hand-drum-like pulses, backbeat claps and shakers. Notes have attack/release envelopes and the loop ends at zero. This is synthesized original music, not a recording of traditional performers or a claim to reproduce an authentic regional instrument.
 
 Pickups play a gentle four-note chime sequence with a short retrigger limit; jumps have a soft rising swish and game over has a short rounded drum. A pooled engine source fades/pans in as a motorcycle approaches and lowers pitch after passing; the spaceship uses a separate airy hum on the same source. Camel calls and occasional roadside-elephant trumpets are stylised synthesized effects, not realistic animal recordings or spoken voice acting. They trigger once per nearby encounter and duck the music briefly. Music/effects retain separate controls; pause freezes audio, restart clears encounter sounds and returning to menu stops vehicle/animal sounds.
 
@@ -27,3 +27,11 @@ The main runner and the safe-route rules are preserved. At the enlarged camel en
 No Unity Editor/audio-device audition or Android performance measurement was available in the implementation workspace.
 
 The subsequent goals/gardens pass adds safe festival sections, pouch power, outfit rewards, a welcome arpeggio and a rare spaceship schedule. See FESTIVAL_GOALS_AND_GARDENS.md for current timing and acceptance checks.
+
+## Faster festival groove and start
+
+The new original background track runs at 126 BPM (up from 96), with 64 eighth-note melody/rest slots, bass movement, low/high drum accents, claps and sixteenth-note shaker texture. Short attack/release envelopes and loop-edge fades avoid hard starts/clicks. Frequencies are precomputed at initialization; the track is still generated only once. Default music level is slightly higher and pickup ducking is less deep, while dialogue keeps its stronger duck. Scenic passages change level gently without speeding up/detuning the track. Procession drums now use the same beat clock (four-beat loop), synchronized with music samples.
+
+The mono 22,050 Hz music clip is 336,000 samples instead of the former 441,000; no audio downloads, music assets or additional AudioSources were added. This is original synthesized music, not recorded Rajasthani instruments or a traditional-song performance. Startup time, music enjoyment and device mix require audition/profiling.
+
+RunRules.StartSpeed is now 11 units/s (was 9), about 22% faster at launch. Speed still rises gradually by distance and caps at the existing 18. Lane-change speed, jump/slide physics, obstacle rows and maximum-speed reaction allowance are unchanged. Check swipes, warnings, the initial camera transition and the easier first goals on the phone at the faster launch pace.
