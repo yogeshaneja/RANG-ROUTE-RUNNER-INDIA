@@ -9,6 +9,7 @@ namespace IndianRunner
         private TrackWorld world;
         private RunnerModel runner;
         private WeatherController weather;
+        private CloudGuardian guardian;
         private RunnerAudio audioPlayer;
         private AndroidSpeech speech, breakSpeech;
         private const float DanceSeconds=5;
@@ -67,13 +68,14 @@ namespace IndianRunner
             feedback = new RunFeedback(transform);
             runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
             weather = new WeatherController(transform, gameCamera, sunlight);
+            guardian=new CloudGuardian(transform);
             audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
             speech=new AndroidSpeech(dialogueLanguage,gameObject); speech.SetEnabled(voices && sound); banter.Reset(seed);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); world.SetRain(weather.RainIntensity); RefreshHud();
         }
         public void ValidateStartup()
         {
-            if (progress == null || world == null || runner == null || weather == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
+            if (progress == null || world == null || runner == null || weather == null || guardian == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
             world.ValidatePool(); runner.ValidateRig();
         }
@@ -88,7 +90,7 @@ namespace IndianRunner
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
             runEndMessage = "Try the open lane for a safe route.";
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
-            world.Reset(seed); world.Position(0, seed, 0, reduced); audioPlayer.ResetRun(); banter.Reset(seed); speech.Stop(); state = State.Running;
+            world.Reset(seed); world.Position(0, seed, 0, reduced); guardian.Reset(); audioPlayer.ResetRun(); banter.Reset(seed); speech.Stop(); state = State.Running;
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = fromMenu && !reduced ? Quaternion.Euler(0,180,0) : Quaternion.identity;
             runner.Animate(0, false, false, 0, reduced); PositionCamera();
             input.ResetGesture(); audioPlayer.Paused(false); RefreshHud();
@@ -165,6 +167,10 @@ namespace IndianRunner
             }
             if(!hit)
             {
+                if(guardian.Tick(distance,clock,reduced))
+                {
+                    audioPlayer.GuardianReveal(); milestoneText="THE THAR CLOUD GUARDIAN"; milestoneUntil=clock+2;
+                }
                 audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
                 if((world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
             }
@@ -266,7 +272,7 @@ namespace IndianRunner
         }
         private void ReturnToMenu()
         {
-            SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
+            SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; guardian.Reset(); magnetUntil=0; inRest=false;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
@@ -277,7 +283,7 @@ namespace IndianRunner
         private void Resume() { state = pausedDanceBreak ? State.DanceBreak:State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
         private void EndRun(bool camelContact)
         {
-            state = State.GameOver; speech.Stop(); audioPlayer.EndSpeechDuck();
+            state = State.GameOver; guardian.Reset(); speech.Stop(); audioPlayer.EndSpeechDuck();
             runEndMessage = world.ContactMessage.Length > 0 ? world.ContactMessage : camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
             SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
@@ -337,7 +343,7 @@ namespace IndianRunner
         private void OnApplicationPause(bool paused) { if(paused) { speech?.Stop(); breakSpeech?.Stop(); } if (paused && (state==State.Running || state==State.DanceBreak)) Pause(); }
         private void OnApplicationFocus(bool focus) { if(!focus) { speech?.Stop(); breakSpeech?.Stop(); } if (!focus && (state==State.Running || state==State.DanceBreak)) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { speech?.Dispose(); breakSpeech?.Dispose(); skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void OnDestroy() { speech?.Dispose(); breakSpeech?.Dispose(); guardian?.Dispose(); skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
         private void WeatherChoice()
         {
             weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);

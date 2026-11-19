@@ -78,6 +78,7 @@ namespace IndianRunner
         public void DuckSpeech(float seconds=4.5f) { speechDuckUntil=Time.unscaledTime+seconds; }
         public void EndSpeechDuck() { speechDuckUntil=0; }
         public void Celebrate() { effects.PlayOneShot(celebration,.52f); }
+        public void GuardianReveal() { effects.PlayOneShot(celebration,.40f); animals.PlayOneShot(saucer,.22f); }
         public void Jump() => effects.PlayOneShot(jump,.65f);
         public void Stumble() { EndDanceBreak(); approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.8f); }
         public void Tick(float dt,int kind=0,float ahead=100,float pan=0,int encounterKey=-1,bool scenic=false)

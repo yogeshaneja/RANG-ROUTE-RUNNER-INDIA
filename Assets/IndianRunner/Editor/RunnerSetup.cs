@@ -169,6 +169,18 @@ namespace IndianRunner.Editor
             Require(TrackWorld.SegmentBox(new Vector3(0,0,3),new Vector3(0,0,-3),new Vector3(-.84f,-2.03f,-1.4f),new Vector3(.84f,1.97f,1.4f)),"Motorcycle sweep missed");
             Require(TrackWorld.SegmentBox(new Vector3(0,-4,0),new Vector3(0,-.8f,0),new Vector3(-1.26f,-2.03f,-1.26f),new Vector3(1.26f,.74f,1.26f)),"Descending ship sweep missed");
             Require(RunRules.DynamicKind(32)==RajasthanObstacles.Spaceship,"Spaceship rarity schedule");
+            var guardianShader=UnityEngine.Resources.Load<Shader>("Scenery/CloudGuardian");
+            Require(guardianShader!=null && guardianShader.isSupported,"Cloud Guardian shader missing or unsupported");
+            Require(!RunRules.GuardianWindow(287.9f) && RunRules.GuardianWindow(288) && !RunRules.GuardianWindow(308),"Guardian intro window incorrect");
+            Require(!RunRules.GuardianWindow(792) && RunRules.GuardianWindow(1296),"Guardian rarity incorrect");
+            for(int gardenRow=10;gardenRow<1000;gardenRow+=36)
+                for(int boundary=0;boundary<2;boundary++)
+                {
+                    float appearanceStart=gardenRow*RunRules.RowSpacing+(boundary==0 ? 8:27.99f);
+                    float appearanceEnd=appearanceStart+RunRules.MaxSpeed*CloudGuardian.Duration;
+                    for(float sample=appearanceStart;sample<=appearanceEnd;sample+=1)
+                        Require(RunRules.RestBuffer((int)(sample/RunRules.RowSpacing)),"Guardian overlaps an obstacle row");
+                }
             Require(RunRules.RestDistance(280) && !RunRules.RestDistance(364),"Rest garden boundaries");
             Require(RunRules.DynamicKind(2)==RajasthanObstacles.Wheel && RunRules.DynamicKind(8)==RajasthanObstacles.FallingCloth,"Intro encounter schedule");
             Require(RunRules.DynamicKind(14)==RajasthanObstacles.Peacock && RunRules.DynamicKind(20)==RajasthanObstacles.Procession,"Peacock/procession schedule");

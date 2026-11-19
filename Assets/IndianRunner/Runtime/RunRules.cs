@@ -34,6 +34,11 @@ namespace IndianRunner
         // Empty neighbouring rows leave time to enter/leave the warned lane.
         public static bool RestRow(int row) => row >= 10 && row%18 >= 10 && row%18 <= 12;
         public static bool RestBuffer(int row) => row >= 9 && row%18 >= 9 && row%18 <= 13;
+        public static bool GuardianWindow(float distance)
+        {
+            int row=(int)Math.Max(0,distance/RowSpacing);
+            return row>=10 && row%36==10 && distance-row*RowSpacing>=8;
+        }
         public static bool RestDistance(float distance) => RestRow((int)Math.Max(0,distance/RowSpacing));
         public static bool PouchRow(int row) => row >= 11 && row%18 == 11;
         // Rare fantasy surprise: first at 910 m, then every 2,016 m. Skip rest buffers.
