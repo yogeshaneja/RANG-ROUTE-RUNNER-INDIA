@@ -234,6 +234,11 @@ namespace IndianRunner
                             var hazard=row.Obstacles[lane].Root;
                             hazard.localPosition=new Vector3(RunRules.HazardX(row.DynamicKind,lane,ahead),RunRules.HazardY(row.DynamicKind,ahead),RunRules.HazardZ(row.DynamicKind,row.Z,distance)-tile.Index*TileLength);
                             if(row.DynamicKind==RajasthanObstacles.Spaceship) hazard.localRotation=Quaternion.Euler(0,reduced ? 0:clock*24,0);
+                            if(row.DynamicKind==RajasthanObstacles.OncomingElephant)
+                            {
+                                hazard.localRotation=Quaternion.Euler(0,180,0);
+                                row.Obstacles[lane].AnimateElephant(distance,reduced);
+                            }
                             // Rolling is gameplay motion: reduced effects preserves it.
                             if(row.DynamicKind==RajasthanObstacles.Wheel) hazard.localRotation=Quaternion.Euler(-distance*1.45f/.62f*Mathf.Rad2Deg,0,0);
                         }

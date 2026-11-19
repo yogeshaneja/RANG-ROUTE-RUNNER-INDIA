@@ -83,6 +83,10 @@ namespace IndianRunner
         {
             var root=new GameObject("Decorated roadside elephant - scenery").transform; root.SetParent(parent,false);
             root.localPosition=position; root.localRotation=Quaternion.Euler(0,-35,0);
+            BuildElephant(root);
+        }
+        public static void BuildElephant(Transform root,bool includeLegs=true)
+        {
             var grey=PrimitiveArt.Mat(new Color(.43f,.46f,.47f));
             var soft=PrimitiveArt.Mat(new Color(.54f,.53f,.50f));
             var dark=PrimitiveArt.Mat(new Color(.09f,.075f,.06f));
@@ -94,7 +98,7 @@ namespace IndianRunner
             {
                 NaturalMesh.Oval(root,"Asian elephant ear",new Vector3(side*.67f,2.11f,1.08f),new Vector3(.68f,1.22f,.28f),soft,16);
                 NaturalMesh.Oval(root,"Gentle elephant eye",new Vector3(side*.49f,2.36f,1.68f),Vector3.one*.075f,dark,10);
-                foreach(float z in new[]{-.8f,.85f})
+                if(includeLegs) foreach(float z in new[]{-.8f,.85f})
                 {
                     NaturalMesh.Lathe(root,"Rounded elephant leg",new[]{new Vector3(.24f,.08f,.25f),new Vector3(.22f,.65f,.22f),new Vector3(.29f,1.55f,.28f)},grey,14).localPosition=new Vector3(side*.53f,0,z);
                     for(int n=0;n<3;n++) NaturalMesh.Oval(root,"Elephant toenail",new Vector3(side*.53f-.13f+n*.13f,.15f,z+.23f),new Vector3(.10f,.14f,.04f),soft,8);
@@ -108,6 +112,12 @@ namespace IndianRunner
             NaturalMesh.Oval(root,"Woven pink saddle cloth",new Vector3(0,2.18f,-.15f),new Vector3(1.87f,1.1f,1.55f),cloth,18);
             NaturalMesh.Branch(root,"Elephant tail",new Vector3(0,1.86f,-1.3f),new Vector3(.15f,.65f,-1.56f),.055f,grey);
             NaturalMesh.Oval(root,"Tail tuft",new Vector3(.15f,.63f,-1.56f),new Vector3(.14f,.25f,.13f),dark,10);
+        }
+        public static void MovingElephantLeg(Transform root)
+        {
+            var grey=PrimitiveArt.Mat(new Color(.43f,.46f,.47f));
+            NaturalMesh.Lathe(root,"Rounded walking elephant leg",new[]{new Vector3(.24f,-1.27f,.25f),new Vector3(.22f,-.70f,.22f),new Vector3(.29f,.20f,.28f)},grey,14);
+            for(int n=0;n<3;n++) NaturalMesh.Oval(root,"Sculpted elephant toenail",new Vector3(-.13f+n*.13f,-1.20f,.23f),new Vector3(.10f,.14f,.04f),grey,8);
         }
     }
 }

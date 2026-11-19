@@ -164,6 +164,11 @@ namespace IndianRunner.Editor
             Require(!TrackWorld.SegmentBox(new Vector3(0, 0, -5), new Vector3(0, 0, 5), new Vector3(-1, .45f, -1), new Vector3(1, 3, 1)), "Slide incorrectly hit high barrier");
             Require(RunRules.CamelWarningDistance / RunRules.MaxSpeed >= 2, "Camel warning must allow at least two seconds at maximum speed");
             Require(RunRules.HazardY(7,40) == 9 && Mathf.Abs(RunRules.HazardY(7,8)-.8f)<.001f,"Spaceship descent endpoints");
+            Require(RunRules.DynamicKind(16)==RajasthanObstacles.OncomingElephant && RunRules.DynamicKind(52)==RajasthanObstacles.OncomingElephant,"Oncoming elephant schedule incorrect");
+            Require(RunRules.HazardZ(RajasthanObstacles.OncomingElephant,100,90)>100 && RunRules.HazardZ(RajasthanObstacles.OncomingElephant,100,110)<100,"Elephant must approach the runner from the front");
+            var elephantShape=FestivalObstacles.Shape(RajasthanObstacles.OncomingElephant);
+            Require(elephantShape.x+RunRules.PlayerHalfWidth<RunRules.LaneWidth && elephantShape.z>=2.4f,"Elephant bounds block a safe lane or miss its trunk");
+            Require(TrackWorld.SegmentBox(new Vector3(0,0,5),new Vector3(0,0,-5),new Vector3(-elephantShape.x-RunRules.PlayerHalfWidth,-2,-elephantShape.z-RunRules.PlayerHalfWidth),new Vector3(elephantShape.x+RunRules.PlayerHalfWidth,elephantShape.y,elephantShape.z+RunRules.PlayerHalfWidth)),"Elephant relative sweep missed");
             Require(RunRules.HazardZ(6,100,90)>100 && RunRules.HazardZ(6,100,110)<100,"Motorcycle must approach from the front");
             // Relative sweeps include both player movement and obstacle motion.
             Require(TrackWorld.SegmentBox(new Vector3(0,0,3),new Vector3(0,0,-3),new Vector3(-.84f,-2.03f,-1.4f),new Vector3(.84f,1.97f,1.4f)),"Motorcycle sweep missed");
@@ -215,6 +220,8 @@ namespace IndianRunner.Editor
             Require(chatter.Tick(1,RajasthanObstacles.Motorcycle,8,11),"Rider dialogue missing");
             string firstCaption=chatter.Current.Caption;
             Require(chatter.Visible(2) && !chatter.Tick(2,RajasthanObstacles.Motorcycle,7,11),"Repeated voice for same encounter");
+            var elephantChatter=new RoadBanter(); elephantChatter.Reset(1);
+            Require(elephantChatter.Tick(1,RajasthanObstacles.OncomingElephant,7,9) && elephantChatter.Current.Role==VoiceRole.Elephant,"Oncoming elephant did not use elephant recordings");
             Require(!chatter.Tick(3,RajasthanObstacles.Camel,6,22),"Voice cooldown ignored");
             Require(chatter.Tick(10,RajasthanObstacles.Camel,7,33),"Animal dialogue missing after cooldown");
             Require(!chatter.Visible(15),"Subtitle expiry ignored");

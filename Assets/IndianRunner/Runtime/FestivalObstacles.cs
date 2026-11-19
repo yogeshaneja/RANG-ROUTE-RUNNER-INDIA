@@ -8,6 +8,7 @@ namespace IndianRunner
         // X/Z are half extents; Y is height above the moving object's base.
         public static Vector3 Shape(int kind)
         {
+            if(kind==RajasthanObstacles.OncomingElephant) return new Vector3(1.05f,3f,2.45f);
             if(kind==RajasthanObstacles.Motorcycle) return new Vector3(.50f,1.97f,1.06f);
             if(kind==RajasthanObstacles.Spaceship) return new Vector3(.92f,.74f,.92f);
             if(kind==RajasthanObstacles.Wheel) return new Vector3(.23f,1.24f,.62f);
@@ -19,6 +20,7 @@ namespace IndianRunner
         }
         public static string Warning(int kind)
         {
+            if(kind==RajasthanObstacles.OncomingElephant) return "ELEPHANT COMING";
             if(kind==RajasthanObstacles.UmbrellaLady) return "LADY WITH UMBRELLA";
             if(kind==RajasthanObstacles.Wheel) return "ROLLING WHEEL";
             if(kind==RajasthanObstacles.Procession) return "FESTIVAL PROCESSION";
@@ -29,6 +31,7 @@ namespace IndianRunner
         }
         public static string Contact(int kind)
         {
+            if(kind==RajasthanObstacles.OncomingElephant) return "Gentle elephant stumble. Give the big fellow his own lane.";
             if(kind==RajasthanObstacles.UmbrellaLady) return "Gentle umbrella stumble. Give her marked lane some room.";
             if(kind==RajasthanObstacles.Peacock) return "Peacock is unharmed. Give its marked lane some space.";
             if(kind==RajasthanObstacles.Wheel) return "Rolling wheel contact. Jump early or take the open lane.";

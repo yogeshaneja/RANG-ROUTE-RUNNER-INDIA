@@ -35,3 +35,7 @@ The new original background track runs at 126 BPM (up from 96), with 64 eighth-n
 The mono 22,050 Hz music clip is 336,000 samples instead of the former 441,000; no audio downloads, music assets or additional AudioSources were added. This is original synthesized music, not recorded Rajasthani instruments or a traditional-song performance. Startup time, music enjoyment and device mix require audition/profiling.
 
 RunRules.StartSpeed is now 11 units/s (was 9), about 22% faster at launch. Speed still rises gradually by distance and caps at the existing 18. Lane-change speed, jump/slide physics, obstacle rows and maximum-speed reaction allowance are unchanged. Check swipes, warnings, the initial camera transition and the easier first goals on the phone at the faster launch pace.
+
+## Comic game-over crank
+
+Game over now plays a short original 0.78-second raspy descending non-verbal groan/crank over a softer end drum. It is a synthesized sound effect, not a recorded actor, spoken Hindi line or new phone-speech request. The clip is created once (17,199 mono samples at 22,050 Hz) and reused on the existing effects source. Game over stops outgoing effect/animal/approach sounds first, briefly lowers the music, and restart stops the crank so it cannot bleed into the next run. Sound OFF mutes it. Audition volume/tone on the phone and verify only one game-over cue is played per run.

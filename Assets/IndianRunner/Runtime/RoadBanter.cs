@@ -62,7 +62,7 @@ namespace IndianRunner
             for(int i=0;i<next.Length;i++) next[i]=(int)(((uint)seed+(uint)i*7)%(uint)Lines[i].Length);
             lastKey=lastKind=-1; nextAllowed=visibleUntil=0; Current=default(Line);
         }
-        private static int Group(int kind) => kind==RajasthanObstacles.Motorcycle ? 0 : kind==RajasthanObstacles.Peacock ? 1 : kind==RajasthanObstacles.Camel ? 2 : kind==RajasthanObstacles.ElephantSound ? 3 : kind==RajasthanObstacles.Procession ? 4 : kind==RajasthanObstacles.UmbrellaLady ? 5 : -1;
+        private static int Group(int kind) => kind==RajasthanObstacles.Motorcycle ? 0 : kind==RajasthanObstacles.Peacock ? 1 : kind==RajasthanObstacles.Camel ? 2 : (kind==RajasthanObstacles.ElephantSound || kind==RajasthanObstacles.OncomingElephant) ? 3 : kind==RajasthanObstacles.Procession ? 4 : kind==RajasthanObstacles.UmbrellaLady ? 5 : -1;
         public bool Tick(float clock,int kind,float ahead,int encounterKey,bool reserveForRain=false)
         {
             int group=Group(kind);

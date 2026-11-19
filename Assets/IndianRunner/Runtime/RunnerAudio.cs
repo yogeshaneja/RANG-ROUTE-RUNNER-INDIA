@@ -14,7 +14,7 @@ namespace IndianRunner
         private readonly List<AudioClip> owned = new List<AudioClip>();
         private readonly AudioClip[] pickups = new AudioClip[4];
         private readonly AudioClip danceTrack,breakVoice;
-        private readonly AudioClip jump, stumble, engine, saucer, camel, elephant, celebration, rolling, procession, cloth, peacock, repairs;
+        private readonly AudioClip jump, stumble, gameOverCrank, engine, saucer, camel, elephant, celebration, rolling, procession, cloth, peacock, repairs;
         private bool paused, musicEnabled, dancing;
         private int savedMusicSample;
         private AudioClip runningTrack;
@@ -31,6 +31,7 @@ namespace IndianRunner
             for (int i=0;i<pickups.Length;i++) pickups[i]=Cue("Mirror-work sparkle "+i,0,.32f,587.33f*Mathf.Pow(2,i*2/12f));
             jump=Cue("Soft jump swish",1,.24f,280);
             stumble=Cue("Gentle end-of-run drum",2,.38f,100);
+            gameOverCrank=Cue("Original comic raspy game-over groan",13,.78f,155);
             engine=Cue("Rounded motorcycle engine loop",3,1,60);
             saucer=Cue("Airy spaceship hum loop",4,1,110);
             camel=Cue("Soft stylised camel call",5,.85f,105);
@@ -80,7 +81,7 @@ namespace IndianRunner
         public void Celebrate() { effects.PlayOneShot(celebration,.52f); }
         public void GuardianReveal() { effects.PlayOneShot(celebration,.40f); animals.PlayOneShot(saucer,.22f); }
         public void Jump() => effects.PlayOneShot(jump,.65f);
-        public void Stumble() { EndDanceBreak(); approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.8f); }
+        public void Stumble() { EndDanceBreak(); effects.Stop(); approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.65f); effects.PlayOneShot(gameOverCrank,.80f); duckUntil=Time.unscaledTime+.9f; }
         public void Tick(float dt,int kind=0,float ahead=100,float pan=0,int encounterKey=-1,bool scenic=false)
         {
             if(paused) return;
@@ -103,10 +104,10 @@ namespace IndianRunner
             }
             approach.panStereo=Mathf.Lerp(approach.panStereo,Mathf.Clamp(pan,-.65f,.65f),smoothing);
             approach.pitch=Mathf.Lerp(approach.pitch,kind==RajasthanObstacles.Procession ? 1 : ahead<0 ? .88f : 1.06f,smoothing);
-            if((kind==RajasthanObstacles.Camel || kind==RajasthanObstacles.ElephantSound || kind==RajasthanObstacles.FallingCloth || kind==RajasthanObstacles.Peacock || kind==RajasthanObstacles.Roadworks) && ahead<24 && ahead>0 && encounterKey!=lastAnimalKey)
+            if((kind==RajasthanObstacles.Camel || kind==RajasthanObstacles.ElephantSound || kind==RajasthanObstacles.OncomingElephant || kind==RajasthanObstacles.FallingCloth || kind==RajasthanObstacles.Peacock || kind==RajasthanObstacles.Roadworks) && ahead<(kind==RajasthanObstacles.OncomingElephant ? 42:24) && ahead>0 && encounterKey!=lastAnimalKey)
             {
                 lastAnimalKey=encounterKey; animals.panStereo=Mathf.Clamp(pan,-.65f,.65f);
-                animals.PlayOneShot(kind==RajasthanObstacles.ElephantSound ? elephant : kind==RajasthanObstacles.FallingCloth ? cloth : kind==RajasthanObstacles.Peacock ? peacock : kind==RajasthanObstacles.Roadworks ? repairs : camel,.65f); duckUntil=Time.unscaledTime+.7f;
+                animals.PlayOneShot((kind==RajasthanObstacles.ElephantSound || kind==RajasthanObstacles.OncomingElephant) ? elephant : kind==RajasthanObstacles.FallingCloth ? cloth : kind==RajasthanObstacles.Peacock ? peacock : kind==RajasthanObstacles.Roadworks ? repairs : camel,.65f); duckUntil=Time.unscaledTime+.7f;
             }
         }
         public void BeginDanceBreak()
@@ -190,6 +191,13 @@ namespace IndianRunner
                 }
                 else if(type==10) value=(.055f*Sin(2400*t+.2f*Sin(37*t))+.035f*Sin(3100*t)+.12f*Sin(hz*t-130*t*t))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2);
                 else if(type==11) value=(Sin(hz*t+1.5f*Sin(3*t))+.15f*Sin(hz*2*t))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2)*.25f;
+                else if(type==13)
+                {
+                    // Non-verbal "awrr"-like comic crank, not synthesized words.
+                    float phase=155*t-65*t*t;
+                    float rasp=(Sin(phase)+.32f*Sin(phase*2)+.15f*Sin(phase*3))*(.78f+.22f*Sin(25*t));
+                    value=(rasp+.09f*Sin(720*t))*Mathf.Sin(Mathf.PI*u)*Mathf.Exp(-t*.6f)*.45f;
+                }
                 else value=(Sin(hz*t)+.15f*Sin(330*t))*Mathf.Exp(-t*14)*.35f;
                 // Procession uses four beats at the same tempo as the background track.
                 data[i]=value*(type==3 || type==4 || type==8 || type==9 ? 1 : envelope);

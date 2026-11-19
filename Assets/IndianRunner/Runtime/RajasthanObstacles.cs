@@ -6,13 +6,14 @@ namespace IndianRunner
     // Shared geometry is built once. Every pooled slot reuses these meshes/materials.
     public sealed class RajasthanObstacles
     {
-        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14;
-        public const int MaxKind=14, ElephantSound=100;
+        public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14, OncomingElephant = 15;
+        public const int MaxKind=15, ElephantSound=100;
         public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {
             public Mesh Mesh;
             public Material Material;
+            public int LegIndex=-1;
         }
         private readonly Part[][] models = new Part[MaxKind+1][];
         private Part[] camelLeg;
@@ -29,6 +30,12 @@ namespace IndianRunner
             foreach(var r in legRoot.GetComponentsInChildren<MeshRenderer>()) if(r.enabled)
                 legParts.Add(new Part {Mesh=r.GetComponent<MeshFilter>().sharedMesh,Material=r.sharedMaterial});
             camelLeg = legParts.ToArray(); Object.Destroy(legRoot.gameObject);
+            var elephantLegRoot=new GameObject("Shared walking elephant leg").transform;
+            RajasthanDecor.MovingElephantLeg(elephantLegRoot); PrimitiveArt.CombineScenery(elephantLegRoot,true);
+            var elephantLegParts=new List<Part>();
+            foreach(var renderer in elephantLegRoot.GetComponentsInChildren<MeshRenderer>()) if(renderer.enabled)
+                elephantLegParts.Add(new Part { Mesh=renderer.GetComponent<MeshFilter>().sharedMesh,Material=renderer.sharedMaterial });
+            Object.Destroy(elephantLegRoot.gameObject);
             for (int kind = 1; kind <= MaxKind; kind++)
             {
                 var root = new GameObject("Shared Rajasthan obstacle " + kind).transform;
@@ -41,6 +48,8 @@ namespace IndianRunner
                     if (!renderer.enabled) continue;
                     parts.Add(new Part { Mesh = renderer.GetComponent<MeshFilter>().sharedMesh, Material = renderer.sharedMaterial });
                 }
+                if(kind==OncomingElephant) for(int foot=0;foot<4;foot++) foreach(var legPart in elephantLegParts)
+                    parts.Add(new Part { Mesh=legPart.Mesh,Material=legPart.Material,LegIndex=foot });
                 models[kind] = parts.ToArray();
                 MaxParts = Mathf.Max(MaxParts, parts.Count);
                 Object.Destroy(root.gameObject);
@@ -53,6 +62,7 @@ namespace IndianRunner
             private readonly MeshRenderer[] renderers;
             private readonly RajasthanObstacles catalog;
             private readonly Transform[] legs;
+            private int configuredKind;
             public Instance(Transform parent, RajasthanObstacles source, bool camelSlot = false)
             {
                 catalog = source;
@@ -83,6 +93,7 @@ namespace IndianRunner
             }
             public void Configure(int kind)
             {
+                configuredKind=kind;
                 Root.gameObject.SetActive(kind != 0); Root.localScale = Vector3.one*VisualScale(kind);
                 Root.localRotation = Quaternion.identity;
                 if(legs != null) foreach(var leg in legs) leg.gameObject.SetActive(kind == Camel);
@@ -93,9 +104,22 @@ namespace IndianRunner
                     bool active = i < parts.Length; renderers[i].enabled = active;
                     if (!active) continue;
                     filters[i].sharedMesh = parts[i].Mesh; renderers[i].sharedMaterial = parts[i].Material;
-                    filters[i].transform.localPosition = kind==Wheel ? new Vector3(0,-.62f,0) : Vector3.zero;
+                    filters[i].transform.localPosition = parts[i].LegIndex>=0 ? ElephantLegPosition(parts[i].LegIndex):kind==Wheel ? new Vector3(0,-.62f,0) : Vector3.zero;
+                    filters[i].transform.localRotation=Quaternion.identity;
                 }
                 Root.name = kind == Matkas ? "Matka pottery stack - jump" : kind == Fabric ? "Fabric bundles - jump" : kind == Cart ? "Wooden bazaar cart - dodge" : kind == Awning ? "Market awning - slide" : kind == Camel ? "Decorated camel crossing - dodge" : kind == Motorcycle ? "Oncoming motorcycle - dodge" : kind==Spaceship ? "Descending spaceship - dodge" : FestivalObstacles.Warning(kind);
+            }
+            private static Vector3 ElephantLegPosition(int foot) => new Vector3(foot%2==0 ? -.53f:.53f,1.35f,foot<2 ? .85f:-.8f);
+            public void AnimateElephant(float distance,bool reduced)
+            {
+                if(configuredKind!=OncomingElephant) return;
+                var parts=catalog.models[OncomingElephant];
+                for(int i=0;i<parts.Length;i++) if(parts[i].LegIndex>=0)
+                {
+                    int foot=parts[i].LegIndex;
+                    float phase=distance*.5f+(foot==0 || foot==3 ? 0:Mathf.PI);
+                    filters[i].transform.localRotation=Quaternion.Euler(Mathf.Sin(phase)*(reduced ? 6:12),0,0);
+                }
             }
             public void Walk(float distance)
             {
@@ -109,6 +133,7 @@ namespace IndianRunner
         }
         private static void Build(Transform root, int kind)
         {
+            if(kind==OncomingElephant) { RajasthanDecor.BuildElephant(root,false); return; }
             if(kind>=Wheel) { FestivalObstacles.Build(root,kind); return; }
             var clay = PrimitiveArt.Mat(new Color(.73f, .26f, .12f));
             var gold = PrimitiveArt.Mat(new Color(1, .71f, .13f));

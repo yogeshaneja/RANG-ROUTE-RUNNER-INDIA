@@ -59,6 +59,7 @@ namespace IndianRunner
             if(row>=8 && row%36==8) return 10;
             if(row>=14 && row%36==14) return 12;
             if(row>=20 && row%36==20) return 9;
+            if(row>=16 && row%36==16) return 15; // oncoming elephant; keep this rules file independent of Unity types
             return row>=4 && row%12==4 ? 6 : 0;
         }
         public static bool NearDynamic(int row) => DynamicKind(row-1) != 0 || DynamicKind(row) != 0 || DynamicKind(row+1) != 0;
@@ -69,7 +70,7 @@ namespace IndianRunner
             return LaneX(lane)+(lane==0 ? -offset:offset);
         }
         // Bike meets the runner at its row, but travels towards them before and after.
-        public static float HazardZ(int kind, float rowZ, float distance) => rowZ + (kind == 6 ? .65f : kind==8 ? .45f : kind==9 ? -.20f : 0)*(rowZ-distance);
+        public static float HazardZ(int kind, float rowZ, float distance) => rowZ + (kind == 6 ? .65f : kind==15 ? .35f : kind==8 ? .45f : kind==9 ? -.20f : 0)*(rowZ-distance);
         public static float HazardY(int kind, float ahead)
         {
             float t = Math.Max(0,Math.Min(1,(40-ahead)/32));
