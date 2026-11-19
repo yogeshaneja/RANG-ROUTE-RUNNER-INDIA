@@ -18,7 +18,7 @@ namespace IndianRunner
         public bool Active { get; private set; }
         public CloudGuardian(Transform parent)
         {
-            root=Pivot(parent,"Original Thar Cloud Guardian",new Vector3(0,7,70));
+            root=Pivot(parent,"Original Thar Cloud Guardian",new Vector3(0,2.5f,70));
             var shader=Resources.Load<Shader>("Scenery/CloudGuardian");
             if(shader==null || !shader.isSupported)
             { root.gameObject.SetActive(false); Debug.LogWarning("Cloud Guardian disabled: its sky shader is unavailable."); return; }

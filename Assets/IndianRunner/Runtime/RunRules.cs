@@ -40,6 +40,11 @@ namespace IndianRunner
             return row>=10 && row%36==10 && distance-row*RowSpacing>=8;
         }
         public static bool RestDistance(float distance) => RestRow((int)Math.Max(0,distance/RowSpacing));
+        public static bool DanceRestDistance(float distance)
+        {
+            int row=(int)Math.Max(0,distance/RowSpacing);
+            return RestRow(row) && ((row-10)/18)%3==0;
+        }
         public static bool PouchRow(int row) => row >= 11 && row%18 == 11;
         // Rare fantasy surprise: first at 910 m, then every 2,016 m. Skip rest buffers.
         // Rain visitors replace one eligible row, preserving its existing escape lane.

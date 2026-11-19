@@ -150,7 +150,7 @@ namespace IndianRunner
             }
             int fade=Rate/200;
             for(int i=0;i<fade;i++) { float gain=Mathf.SmoothStep(0,1,(float)i/fade); data[i]*=gain; data[data.Length-1-i]*=gain; }
-            return Clip("Original five-second rest dance groove - 140 BPM",data);
+            return Clip("Original short rest dance groove - 140 BPM",data);
         }
         private AudioClip Clip(string name,float[] data)
         {

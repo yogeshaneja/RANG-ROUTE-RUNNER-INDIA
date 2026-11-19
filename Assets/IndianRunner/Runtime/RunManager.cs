@@ -12,7 +12,7 @@ namespace IndianRunner
         private CloudGuardian guardian;
         private RunnerAudio audioPlayer;
         private AndroidSpeech speech, breakSpeech;
-        private const float DanceSeconds=5;
+        private const float DanceSeconds=3;
         private float danceElapsed,danceLandingHeight,introStartedAt;
         private bool pausedDanceBreak,breakCuePending;
         private static readonly RoadBanter.Line BreakTimeLine=new RoadBanter.Line("RUNNER","ब्रेक टाइम!","Break time!","Break time!",1,1,VoiceRole.Rider,0);
@@ -161,7 +161,7 @@ namespace IndianRunner
             inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
-            if(enterGarden)
+            if(enterGarden && RunRules.DanceRestDistance(distance))
             {
                 BeginDanceBreak(); TickDanceBreak(0); RefreshHud(); return;
             }

@@ -181,6 +181,7 @@ namespace IndianRunner.Editor
                     for(float sample=appearanceStart;sample<=appearanceEnd;sample+=1)
                         Require(RunRules.RestBuffer((int)(sample/RunRules.RowSpacing)),"Guardian overlaps an obstacle row");
                 }
+            Require(RunRules.DanceRestDistance(280) && !RunRules.DanceRestDistance(784) && !RunRules.DanceRestDistance(1288) && RunRules.DanceRestDistance(1792),"Dance rest must skip two gardens between breaks");
             Require(RunRules.RestDistance(280) && !RunRules.RestDistance(364),"Rest garden boundaries");
             Require(RunRules.DynamicKind(2)==RajasthanObstacles.Wheel && RunRules.DynamicKind(8)==RajasthanObstacles.FallingCloth,"Intro encounter schedule");
             Require(RunRules.DynamicKind(14)==RajasthanObstacles.Peacock && RunRules.DynamicKind(20)==RajasthanObstacles.Procession,"Peacock/procession schedule");
