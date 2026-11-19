@@ -54,6 +54,8 @@ Prompts and generation details for the three images are in ARTWORK.md. They are 
 
 - Lightweight pass: the original RajasthanBazaar.jpg and RajasthanHorizon.jpg and their metadata are archived byte-for-byte in Documentation/ArtArchive, outside Unity's build Assets tree. Their original ownership/licences are unchanged. The active realistic horizon/sandstone/cotton art and all current models/audio/voices are retained; no new external assets or dependencies.
 
-### Dialogue recording status
+### User-supplied Hindi dialogue recordings
 
-No Hindi/English dialogue recordings have been supplied or generated. DIALOGUE_RECORDINGS.csv specifies 16 original bilingual lines and intended filenames. The runtime supports recorded AudioClips, but none are shipped by this change. Recordings, provenance/license and actor consent entries must be added when actual audio is available. Existing phone-generated speech remains an optional temporary fallback.
+16 Hindi clips in Resources/Dialogue/hi are derived from the user uploads MALE.mp3 and FEMALE.mp3, explicitly supplied for use as the male/female game voices. The older FEMAL.mp3 was superseded and not used. Rider/camel/elephant/caller use the male batch; peacock/lady use the female batch. Spoken GAP sections are excluded; gentle level/edge cleanup preserves pitch/speed. The source originals remain unchanged outside the repository. Provenance hashes and exact cuts are in HINDI_AUDIO_CUTS.csv.
+
+The conversation discussed TTSMaker, but the user did not independently confirm which service/voice produced these files. Provider, voice identity and generation-license evidence have therefore not been independently verified; no actor-recording or verified-Marwari-accent claim is made. The user supplied/authorized these audio files for the game. No paid generation, audio service, voice model or cloned identity was introduced. English recordings remain unsupplied.
