@@ -4,13 +4,17 @@ namespace IndianRunner
 {
     public sealed class RunManager : MonoBehaviour
     {
-        private enum State { Menu, Running, Paused, GameOver }
+        private enum State { Menu, Running, DanceBreak, Paused, GameOver }
         private State state;
         private TrackWorld world;
         private RunnerModel runner;
         private WeatherController weather;
         private RunnerAudio audioPlayer;
-        private AndroidSpeech speech;
+        private AndroidSpeech speech, breakSpeech;
+        private const float DanceSeconds=5;
+        private float danceElapsed,danceLandingHeight,introStartedAt;
+        private bool pausedDanceBreak,breakCuePending;
+        private static readonly RoadBanter.Line BreakTimeLine=new RoadBanter.Line("RUNNER","ब्रेक टाइम!","Break time!","Break time!",1,1,VoiceRole.Rider,0);
         private readonly RoadBanter banter=new RoadBanter();
         private readonly RunnerInput input = new RunnerInput();
         private Camera gameCamera;
@@ -78,6 +82,7 @@ namespace IndianRunner
             bool fromMenu = state == State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
             introCameraPosition = gameCamera.transform.position; introCameraRotation = gameCamera.transform.rotation;
             introDuration = reduced ? 0 : fromMenu ? .7f : .25f;
+            danceElapsed=0; pausedDanceBreak=breakCuePending=false; introStartedAt=0; breakSpeech?.Stop();
             milestoneUntil = 0; milestoneText = ""; nextMilestone = 100; feedback.Reset();
             distance = x = height = verticalSpeed = slideUntil = clock = 0;
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
@@ -91,7 +96,11 @@ namespace IndianRunner
         private void Update()
         {
             // Clamp large stalls so an OS hitch cannot skip a reaction window.
-            float dt = Mathf.Min(Time.deltaTime, .05f); speech.Tick();
+            float dt = Mathf.Min(Time.deltaTime, .05f); speech.Tick(); breakSpeech?.Tick();
+            if(state==State.DanceBreak)
+            {
+                input.ResetGesture(); TickDanceBreak(Time.unscaledDeltaTime); return;
+            }
             input.Read(Screen.safeArea.yMax - 100 * Screen.width / 480f);
             if (input.Pause && !showingGoals)
             {
@@ -146,13 +155,14 @@ namespace IndianRunner
                 milestoneUntil=clock+2.5f;
             }
             bool restNow=RunRules.RestDistance(distance);
-            if(restNow && !inRest && !hit)
-            {
-                audioPlayer.Celebrate(); milestoneText="FESTIVAL GARDEN - enjoy the colours"; milestoneUntil=clock+2;
-            }
+            bool enterGarden=restNow && !inRest && !hit;
             inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
+            if(enterGarden)
+            {
+                BeginDanceBreak(); TickDanceBreak(0); RefreshHud(); return;
+            }
             if(!hit)
             {
                 audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
@@ -178,6 +188,57 @@ namespace IndianRunner
                 RefreshHud(); nextHudUpdate = clock + .1f;
             }
         }
+        private void BeginDanceBreak()
+        {
+            state=State.DanceBreak; danceElapsed=0; danceLandingHeight=height;
+            height=verticalSpeed=0; slideUntil=clock; showingGoals=false; breakCuePending=false;
+            speech.Stop(); input.ResetGesture(); SaveBest(); audioPlayer.BeginDanceBreak();
+            if(voices && sound)
+            {
+                if(audioPlayer.HasBreakVoice) { audioPlayer.SayRecordedBreakTime(); audioPlayer.DuckSpeech(1.25f); }
+                else
+                {
+                    // New cue is not in the supplied 16-line recording pack.
+                    // Optional English phone voice; no clip is fabricated.
+                    if(breakSpeech==null || (!breakSpeech.Ready && breakSpeech.CanRetry))
+                    { breakSpeech?.Dispose(); breakSpeech=new AndroidSpeech(DialogueLanguage.English); }
+                    breakSpeech.SetEnabled(true); breakCuePending=true;
+                }
+            }
+        }
+        private void TickDanceBreak(float elapsedStep)
+        {
+            danceElapsed=Mathf.Min(DanceSeconds,danceElapsed+Mathf.Max(0,elapsedStep));
+            if(breakCuePending)
+            {
+                if(danceElapsed>2) breakCuePending=false;
+                else if(breakSpeech.Ready)
+                {
+                    if(breakSpeech.Speak(BreakTimeLine)) audioPlayer.DuckSpeech(1.25f);
+                    breakCuePending=false;
+                }
+            }
+            float dt=Mathf.Min(elapsedStep,.05f);
+            runner.Root.localPosition=new Vector3(x,0,0);
+            runner.Dance(clock,danceElapsed,reduced,danceLandingHeight);
+            var cameraTarget=transform.position+new Vector3(x+.7f,2.2f,-4.6f);
+            var lookTarget=transform.position+new Vector3(x,1.8f,0);
+            float cameraBlend=reduced ? 1:1-Mathf.Exp(-7*dt);
+            gameCamera.transform.position=Vector3.Lerp(gameCamera.transform.position,cameraTarget,cameraBlend);
+            gameCamera.transform.rotation=Quaternion.Slerp(gameCamera.transform.rotation,Quaternion.LookRotation(lookTarget-gameCamera.transform.position),cameraBlend);
+            gameCamera.fieldOfView=Mathf.Lerp(gameCamera.fieldOfView,58,cameraBlend);
+            feedback.Tick(dt); audioPlayer.DanceRemaining(DanceSeconds-danceElapsed); audioPlayer.Tick(dt);
+            if(danceElapsed>=DanceSeconds)
+            {
+                breakSpeech?.Stop(); breakCuePending=false; audioPlayer.EndSpeechDuck(); audioPlayer.EndDanceBreak();
+                state=State.Running; pausedDanceBreak=false; input.ResetGesture();
+                laneStartX=x; laneTargetX=RunRules.LaneX(lane); laneElapsed=0;
+                laneDuration=RunRules.LaneTravelTime(laneTargetX-laneStartX);
+                introCameraPosition=gameCamera.transform.position; introCameraRotation=gameCamera.transform.rotation;
+                introDuration=reduced ? 0:.45f; introStartedAt=clock;
+                milestoneText="LET'S GO!"; milestoneUntil=clock+1.2f; RefreshHud();
+            }
+        }
         private void RefreshHud()
         {
             hudScore = CurrentScore.ToString("N0"); hudCoins = coins.ToString();
@@ -197,7 +258,7 @@ namespace IndianRunner
             cameraX = dt <= 0 ? targetX : Mathf.Lerp(cameraX,targetX,1-Mathf.Exp(-10*dt));
             var position = transform.position+new Vector3(cameraX,4.7f+(reduced ? 0 : height*.045f),-7.8f);
             var rotation = Quaternion.LookRotation(transform.position+new Vector3(cameraX,1.15f,12.5f)-position);
-            float transition = introDuration > 0 ? Mathf.SmoothStep(0,1,Mathf.Clamp01(clock/introDuration)) : 1;
+            float transition = introDuration > 0 ? Mathf.SmoothStep(0,1,Mathf.Clamp01((clock-introStartedAt)/introDuration)) : 1;
             gameCamera.transform.position = Vector3.Lerp(introCameraPosition,position,transition);
             gameCamera.transform.rotation = Quaternion.Slerp(introCameraRotation,rotation,transition);
             float fov = reduced ? 62 : Mathf.Lerp(62,65,Mathf.InverseLerp(9,18,RunRules.Speed(distance)));
@@ -205,15 +266,15 @@ namespace IndianRunner
         }
         private void ReturnToMenu()
         {
-            SaveBest(); speech.Stop(); banter.Reset(seed); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
+            SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
             runner.Animate(0,false,false,0,reduced); audioPlayer.ResetRun(); audioPlayer.Paused(false); PositionCamera(); RefreshHud();
             input.ResetGesture();
         }
-        private void Pause() { state = State.Paused; SaveBest(); RefreshHud(); input.ResetGesture(); speech.Stop(); audioPlayer.EndSpeechDuck(); audioPlayer.Paused(true); }
-        private void Resume() { state = State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
+        private void Pause() { pausedDanceBreak=state==State.DanceBreak; state = State.Paused; breakSpeech?.Stop(); breakCuePending=false; SaveBest(); RefreshHud(); input.ResetGesture(); speech.Stop(); audioPlayer.EndSpeechDuck(); audioPlayer.Paused(true); }
+        private void Resume() { state = pausedDanceBreak ? State.DanceBreak:State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
         private void EndRun(bool camelContact)
         {
             state = State.GameOver; speech.Stop(); audioPlayer.EndSpeechDuck();
@@ -236,12 +297,12 @@ namespace IndianRunner
         {
             PlayerPrefs.SetInt("runner.reduced", reduced ? 1 : 0); PlayerPrefs.SetInt("runner.music", music ? 1 : 0);
             PlayerPrefs.SetInt("runner.sound", sound ? 1 : 0); PlayerPrefs.SetInt("runner.voices",voices ? 1:0); PlayerPrefs.SetInt("runner.dialogueLanguageSimple",(int)dialogueLanguage); PlayerPrefs.Save(); audioPlayer.Settings(sound, music);
-            speech.SetEnabled(voices && sound); if(!voices || !sound) audioPlayer.EndSpeechDuck();
+            speech.SetEnabled(voices && sound); breakSpeech?.SetEnabled(voices && sound); if(!voices || !sound) audioPlayer.EndSpeechDuck();
             if (state == State.Paused) audioPlayer.Paused(true);
         }
         private void ReturnToPhoneHome()
         {
-            SaveBest(); SaveSettings(); speech.Stop(); audioPlayer.EndSpeechDuck();
+            SaveBest(); SaveSettings(); speech.Stop(); breakSpeech?.Stop(); audioPlayer.EndSpeechDuck();
 #if UNITY_ANDROID && !UNITY_EDITOR
             // Open the actual launcher, preserving this app in Recents. Moving a
             // task back alone can expose a previous app instead of the Home screen.
@@ -273,10 +334,10 @@ namespace IndianRunner
             Debug.Log("Exit to Home is available in the Android phone build.");
 #endif
         }
-        private void OnApplicationPause(bool paused) { if(paused) speech?.Stop(); if (paused && state == State.Running) Pause(); }
-        private void OnApplicationFocus(bool focus) { if(!focus) speech?.Stop(); if (!focus && state == State.Running) Pause(); }
+        private void OnApplicationPause(bool paused) { if(paused) { speech?.Stop(); breakSpeech?.Stop(); } if (paused && (state==State.Running || state==State.DanceBreak)) Pause(); }
+        private void OnApplicationFocus(bool focus) { if(!focus) { speech?.Stop(); breakSpeech?.Stop(); } if (!focus && (state==State.Running || state==State.DanceBreak)) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { speech?.Dispose(); skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void OnDestroy() { speech?.Dispose(); breakSpeech?.Dispose(); skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
         private void WeatherChoice()
         {
             weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);
@@ -372,7 +433,15 @@ namespace IndianRunner
                 GUI.Label(new Rect(left+24,top+3,width-230,35),hudScore,skin.Score);
                 GUI.Label(new Rect(left+18,top+38,width-214,23),hudStatus,skin.Caption);
                 GUI.Box(new Rect(left+width-192,top+5,122,54),"TOKENS "+hudCoins,skin.Chip);
-                if (state == State.Running)
+                if(state==State.DanceBreak)
+                {
+                    float restTop=top+75;
+                    GUI.Box(new Rect(left+24,restTop,width-48,205),GUIContent.none,skin.Card);
+                    GUI.Label(new Rect(left+30,restTop+8,width-60,48),"REST TIME!",skin.Title);
+                    GUI.Label(new Rect(left+30,restTop+54,width-60,100),Mathf.CeilToInt(Mathf.Max(0,DanceSeconds-danceElapsed)).ToString(),skin.RestCountdown);
+                    GUI.Label(new Rect(left+30,restTop+157,width-60,38),"Break time! Dance along.",skin.Text);
+                }
+                else if (state == State.Running)
                 {
                     if (GUI.Button(new Rect(left+width-61,top+5,50,54),"II",skin.Secondary)) Pause();
                     if (!string.IsNullOrEmpty(world.WarningMessage))

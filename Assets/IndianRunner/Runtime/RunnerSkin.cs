@@ -6,7 +6,7 @@ namespace IndianRunner
     // Cached native UI skin: no package download and no texture creation per frame.
     public sealed class RunnerSkin
     {
-        public GUIStyle Title, Subtitle, Text, Caption, Score, Card, Chip, Primary, Secondary, Toggle;
+        public GUIStyle RestCountdown, Title, Subtitle, Text, Caption, Score, Card, Chip, Primary, Secondary, Toggle;
         private readonly List<Texture2D> textures = new List<Texture2D>();
         public RunnerSkin()
         {
@@ -16,6 +16,7 @@ namespace IndianRunner
             Title = Label(40,FontStyle.Bold,new Color(1,.89f,.66f),TextAnchor.MiddleCenter);
             Subtitle = Label(15,FontStyle.Bold,new Color(.92f,.84f,.69f),TextAnchor.MiddleCenter);
             Text = Label(17,FontStyle.Normal,new Color(.94f,.95f,.92f),TextAnchor.MiddleCenter);
+            RestCountdown = Label(76,FontStyle.Bold,gold,TextAnchor.MiddleCenter);
             Caption = Label(12,FontStyle.Normal,new Color(.71f,.77f,.75f),TextAnchor.MiddleCenter);
             Score = Label(28,FontStyle.Bold,Color.white,TextAnchor.MiddleLeft);
             Card = Panel(glass);

@@ -182,6 +182,33 @@ namespace IndianRunner
                 shadow.localScale=new Vector3(.82f*size,1.16f*size,1); shadowMaterial.SetColor("_Tint",new Color(.14f,.10f,.06f,Mathf.Lerp(.30f,.11f,Mathf.Clamp01(height/1.7f))));
             }
         }
+        public void Dance(float clock,float elapsed,bool reduced,float landingHeight)
+        {
+            Animate(clock,false,false,0,reduced);
+            float settle=Mathf.SmoothStep(0,1,Mathf.Clamp01(elapsed/.35f));
+            float phase=elapsed*(RunnerAudio.DanceBpm/60f)*Mathf.PI*2;
+            float strength=(reduced ? .35f:1)*settle;
+            float pulse=Mathf.Sin(phase),sway=Mathf.Sin(phase*.5f);
+            Root.localPosition=new Vector3(Root.localPosition.x,landingHeight*(1-settle),0);
+            Root.localRotation=Quaternion.Slerp(Root.localRotation,Quaternion.Euler(0,180+(reduced ? 0:sway*7*settle),reduced ? 0:pulse*2*settle),settle);
+            float hip=Mathf.Lerp(torso.localPosition.y,.91f+(.5f+.5f*Mathf.Cos(phase*2))*.035f*strength,settle);
+            torso.localPosition=new Vector3(0,hip,0);
+            torso.localRotation=Quaternion.Slerp(torso.localRotation,Quaternion.Euler(2,sway*10*strength,pulse*4*strength),settle);
+            head.localRotation=Quaternion.Slerp(head.localRotation,Quaternion.Euler(-3+Mathf.Sin(phase*2)*3*strength,-sway*6*strength,0),settle);
+            leftArm.localRotation=Quaternion.Slerp(leftArm.localRotation,Quaternion.Euler(-35-pulse*16*strength,0,-95-sway*14*strength),settle);
+            rightArm.localRotation=Quaternion.Slerp(rightArm.localRotation,Quaternion.Euler(-35+pulse*16*strength,0,95-sway*14*strength),settle);
+            leftElbow.localRotation=Quaternion.Slerp(leftElbow.localRotation,Quaternion.Euler(-65-pulse*15*strength,0,0),settle);
+            rightElbow.localRotation=Quaternion.Slerp(rightElbow.localRotation,Quaternion.Euler(-65+pulse*15*strength,0,0),settle);
+            for(int i=0;i<2;i++)
+            {
+                float step=Mathf.Sin(phase+i*Mathf.PI);
+                SolveLeg(i,hip,.10f+Mathf.Max(0,step)*.075f*strength,step*.06f*strength,step*5*strength);
+                wrists[i].localRotation=Quaternion.Euler(-10,step*12*strength,i==0 ? -15:15);
+            }
+            scarf.localRotation=Quaternion.Euler(10+sway*5*strength,0,0);
+            scarfMiddle.localRotation=Quaternion.Euler(pulse*7*strength,0,0);
+            scarfTip.localRotation=Quaternion.Euler(pulse*4*strength,0,0);
+        }
         private void SolveLeg(int i,float hipY,float footY,float footZ,float toePitch)
         {
             thighs[i].localPosition=new Vector3(i==0 ? -.128f:.128f,hipY,0);

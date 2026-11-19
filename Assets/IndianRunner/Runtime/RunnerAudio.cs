@@ -8,12 +8,18 @@ namespace IndianRunner
     {
         private const int Rate = 22050;
         private const int MusicBpm = 126;
+        public const int DanceBpm = 140;
         private const float MusicBeat = 60f/MusicBpm;
         private readonly AudioSource effects, music, approach, animals;
         private readonly List<AudioClip> owned = new List<AudioClip>();
         private readonly AudioClip[] pickups = new AudioClip[4];
+        private readonly AudioClip danceTrack,breakVoice;
         private readonly AudioClip jump, stumble, engine, saucer, camel, elephant, celebration, rolling, procession, cloth, peacock, repairs;
-        private bool paused, musicEnabled;
+        private bool paused, musicEnabled, dancing;
+        private int savedMusicSample;
+        private AudioClip runningTrack;
+        private float danceFade=1;
+        public bool HasBreakVoice => breakVoice!=null;
         private int pickupIndex, approachKind, lastAnimalKey = -1;
         private float lastPickup = -1, duckUntil, speechDuckUntil;
 
@@ -35,7 +41,8 @@ namespace IndianRunner
             cloth=Cue("Soft falling textile rustle",10,.65f,420);
             peacock=Cue("Gentle stylised peacock call",11,.70f,660);
             repairs=Cue("Wooden roadwork warning knock",12,.50f,220);
-            music.clip=Compose();
+            runningTrack=Compose(); music.clip=runningTrack;
+            danceTrack=ComposeDance(); breakVoice=Resources.Load<AudioClip>("Dialogue/hi/break_time");
         }
         private static AudioSource Source(GameObject owner,float volume)
         {
@@ -56,6 +63,7 @@ namespace IndianRunner
         }
         public void ResetRun()
         {
+            EndDanceBreak();
             effects.Stop(); animals.Stop(); approach.Stop(); approach.volume=0;
             approachKind=0; lastAnimalKey=-1; pickupIndex=0; lastPickup=-1; duckUntil=speechDuckUntil=0;
         }
@@ -67,19 +75,21 @@ namespace IndianRunner
             effects.PlayOneShot(pickups[pickupIndex++%pickups.Length],.72f);
             lastPickup=now; duckUntil=now+.22f;
         }
-        public void DuckSpeech() { speechDuckUntil=Time.unscaledTime+4.5f; }
+        public void DuckSpeech(float seconds=4.5f) { speechDuckUntil=Time.unscaledTime+seconds; }
         public void EndSpeechDuck() { speechDuckUntil=0; }
         public void Celebrate() { effects.PlayOneShot(celebration,.52f); }
         public void Jump() => effects.PlayOneShot(jump,.65f);
-        public void Stumble() { approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.8f); }
+        public void Stumble() { EndDanceBreak(); approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.8f); }
         public void Tick(float dt,int kind=0,float ahead=100,float pan=0,int encounterKey=-1,bool scenic=false)
         {
             if(paused) return;
             float smoothing=1-Mathf.Exp(-7*dt);
-            float musicTarget=musicEnabled ? (Time.unscaledTime<speechDuckUntil ? .12f : Time.unscaledTime<duckUntil ? .20f : scenic ? .29f : .27f) : 0;
+            float musicTarget=musicEnabled ? (Time.unscaledTime<speechDuckUntil ? .12f : Time.unscaledTime<duckUntil ? .20f : dancing ? .34f*danceFade : scenic ? .29f : .27f) : 0;
             music.pitch=Mathf.Lerp(music.pitch,1,smoothing); // keep the groove in tune and on tempo
             music.volume=Mathf.Lerp(music.volume,musicTarget,smoothing);
+            if(dancing) music.volume=Mathf.Min(music.volume,.34f*danceFade);
             if(!musicEnabled && music.volume<.001f) music.Stop();
+            if(dancing) return;
             bool motor=kind==RajasthanObstacles.Motorcycle, ship=kind==RajasthanObstacles.Spaceship;
             int nextKind=motor || ship || kind==RajasthanObstacles.Wheel || kind==RajasthanObstacles.Procession ? kind : 0;
             // Fade an outgoing loop before changing its clip, avoiding a sharp switch.
@@ -97,6 +107,49 @@ namespace IndianRunner
                 lastAnimalKey=encounterKey; animals.panStereo=Mathf.Clamp(pan,-.65f,.65f);
                 animals.PlayOneShot(kind==RajasthanObstacles.ElephantSound ? elephant : kind==RajasthanObstacles.FallingCloth ? cloth : kind==RajasthanObstacles.Peacock ? peacock : kind==RajasthanObstacles.Roadworks ? repairs : camel,.65f); duckUntil=Time.unscaledTime+.7f;
             }
+        }
+        public void BeginDanceBreak()
+        {
+            if(dancing) return;
+            savedMusicSample=music.timeSamples; dancing=true; danceFade=1;
+            effects.Stop(); animals.Stop(); approach.Stop(); approach.volume=0; approachKind=0;
+            duckUntil=speechDuckUntil=0;
+            music.Stop(); music.clip=danceTrack; music.volume=0; music.pitch=1;
+            if(musicEnabled && !paused) music.Play();
+        }
+        public void DanceRemaining(float remaining) { danceFade=Mathf.Clamp01(remaining/.18f); }
+        public void EndDanceBreak()
+        {
+            if(!dancing) return;
+            dancing=false; music.Stop(); music.volume=0; music.clip=runningTrack;
+            music.timeSamples=Mathf.Clamp(savedMusicSample,0,runningTrack.samples-1);
+            if(musicEnabled && !paused) music.Play();
+        }
+        public void SayRecordedBreakTime() { if(breakVoice!=null) effects.PlayOneShot(breakVoice,.9f); }
+        private AudioClip ComposeDance()
+        {
+            const int samplesPerBeat=Rate*60/DanceBpm;
+            var data=new float[samplesPerBeat*8];
+            int[] notes={0,7,9,12,9,7,4,2,0,4,7,9,12,9,7,0};
+            var frequencies=new float[notes.Length];
+            for(int n=0;n<notes.Length;n++) frequencies[n]=293.6648f*Mathf.Pow(2,notes[n]/12f);
+            uint noiseState=0x231a7bu;
+            for(int i=0;i<data.Length;i++)
+            {
+                int beat=i/samplesPerBeat,eighth=i/(samplesPerBeat/2);
+                float b=(float)(i%samplesPerBeat)/Rate,h=(float)(i%(samplesPerBeat/2))/Rate;
+                float drum=Sin(65*b+1.4f*(1-Mathf.Exp(-b*40)))*Mathf.Exp(-b*20)*Mathf.Clamp01(b/.003f)*.28f;
+                float tenor=Sin(180*h)*Mathf.Exp(-h*35)*Mathf.Clamp01(h/.003f)*.12f;
+                noiseState^=noiseState<<13; noiseState^=noiseState>>17; noiseState^=noiseState<<5;
+                float noise=(noiseState&0xffff)/32767.5f-1;
+                float clap=beat%2==1 ? noise*Mathf.Exp(-b*40)*Mathf.Clamp01(b/.003f)*.15f:0;
+                float hz=frequencies[eighth];
+                float melody=(Sin(hz*h)+.22f*Sin(2*hz*h))*Mathf.Exp(-h*11)*Mathf.Clamp01(h/.006f)*Mathf.Clamp01((60f/DanceBpm*.5f-h)/.02f)*.17f;
+                data[i]=drum+tenor+clap+melody;
+            }
+            int fade=Rate/200;
+            for(int i=0;i<fade;i++) { float gain=Mathf.SmoothStep(0,1,(float)i/fade); data[i]*=gain; data[data.Length-1-i]*=gain; }
+            return Clip("Original five-second rest dance groove - 140 BPM",data);
         }
         private AudioClip Clip(string name,float[] data)
         {
