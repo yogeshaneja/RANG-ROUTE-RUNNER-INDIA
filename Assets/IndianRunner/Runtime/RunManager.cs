@@ -22,6 +22,11 @@ namespace IndianRunner
         private string BestKey => RegionProfile.BestKey(region);
         private TrackWorld world;
         private RunnerModel runner;
+        private VehicleAdventure vehicle;
+        private RunnerCompanion companion;
+        private bool riding;
+        private int lastRideWindow=-1,lastSectionWindow=-1;
+        private float companionReadyAt;
         private WeatherController weather;
         private CloudGuardian guardian;
         private RunnerAudio audioPlayer;
@@ -86,6 +91,7 @@ namespace IndianRunner
             world = new TrackWorld(transform,region); world.Reset(seed);
             feedback = new RunFeedback(transform);
             runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
+            vehicle=new VehicleAdventure(transform,region);companion=new RunnerCompanion(transform);
             weather = new WeatherController(transform, gameCamera, sunlight,region);
             guardian=new CloudGuardian(transform,region);
             audioPlayer = new RunnerAudio(gameObject,region); audioPlayer.Settings(sound, music);
@@ -96,7 +102,7 @@ namespace IndianRunner
         }
         public void ValidateStartup()
         {
-            if (progress == null || world == null || runner == null || weather == null || guardian == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
+            if (progress == null || world == null || runner == null || vehicle == null || companion == null || weather == null || guardian == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
             world.ValidatePool(); runner.ValidateRig();
         }
@@ -107,6 +113,7 @@ namespace IndianRunner
                 SaveBest();pendingStartRegion=startingRegion;pendingJourney=null;regionReloading=true;
                 ReleaseRuntime();SceneManager.LoadScene(gameObject.scene.name);return;
             }
+            riding=false;lastRideWindow=lastSectionWindow=-1;companionReadyAt=0;vehicle.Reset();companion.Reset();
             startingRegion=region;visitedRegions=1<<region;nextStageDistance=JourneyRules.MinimumLegDistance;
             stageStartDistance=stageStartClock=0;stageStartCoins=0;journeyActive=true;
             bool fromMenu = state == State.Menu || state==State.StageSelect; showingGoals=false; magnetUntil=0; inRest=false;
@@ -147,6 +154,7 @@ namespace IndianRunner
             if (state == State.Menu)
             {
                 menuClock += dt; runner.Animate(menuClock,false,false,0,reduced);
+                companion.Tick(0,menuClock,false,reduced,false,Vector3.zero);
                 world.Position(0,seed,menuClock,reduced); weather.Tick(menuClock,dt,reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity); audioPlayer.Tick(dt);
                 return;
             }
@@ -162,8 +170,9 @@ namespace IndianRunner
                     laneElapsed = 0; laneDuration = RunRules.LaneTravelTime(laneTargetX - laneStartX);
                 }
             }
-            if (input.Jump && height <= .001f && clock >= slideUntil) { verticalSpeed = RunRules.JumpVelocity; audioPlayer.Jump(); }
-            bool startedSlide=input.Slide && height<=.001f && verticalSpeed<=0 && clock>=slideUntil;
+            bool boarding=AdventureRules.BoardingWindow(distance);
+            if (!riding && !boarding && input.Jump && height <= .001f && clock >= slideUntil) { verticalSpeed = RunRules.JumpVelocity; audioPlayer.Jump(); }
+            bool startedSlide=!riding && !boarding && input.Slide && height<=.001f && verticalSpeed<=0 && clock>=slideUntil;
             if(startedSlide) slideUntil=clock+.7f;
             bool sliding = clock < slideUntil;
             laneElapsed += dt;
@@ -177,7 +186,14 @@ namespace IndianRunner
                 if (height <= 0) { height = 0; verticalSpeed = 0; }
             }
             distance += RunRules.Speed(distance) * dt;
-            int gained = world.CollectAndCollide(previous, new Vector3(x, height, distance), sliding ? .82f : 2.05f, out bool hit, clock<magnetUntil);
+            UpdateAdventureMode(sliding);
+            int gained = world.CollectAndCollide(previous, new Vector3(x, height, distance), sliding ? .82f : 2.05f, out bool hit, clock<magnetUntil,riding,clock>=companionReadyAt);
+            if(world.CompanionCollected>0)
+            {
+                companionReadyAt=clock+AdventureRules.CompanionCooldown;
+                companion.Fetch(world.CompanionTargetX,world.CompanionTargetZ,clock);
+                if(clock>=milestoneUntil){milestoneText="CHUTKU FOUND "+world.CompanionCollected+" TOKEN"+(world.CompanionCollected>1 ? "S!":"!");milestoneUntil=clock+1.5f;}
+            }
             coins += gained;
             if (gained > 0) { audioPlayer.Coin(); feedback.Coin(x,height,reduced); }
             if(world.PouchesCollected>0 && !hit)
@@ -196,7 +212,7 @@ namespace IndianRunner
             inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
-            if(!hit && height<=.001f && verticalSpeed<=0 && !sliding && laneElapsed>=laneDuration && JourneyRules.InTransferWindow(distance,nextStageDistance))
+            if(!hit && !riding && height<=.001f && verticalSpeed<=0 && !sliding && laneElapsed>=laneDuration && JourneyRules.InTransferWindow(distance,nextStageDistance))
             {
                 BeginRegionTransition();RefreshHud();return;
             }
@@ -210,15 +226,19 @@ namespace IndianRunner
                 {
                     audioPlayer.GuardianReveal(); milestoneText=RegionProfile.GuardianName(region); milestoneUntil=clock+2;
                 }
-                audioPlayer.Tick(dt,world.SoundKind,world.SoundAhead,world.SoundPan,world.SoundKey,inRest);
-                if((world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
+                int atmosphere=riding ? region==RegionProfile.Goa ? RajasthanObstacles.Motorcycle:region==RegionProfile.Punjab ? RajasthanObstacles.Procession:region==RegionProfile.Rajasthan ? RajasthanObstacles.Wheel:0:world.SoundKind;
+                audioPlayer.Tick(dt,atmosphere,riding ? 12:world.SoundAhead,riding ? 0:world.SoundPan,world.SoundKey,inRest || riding);
+                if(!riding && (world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
             }
             if (distance >= nextMilestone && clock >= milestoneUntil)
             {
                 milestoneText = nextMilestone + " m  -  GREAT RUN"; milestoneUntil = clock+1.5f; nextMilestone += 100;
             }
             runner.Root.localPosition = new Vector3(x, height, 0);
-            runner.Animate(clock, state == State.Running, sliding, height, reduced, RunRules.Speed(distance));
+            if(riding)runner.Ride(clock,vehicle.SeatHeight,reduced);
+            else runner.Animate(clock, state == State.Running, sliding, height, reduced, RunRules.Speed(distance));
+            vehicle.Tick(x,clock,distance,reduced);
+            companion.Tick(x,clock,state==State.Running,reduced,riding,vehicle.BuddySeat);
             if (hit) runner.Root.localRotation = Quaternion.Euler(0, 0, -12);
             else
             {
@@ -231,6 +251,23 @@ namespace IndianRunner
             if (clock >= nextHudUpdate || hit)
             {
                 RefreshHud(); nextHudUpdate = clock + .1f;
+            }
+        }
+        private void UpdateAdventureMode(bool sliding)
+        {
+            int row=AdventureRules.Row(distance),window=row/36;
+            if(riding && !AdventureRules.RideRow(row))
+            {
+                riding=false;vehicle.Dismount(clock);milestoneText="BACK ON FOOT - jump & slide again";milestoneUntil=clock+2;
+            }
+            if(!riding && window!=lastRideWindow && AdventureRules.BoardingWindow(distance) && height<=.001f && verticalSpeed<=0 && !sliding)
+            {
+                riding=true;lastRideWindow=window;vehicle.Mount(clock);audioPlayer.Celebrate();
+                milestoneText=AdventureRules.RideName(region)+" - STEER LEFT / RIGHT";milestoneUntil=clock+3;
+            }
+            if(AdventureRules.SectionRow(row) && window!=lastSectionWindow)
+            {
+                lastSectionWindow=window;audioPlayer.Celebrate();milestoneText=AdventureRules.SectionName(region)+" - 2X TOKENS";milestoneUntil=clock+3;
             }
         }
         private void BeginRegionTransition()
@@ -254,12 +291,13 @@ namespace IndianRunner
             if(Time.frameCount<=opaqueFrame)return;
             pendingJourney=new JourneyCheckpoint {Region=nextRegion,StartingRegion=startingRegion,
                 Coins=coins,Lane=lane,Seed=seed,Visited=visitedRegions,NextMilestone=nextMilestone,
-                Weather=(int)weather.Selection,Distance=distance,Clock=clock,X=x,MagnetUntil=magnetUntil};
+                Weather=(int)weather.Selection,Distance=distance,Clock=clock,X=x,MagnetUntil=magnetUntil,CompanionReadyAt=companionReadyAt};
             regionReloading=true;
             ReleaseRuntime();SceneManager.LoadScene(gameObject.scene.name);
         }
         private void RestoreJourney(JourneyCheckpoint saved)
         {
+            riding=false;lastRideWindow=lastSectionWindow=-1;companionReadyAt=saved.CompanionReadyAt;vehicle.Reset();companion.Reset();
             startingRegion=saved.StartingRegion;visitedRegions=saved.Visited;coins=saved.Coins;lane=saved.Lane;seed=saved.Seed;
             distance=saved.Distance;clock=saved.Clock;x=saved.X;magnetUntil=saved.MagnetUntil;nextMilestone=saved.NextMilestone;
             stageStartDistance=distance;stageStartCoins=coins;stageStartClock=clock;
@@ -271,6 +309,7 @@ namespace IndianRunner
             world.SetWeather(weather.Cloudiness);world.SetRain(weather.RainIntensity);
             runner.Root.localPosition=new Vector3(x,0,0);runner.Root.localRotation=Quaternion.identity;
             runner.Animate(clock,false,false,0,reduced,RunRules.Speed(distance));
+            companion.Tick(x,clock,false,reduced,false,Vector3.zero);
             state=State.RegionTransition;arrivalFade=true;transitionElapsed=0;nextRegion=region;PositionCamera();
             milestoneText="WELCOME TO "+RegionProfile.Name(region);milestoneUntil=clock+3;nextHudUpdate=clock;
             audioPlayer.Paused(true);banter.Reset(seed);input.ResetGesture();RefreshHud();
@@ -308,6 +347,7 @@ namespace IndianRunner
             float dt=Mathf.Min(elapsedStep,.05f);
             runner.Root.localPosition=new Vector3(x,0,0);
             runner.Dance(clock,danceElapsed,reduced,danceLandingHeight);
+            companion.Tick(x,clock+danceElapsed,false,reduced,false,Vector3.zero);
             var cameraTarget=transform.position+new Vector3(x+.7f,2.2f,-4.6f);
             var lookTarget=transform.position+new Vector3(x,1.8f,0);
             float cameraBlend=reduced ? 1:1-Mathf.Exp(-7*dt);
@@ -331,7 +371,8 @@ namespace IndianRunner
             hudScore = CurrentScore.ToString("N0"); hudCoins = coins.ToString();
             hudStatus = $"{RegionProfile.Code(region)}  {(int)distance} m    {weather.Description}";
             goalsSummary = progress.Ready ? "ALL 3 GOALS DONE - reward at Start" : $"GOALS {progress.Completed}/3  |  {progress.Tokens}/{progress.TokenGoal} tokens";
-            powerSummary = clock<magnetUntil ? $"POUCH POWER  {Mathf.CeilToInt(magnetUntil-clock)}s" : inRest ? "FESTIVAL GARDEN  |  BREATHE & COLLECT" : goalsSummary;
+            int phase=AdventureRules.Phase(AdventureRules.Row(distance));
+            powerSummary = riding ? "RIDE: LEFT / RIGHT  |  2X TOKENS":AdventureRules.SectionRow(AdventureRules.Row(distance)) ? "ADVENTURE: JUMP & SLIDE  |  2X TOKENS":phase==17 ? "RIDE AHEAD - LEFT / RIGHT STEERING":clock<magnetUntil ? $"POUCH POWER  {Mathf.CeilToInt(magnetUntil-clock)}s" : inRest ? "FESTIVAL GARDEN  |  BREATHE & COLLECT" : goalsSummary;
         }
         private void PositionCamera(float dt = 0)
         {
@@ -341,7 +382,7 @@ namespace IndianRunner
                 gameCamera.transform.LookAt(transform.position+new Vector3(0,1.2f,0));
                 gameCamera.fieldOfView = 62; return;
             }
-            float targetX = x*.35f;
+            float targetX = x*(riding ? .55f:.35f);
             cameraX = dt <= 0 ? targetX : Mathf.Lerp(cameraX,targetX,1-Mathf.Exp(-10*dt));
             var position = transform.position+new Vector3(cameraX,4.7f+(reduced ? 0 : height*.045f),-7.8f);
             var rotation = Quaternion.LookRotation(transform.position+new Vector3(cameraX,1.15f,12.5f)-position);
@@ -378,6 +419,7 @@ namespace IndianRunner
         private void ReturnToMenu()
         {
             SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; guardian?.Reset(); magnetUntil=0; inRest=false;
+            riding=false;vehicle.Reset();companion.Reset();companionReadyAt=0;
             journeyActive=false;coins=0;stageStartCoins=0;stageStartDistance=stageStartClock=0;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
@@ -458,7 +500,7 @@ namespace IndianRunner
             if(runtimeReleased)return;runtimeReleased=true;
             speech?.Dispose();breakSpeech?.Dispose();guardian?.Dispose();skin?.Dispose();stagePicker?.Dispose();
             runner?.Dispose();world?.Dispose();audioPlayer?.Dispose();PrimitiveArt.Clear();
-            speech=breakSpeech=null;guardian=null;skin=null;stagePicker=null;runner=null;world=null;audioPlayer=null;
+            speech=breakSpeech=null;guardian=null;skin=null;stagePicker=null;runner=null;vehicle=null;companion=null;world=null;audioPlayer=null;
         }
         private void OnDestroy() { ReleaseRuntime(); }
         private void WeatherChoice()

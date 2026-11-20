@@ -29,6 +29,6 @@ namespace IndianRunner
     public sealed class JourneyCheckpoint
     {
         public int Region,StartingRegion,Coins,Lane,Seed,Visited,NextMilestone,Weather;
-        public float Distance,Clock,X,MagnetUntil;
+        public float Distance,Clock,X,MagnetUntil,CompanionReadyAt;
     }
 }

@@ -187,6 +187,16 @@ namespace IndianRunner
                 shadow.localScale=new Vector3(.82f*size,1.16f*size,1); shadowMaterial.SetColor("_Tint",new Color(.14f,.10f,.06f,Mathf.Lerp(.30f,.11f,Mathf.Clamp01(height/1.7f))));
             }
         }
+        public void Ride(float clock,float seatHeight,bool reduced)
+        {
+            Animate(clock,false,false,0,reduced);
+            torso.localPosition=new Vector3(0,seatHeight,0);torso.localRotation=Quaternion.Euler(5,0,0);
+            head.localRotation=Quaternion.Euler(-5,0,0);
+            for(int i=0;i<2;i++)SolveLeg(i,seatHeight,.26f,.43f,-4);
+            leftArm.localRotation=Quaternion.Euler(-62,0,-8);rightArm.localRotation=Quaternion.Euler(-62,0,8);
+            leftElbow.localRotation=rightElbow.localRotation=Quaternion.Euler(-25,0,0);
+            scarf.localRotation=Quaternion.Euler(38,0,0);
+        }
         public void Dance(float clock,float elapsed,bool reduced,float landingHeight)
         {
             Animate(clock,false,false,0,reduced);

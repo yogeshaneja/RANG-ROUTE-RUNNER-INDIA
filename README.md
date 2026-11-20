@@ -179,3 +179,18 @@ The picture-card selection chooses your **first stop**. After at least 600 m in 
 A shuffled four-state order avoids adjacent repeats and visits every state once per bag. Distance, total score, tokens, speed progression, goal progress and remaining pouch power continue. Each region’s personal best measures its own leg; the full run also saves a separate Journey Best, shown on pause/game over. No pickups or scoring advance during the transition. RUN AGAIN returns to the state selected on the picture screen.
 
 The transition rebuilds the active region behind a fade rather than keeping all four worlds in memory. A phone may spend additional time on the opaque loading screen; target-device smoothness and repeated-transition memory behaviour still need profiling. See [Journey transition details](Documentation/JOURNEY_MODE.md).
+
+## Vehicle rides, adventure passages and Chutku
+
+Every state now has a short vehicle bonus and a themed jump/slide passage. The first passage begins at 112 m; the first ride begins near 504 m. Events recur every 1,008 m, so a continuing journey encounters them in its next state. Both use double-value token trails and keep a reserved open lane.
+
+| State | Vehicle | Adventure passage |
+| --- | --- | --- |
+| Rajasthan | Colourful desert wind cart | Fort Lantern Passage |
+| Kerala | Backwater canoe | Canopy Bridge Dash |
+| Punjab | Harvest trolley | Harvest Festival Alley |
+| Goa | Coastal scooter | Coastal Boardwalk |
+
+Rides are announced before boarding, steer with **left/right only**, then return to normal jumping/sliding after the finish. The ride lasts roughly 9–12 seconds at the current speed curve, depending on boarding and speed; gameplay remains active. Existing momentum is preserved. Clear first/last ride rows and recovery buffers protect the control changes. The boy uses a seated/reaching pose rather than running through the vehicle.
+
+**Chutku**, an original little street-dog companion with a saffron bandana and turquoise collar, follows the runner and can retrieve one missed token every eight seconds. He rides along on the vehicle, never collides with hazards and cannot score a token twice. His collection cooldown survives random stage changes. No paid/downloaded art, image assets or runtime packages were added. See [adventure implementation and validation](Documentation/ADVENTURE_FEATURES.md). Unity visuals, controls and Android performance still require local testing.

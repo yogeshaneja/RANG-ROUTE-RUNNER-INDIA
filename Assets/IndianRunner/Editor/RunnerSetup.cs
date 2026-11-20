@@ -242,7 +242,7 @@ namespace IndianRunner.Editor
                 for(int lane=0;lane<3;lane++)
                 {
                     int kind=RegionRules.ObstacleFor(row,lane,regionSeed,true);
-                    Require(kind==0 || kind==RajasthanObstacles.Motorcycle || kind==RajasthanObstacles.OncomingElephant || (kind>=RegionRules.Ducks && kind<=RegionRules.Log),"Foreign Kerala obstacle");
+                    Require(kind==0 || RegionRules.UsesKind(RegionProfile.Kerala,kind),"Foreign Kerala obstacle");
                     if(kind==RegionRules.Boar || kind==RegionRules.Langur || kind==RajasthanObstacles.OncomingElephant)
                         Require(RegionRules.ForestRow(row),"Wild forest animal in backwater village");
                     if(RunRules.RestBuffer(row)) Require(kind==0,"Kerala rest buffer blocked");
@@ -279,6 +279,32 @@ namespace IndianRunner.Editor
                     newRegionRows++;
                 }
             }
+            int adventureRows=0;
+            for(int stage=0;stage<RegionProfile.Count;stage++)for(int routeSeed=0;routeSeed<16;routeSeed++)for(int row=0;row<1000;row++)
+            {
+                int safe=RunRules.SafeLane(row,routeSeed);
+                Require(RegionRules.ObstacleFor(row,safe,routeSeed,stage)==0,"Adventure blocked the reserved token lane");
+                if(AdventureRules.OverridesRow(row))
+                {
+                    Require(RegionRules.DynamicKind(row,stage)==0,"Old moving hazard entered an adventure stretch");
+                    for(int lane=0;lane<3;lane++)
+                    {
+                        int kind=RegionRules.ObstacleFor(row,lane,routeSeed,stage);
+                        Require(kind==0 || RegionRules.UsesKind(stage,kind),"Adventure borrowed an incompatible regional obstacle");
+                        if(kind!=0 && AdventureRules.RideRow(row))
+                        {
+                            var bounds=AdventureArt.RideObstacleShape(stage);
+                            Require(Mathf.Abs(RunRules.LaneX(lane)-RunRules.LaneX(safe))>bounds.x+AdventureRules.RideHalfWidth,"Vehicle body intersects safe lane");
+                        }
+                    }
+                }
+                if(RunRules.RestBuffer(row))Require(!AdventureRules.RideRow(row) && !AdventureRules.SectionRow(row),"Adventure overlaps a rest/transfer buffer");
+                adventureRows++;
+            }
+            Require(AdventureRules.BoardingWindow(504) && !AdventureRules.BoardingWindow(532),"Boarding window incorrect");
+            Require(AdventureRules.PickupValue(4)==2 && AdventureRules.PickupValue(18)==2 && AdventureRules.PickupValue(9)==1,"Adventure token values incorrect");
+            Require(AdventureRules.CompanionCooldown>=8,"Companion collection cooldown too short");
+            Debug.Log($"PASS: {adventureRows} adventure/vehicle generation rows; companion cooldown and token values.");
             Require(!JourneyRules.InTransferWindow(252,600) && JourneyRules.InTransferWindow(756,600),"Journey first transfer window incorrect");
             Require(JourneyRules.InTransferWindow(775.9f,600) && !JourneyRules.InTransferWindow(776,600),"Journey window must end before unsafe approach");
             for(int firstRegion=0;firstRegion<RegionProfile.Count;firstRegion++)

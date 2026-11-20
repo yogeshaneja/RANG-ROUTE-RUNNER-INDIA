@@ -7,7 +7,7 @@ namespace IndianRunner
     public sealed class RajasthanObstacles
     {
         public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14, OncomingElephant = 15;
-        public const int MaxKind=RegionRules.NetGate, ElephantSound=100;
+        public const int MaxKind=RegionRules.CanalBuoy, ElephantSound=100;
         public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {
@@ -48,7 +48,8 @@ namespace IndianRunner
                 if(!RegionRules.UsesKind(region,kind))
                 { models[kind]=new Part[0]; continue; }
                 var root = new GameObject("Shared regional obstacle " + kind).transform;
-                if(kind>=RegionRules.Buffalo) RegionalArt.Build(root,kind);
+                if(kind==RegionRules.CanalBuoy)AdventureArt.BuildBuoy(root);
+                else if(kind>=RegionRules.Buffalo) RegionalArt.Build(root,kind);
                 else if(kind>=RegionRules.Ducks) KeralaArt.Build(root,kind);
                 else if(region==RegionProfile.Kerala && kind==OncomingElephant) RajasthanDecor.BuildElephant(root,false,false);
                 else Build(root, kind);

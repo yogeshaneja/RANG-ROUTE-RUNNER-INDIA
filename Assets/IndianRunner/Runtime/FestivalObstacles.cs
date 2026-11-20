@@ -8,6 +8,7 @@ namespace IndianRunner
         // X/Z are half extents; Y is height above the moving object's base.
         public static Vector3 Shape(int kind)
         {
+            if(kind==RegionRules.CanalBuoy) return new Vector3(.50f,1.8f,.50f);
             if(kind==RegionRules.Buffalo) return new Vector3(.85f,1.68f,1.45f);
             if(kind==RegionRules.Goat) return new Vector3(.55f,1.12f,1.0f);
             if(kind==RegionRules.Tractor) return new Vector3(1.05f,2.50f,1.45f);
@@ -36,6 +37,7 @@ namespace IndianRunner
         }
         public static string Warning(int kind)
         {
+            if(kind==RegionRules.CanalBuoy) return "CANAL MARKER - steer around";
             if(kind==RegionRules.Buffalo) return "BUFFALO ON THE LANE";
             if(kind==RegionRules.Goat) return "GOAT AHEAD";
             if(kind==RegionRules.Tractor) return "TRACTOR COMING - change lane";

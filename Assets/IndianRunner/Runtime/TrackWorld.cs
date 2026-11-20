@@ -26,7 +26,7 @@ namespace IndianRunner
         private sealed class Tile
         {
             public Transform Root;
-            public Transform Village;
+            public Transform Village,AdventureSection,RideSection;
             public int Index;
             public bool HasElephant;
             public readonly Row[] Rows = { new Row(), new Row() };
@@ -43,6 +43,9 @@ namespace IndianRunner
             public float Phase;
         }
         private readonly List<Kite> kites = new List<Kite>();
+        public int CompanionCollected { get; private set; }
+        public float CompanionTargetX { get; private set; }
+        public float CompanionTargetZ { get; private set; }
         public int PouchesCollected { get; private set; }
         public int SlidesCleared { get; private set; }
         public string WarningMessage { get; private set; } = "";
@@ -114,6 +117,8 @@ namespace IndianRunner
                         PrimitiveArt.Box(kiteRoot, "Short decorative ribbon", new Vector3(Mathf.Sin(tail) * .12f, -.85f - tail * .23f, 0), new Vector3(.13f, .3f, .035f), tail % 2 == 0 ? coral : yellow);
                     kites.Add(new Kite { Root = kiteRoot, BasePosition = position, Phase = i * .7f + k * 2 });
                 }
+                tile.AdventureSection=AdventureArt.Tile(tile.Root,region,TileLength,false);
+                tile.RideSection=AdventureArt.Tile(tile.Root,region,TileLength,true);
                 foreach (var row in tile.Rows)
                 {
                     for (int lane = 0; lane < 3; lane++)
@@ -138,6 +143,9 @@ namespace IndianRunner
         // Inspect the actual constructed pool, not just the generation formulas.
         public void ValidatePool()
         {
+            foreach(var tile in tiles)
+                if(tile.AdventureSection==null || tile.RideSection==null)
+                    throw new System.InvalidOperationException("Pooled tile is missing its adventure overlays.");
             foreach (var tile in tiles) foreach (var row in tile.Rows)
             {
                 if (row.LandingMarker == null || row.LandingMarker.parent != tile.Root)
@@ -171,6 +179,8 @@ namespace IndianRunner
         private void Configure(Tile tile, int index, int seed)
         {
             tile.Index = index;
+            tile.AdventureSection.gameObject.SetActive(AdventureRules.SectionRow(index*2));
+            tile.RideSection.gameObject.SetActive(AdventureRules.RideRow(index*2));
             // Reuse the same meshes with a small deterministic layout variation.
             // Ground, lanes and gameplay obstacles are never shifted or scaled.
             float lateral = region!=RegionProfile.Rajasthan ? 0:(RunRules.SafeLane(index*3,seed)-1)*.12f;
@@ -188,8 +198,8 @@ namespace IndianRunner
                 row.Pouch.localPosition=new Vector3(RunRules.LaneX(row.Safe),1.1f,row.Z-index*TileLength);
                 row.Garden.gameObject.SetActive(RunRules.RestRow(rowNumber));
                 row.Garden.localPosition=new Vector3(0,0,row.Z-index*TileLength);
-                row.CamelCrossing = region==RegionProfile.Rajasthan && RunRules.HasCamel(rowNumber, seed);
-                row.Roadworks=region==RegionProfile.Rajasthan && RunRules.RoadworksRow(rowNumber) && !RunRules.NearDynamic(rowNumber);
+                row.CamelCrossing = !AdventureRules.RoadworksRow(rowNumber,region) && !AdventureRules.OverridesRow(rowNumber) && region==RegionProfile.Rajasthan && RunRules.HasCamel(rowNumber, seed);
+                row.Roadworks=RegionRules.DynamicKind(rowNumber,region)==0 && !AdventureRules.OverridesRow(rowNumber) && region==RegionProfile.Rajasthan && (RunRules.RoadworksRow(rowNumber) || AdventureRules.RoadworksRow(rowNumber,region)) && !RegionRules.NearDynamic(rowNumber,region);
                 row.DynamicKind = RegionRules.DynamicKind(rowNumber,region); row.HazardLane = RunRules.HazardLane(rowNumber,seed);
                 row.LandingMarker.gameObject.SetActive(row.DynamicKind == RajasthanObstacles.Spaceship || row.DynamicKind == RajasthanObstacles.FallingCloth || row.DynamicKind == RajasthanObstacles.Peacock);
                 row.LandingMarker.localPosition = new Vector3(RunRules.LaneX(row.HazardLane),0,row.Z-index*TileLength);
@@ -224,7 +234,7 @@ namespace IndianRunner
                 foreach (var row in tile.Rows)
                 {
                     float ahead = row.Z-distance;
-                    if(!row.RainVisitor && RunRules.RainVisitorRow(row.Number) && RunRules.CanAdmitRainVisitor(rainIntensity,ahead))
+                    if(!row.RainVisitor && AdventureRules.RainVisitorRow(row.Number,region) && RunRules.CanAdmitRainVisitor(rainIntensity,ahead))
                     {
                         row.RainVisitor=true; row.CamelCrossing=false; row.Roadworks=false;
                         row.DynamicKind=RajasthanObstacles.UmbrellaLady; row.HazardLane=(row.Safe+1)%3;
@@ -321,15 +331,22 @@ namespace IndianRunner
             if(ahead < -10 || ahead > 52 || Mathf.Abs(ahead) >= Mathf.Abs(SoundAhead)) return;
             SoundKind=kind; SoundAhead=ahead; SoundPan=pan; SoundKey=key;
         }
-        public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit, bool magnet = false)
+        public int CollectAndCollide(Vector3 previousFoot, Vector3 foot, float playerHeight, out bool hit, bool magnet = false,bool riding=false,bool fetchReady=false)
         {
-            int collected = 0; PouchesCollected=SlidesCleared=0; hit = false; CamelContact = false; ContactMessage = "";
+            int collected = 0; CompanionCollected=0;PouchesCollected=SlidesCleared=0; hit = false; CamelContact = false; ContactMessage = "";
             foreach (var tile in tiles) foreach (var row in tile.Rows)
             {
                 if (row.Z < previousFoot.z - 6 || row.Z > foot.z + 7) continue;
                 for (int lane = 0; lane < 3; lane++)
                 {
                     int kind = row.Kind[lane]; if (kind == 0) continue;
+                    if(riding && AdventureRules.RideRow(row.Number))
+                    {
+                        var bounds=AdventureArt.RideObstacleShape(region);
+                        if(SegmentBox(previousFoot,foot,new Vector3(RunRules.LaneX(lane)-bounds.x-AdventureRules.RideHalfWidth,-2,row.Z-bounds.z-1.45f),new Vector3(RunRules.LaneX(lane)+bounds.x+AdventureRules.RideHalfWidth,bounds.y,row.Z+bounds.z+1.45f)))
+                        {hit=true;ContactMessage="Ride stumble. Steer into the open token lane.";}
+                        continue;
+                    }
                     if(kind==RajasthanObstacles.UmbrellaLady)
                     {
                         float visitorX=RunRules.LaneX(lane);
@@ -416,8 +433,16 @@ namespace IndianRunner
                     float z = row.Z + (c - 2) * 2.2f;
                     var min = new Vector3(RunRules.LaneX(row.Safe) - (magnet ? 3.2f : .7f), -.5f, z - .5f);
                     var max = new Vector3(RunRules.LaneX(row.Safe) + (magnet ? 3.2f : .7f), magnet ? 3f : 1.6f, z + .5f);
-                    if (!SegmentBox(previousFoot, foot, min, max)) continue;
-                    row.Taken[c] = true; row.Coins[c].gameObject.SetActive(false); collected++;
+                    if(SegmentBox(previousFoot,foot,min,max))
+                    {
+                        row.Taken[c]=true;row.Coins[c].gameObject.SetActive(false);collected+=AdventureRules.PickupValue(row.Number);
+                    }
+                    else if(fetchReady && !riding && !hit && CompanionCollected==0 && previousFoot.z<=z+.65f && foot.z>z+.65f)
+                    {
+                        row.Taken[c]=true;row.Coins[c].gameObject.SetActive(false);
+                        CompanionCollected=AdventureRules.PickupValue(row.Number);collected+=CompanionCollected;
+                        CompanionTargetX=RunRules.LaneX(row.Safe);CompanionTargetZ=z-foot.z;
+                    }
                 }
             }
             return collected;

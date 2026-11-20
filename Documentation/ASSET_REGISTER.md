@@ -87,3 +87,7 @@ RegionalArt.cs and RegionalScenery.cs contain original procedural farms, crop ro
 ## Stage-selection thumbnails
 
 Four original AI-generated scenic illustrations are bundled in Assets/IndianRunner/Resources/StageSelection as Rajasthan.jpg, Kerala.jpg, Punjab.jpg and Goa.jpg. No stock/reference imagery or third-party logos were used. The built-in generator produced each image separately; inspected originals were downscaled to 512 x 288 JPEG for the selection cards. Exact prompts and paths are in STAGE_SELECTION_ARTWORK.md. These are illustrated previews, not screenshots of the game’s procedural art.
+
+## Vehicle adventures and companion
+
+AdventureArt.cs, VehicleAdventure.cs and RunnerCompanion.cs contain original mesh arrangements for four regional rides, reusable passage/ride overlays and Chutku the dog. All materials use the existing renderer/material cache; all rigid art is built once and batched, with separate transforms for animated wheels/legs/tail. The runner reuses its existing articulated rig. No external model/image/audio downloads, licenses or paid dependencies were introduced. Existing original sound effects are reused. Asset scope and temporary-art limitations are recorded in ADVENTURE_FEATURES.md.
