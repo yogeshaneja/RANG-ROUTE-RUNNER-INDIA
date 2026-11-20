@@ -150,10 +150,23 @@ namespace IndianRunner
                     if (coin == null) throw new System.InvalidOperationException("Pooled row is missing a coin slot.");
             }
         }
-        public void Reset(int seed)
+        public void Reset(int seed,float distance=0)
         {
-            nextIndex = TileCount; UmbrellaAhead=float.PositiveInfinity; WarningMessage = ""; CamelContact = false; ContactMessage = "";
-            for (int i = 0; i < TileCount; i++) Configure(tiles[i], i, seed);
+            int first=Mathf.Max(0,Mathf.FloorToInt(distance/TileLength)-1);
+            nextIndex = first+TileCount; UmbrellaAhead=float.PositiveInfinity; WarningMessage = ""; CamelContact = false; ContactMessage = "";
+            for (int i = 0; i < TileCount; i++)
+            {
+                int index=first+(i-first%TileCount+TileCount)%TileCount;
+                Configure(tiles[i],index,seed);
+                if(distance<=0)continue;
+                // A rebuilt region cannot award the same pickup twice at the join.
+                foreach(var row in tiles[i].Rows)
+                {
+                    for(int c=0;c<row.Coins.Length;c++) if(row.Z+(c-2)*2.2f<=distance+.5f)
+                    { row.Taken[c]=true;row.Coins[c].gameObject.SetActive(false); }
+                    if(row.Z<=distance+.6f){row.PouchTaken=true;row.Pouch.gameObject.SetActive(false);}
+                }
+            }
         }
         private void Configure(Tile tile, int index, int seed)
         {

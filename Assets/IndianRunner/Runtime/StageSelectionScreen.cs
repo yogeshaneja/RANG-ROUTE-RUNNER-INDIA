@@ -36,7 +36,7 @@ namespace IndianRunner
             GUI.DrawTexture(new Rect(left,top-10,width,bottom-top+22),Texture2D.whiteTexture);GUI.color=previousColour;
             GUI.Label(new Rect(left+20,top+5,width-40,24),"YOUR JOURNEY ACROSS INDIA   /   STEP 2",skin.Caption);
             GUI.Label(new Rect(left+18,top+30,width-36,43),"CHOOSE YOUR STATE",skin.StageTitle);
-            GUI.Label(new Rect(left+24,top+76,width-48,23),"Four colourful worlds. One adventurous runner.",skin.Caption);
+            GUI.Label(new Rect(left+24,top+76,width-48,23),"Pick your first stop. More states follow as you run.",skin.Caption);
             float gap=12,footerTop=bottom-164;
             var viewport=new Rect(left+20,top+108,width-40,Mathf.Max(160,footerTop-top-120));
             float cardHeight=Mathf.Clamp((viewport.height-gap)*.5f,224,246);

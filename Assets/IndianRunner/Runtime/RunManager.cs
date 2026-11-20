@@ -5,13 +5,20 @@ namespace IndianRunner
 {
     public sealed class RunManager : MonoBehaviour
     {
-        private enum State { Menu, StageSelect, Running, DanceBreak, Paused, GameOver }
+        private enum State { Menu, StageSelect, Running, RegionTransition, DanceBreak, Paused, GameOver }
         private State state;
         private int region;
         private bool regionReloading;
         private StageSelectionScreen stagePicker;
         private int stageCameraMask;
         private static int pendingStartRegion=-1;
+        private static JourneyCheckpoint pendingJourney;
+        private int startingRegion,visitedRegions,nextRegion,stageStartCoins,journeyBest;
+        private float nextStageDistance,stageStartDistance,stageStartClock,transitionElapsed;
+        private bool journeyActive,arrivalFade,appPaused,runtimeReleased;
+        private bool appFocused=true;
+        private int opaqueFrame=-1;
+        private float TransitionAlpha => arrivalFade ? 1-Mathf.Clamp01(transitionElapsed/(reduced ? .18f:.65f)):Mathf.Clamp01(transitionElapsed/(reduced ? .18f:.45f));
         private string BestKey => RegionProfile.BestKey(region);
         private TrackWorld world;
         private RunnerModel runner;
@@ -53,7 +60,10 @@ namespace IndianRunner
         {
             Application.targetFrameRate = 60;
             Screen.orientation = ScreenOrientation.Portrait;
-            region=RegionProfile.Valid(PlayerPrefs.GetInt("runner.region",0));
+            var handoff=pendingJourney;pendingJourney=null;
+            region=handoff==null ? RegionProfile.Valid(PlayerPrefs.GetInt("runner.region",0)):RegionProfile.Valid(handoff.Region);
+            appFocused=Application.isFocused;
+            journeyBest=PlayerPrefs.GetInt("runner.best.journey",0);
             bool startRequested=pendingStartRegion==region; pendingStartRegion=-1;
             best = PlayerPrefs.GetInt(BestKey, 0);
             progress = new FestivalProgress(PlayerPrefs.GetInt("festival.set",0),PlayerPrefs.GetInt("festival.tokens",0),PlayerPrefs.GetInt("festival.slides",0),PlayerPrefs.GetInt("festival.distance",0),PlayerPrefs.GetInt("festival.outfit",0));
@@ -81,7 +91,8 @@ namespace IndianRunner
             audioPlayer = new RunnerAudio(gameObject,region); audioPlayer.Settings(sound, music);
             speech=new AndroidSpeech(dialogueLanguage,gameObject); speech.SetEnabled(voices && sound); banter.Reset(seed);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); world.SetRain(weather.RainIntensity); RefreshHud();
-            if(startRequested) StartRun();
+            if(handoff!=null)RestoreJourney(handoff);
+            else if(startRequested) StartRun();
         }
         public void ValidateStartup()
         {
@@ -91,6 +102,13 @@ namespace IndianRunner
         }
         private void StartRun()
         {
+            if(state==State.GameOver && region!=startingRegion)
+            {
+                SaveBest();pendingStartRegion=startingRegion;pendingJourney=null;regionReloading=true;
+                ReleaseRuntime();SceneManager.LoadScene(gameObject.scene.name);return;
+            }
+            startingRegion=region;visitedRegions=1<<region;nextStageDistance=JourneyRules.MinimumLegDistance;
+            stageStartDistance=stageStartClock=0;stageStartCoins=0;journeyActive=true;
             bool fromMenu = state == State.Menu || state==State.StageSelect; showingGoals=false; magnetUntil=0; inRest=false;
             introCameraPosition = gameCamera.transform.position; introCameraRotation = gameCamera.transform.rotation;
             introDuration = reduced ? 0 : fromMenu ? .7f : .25f;
@@ -107,8 +125,13 @@ namespace IndianRunner
         }
         private void Update()
         {
+            if(runtimeReleased)return;
             // Clamp large stalls so an OS hitch cannot skip a reaction window.
             float dt = Mathf.Min(Time.deltaTime, .05f); speech.Tick(); breakSpeech?.Tick();
+            if(state==State.RegionTransition)
+            {
+                input.ResetGesture();TickRegionTransition(dt);return;
+            }
             if(state==State.DanceBreak)
             {
                 input.ResetGesture(); TickDanceBreak(Time.unscaledDeltaTime); return;
@@ -173,7 +196,11 @@ namespace IndianRunner
             inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
-            if(enterGarden && RunRules.DanceRestDistance(distance))
+            if(!hit && height<=.001f && verticalSpeed<=0 && !sliding && laneElapsed>=laneDuration && JourneyRules.InTransferWindow(distance,nextStageDistance))
+            {
+                BeginRegionTransition();RefreshHud();return;
+            }
+            if(enterGarden && distance-stageStartDistance>120 && RunRules.DanceRestDistance(distance))
             {
                 BeginDanceBreak(); TickDanceBreak(0); RefreshHud(); return;
             }
@@ -199,12 +226,54 @@ namespace IndianRunner
                 float turn = reduced ? 0 : Mathf.Clamp((x-previous.x)/Mathf.Max(.001f,dt)/RunRules.LaneSpeed,-1,1)*9;
                 runner.Root.localRotation = Quaternion.Slerp(runner.Root.localRotation, Quaternion.Euler(0,turn,lean), 1-Mathf.Exp(-16*dt));
             }
-            weather.Tick(clock, dt, reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity);
+            weather.Tick(clock-stageStartClock, dt, reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity);
             PositionCamera(dt);
             if (clock >= nextHudUpdate || hit)
             {
                 RefreshHud(); nextHudUpdate = clock + .1f;
             }
+        }
+        private void BeginRegionTransition()
+        {
+            nextRegion=JourneyRules.NextRegion(region,visitedRegions,UnityEngine.Random.Range(0,int.MaxValue),out visitedRegions);
+            SaveBest();speech.Stop();breakSpeech?.Stop();guardian.Reset();audioPlayer.Paused(true);
+            state=State.RegionTransition;arrivalFade=false;transitionElapsed=0;opaqueFrame=-1;input.ResetGesture();
+        }
+        private void TickRegionTransition(float dt)
+        {
+            if(regionReloading || appPaused || !appFocused)return;
+            transitionElapsed+=Mathf.Max(0,dt);
+            if(arrivalFade)
+            {
+                if(TransitionAlpha>0)return;
+                state=State.Running;audioPlayer.Paused(false);input.ResetGesture();return;
+            }
+            if(TransitionAlpha<1)return;
+            // Render one fully opaque frame before the synchronous scene load.
+            if(opaqueFrame<0){opaqueFrame=Time.frameCount;return;}
+            if(Time.frameCount<=opaqueFrame)return;
+            pendingJourney=new JourneyCheckpoint {Region=nextRegion,StartingRegion=startingRegion,
+                Coins=coins,Lane=lane,Seed=seed,Visited=visitedRegions,NextMilestone=nextMilestone,
+                Weather=(int)weather.Selection,Distance=distance,Clock=clock,X=x,MagnetUntil=magnetUntil};
+            regionReloading=true;
+            ReleaseRuntime();SceneManager.LoadScene(gameObject.scene.name);
+        }
+        private void RestoreJourney(JourneyCheckpoint saved)
+        {
+            startingRegion=saved.StartingRegion;visitedRegions=saved.Visited;coins=saved.Coins;lane=saved.Lane;seed=saved.Seed;
+            distance=saved.Distance;clock=saved.Clock;x=saved.X;magnetUntil=saved.MagnetUntil;nextMilestone=saved.NextMilestone;
+            stageStartDistance=distance;stageStartCoins=coins;stageStartClock=clock;
+            nextStageDistance=distance+JourneyRules.MinimumLegDistance;journeyActive=true;
+            height=verticalSpeed=slideUntil=0;laneStartX=laneTargetX=x;laneElapsed=laneDuration=0;cameraX=x*.35f;
+            inRest=RunRules.RestDistance(distance);introDuration=0;
+            world.Reset(seed,distance);world.Position(distance,seed,clock,reduced,clock<magnetUntil,x,0);
+            weather.Selection=(WeatherController.Mode)saved.Weather;weather.Tick(0,0,reduced);
+            world.SetWeather(weather.Cloudiness);world.SetRain(weather.RainIntensity);
+            runner.Root.localPosition=new Vector3(x,0,0);runner.Root.localRotation=Quaternion.identity;
+            runner.Animate(clock,false,false,0,reduced,RunRules.Speed(distance));
+            state=State.RegionTransition;arrivalFade=true;transitionElapsed=0;nextRegion=region;PositionCamera();
+            milestoneText="WELCOME TO "+RegionProfile.Name(region);milestoneUntil=clock+3;nextHudUpdate=clock;
+            audioPlayer.Paused(true);banter.Reset(seed);input.ResetGesture();RefreshHud();
         }
         private void BeginDanceBreak()
         {
@@ -287,7 +356,7 @@ namespace IndianRunner
             if(state!=State.Menu || regionReloading)return;
             SaveBest(); showingGoals=false; speech.Stop(); breakSpeech?.Stop();
             if(stagePicker==null)stagePicker=new StageSelectionScreen();
-            stagePicker.Open(region);stageCameraMask=gameCamera.cullingMask;gameCamera.cullingMask=0;
+            stagePicker.Open(RegionProfile.Valid(PlayerPrefs.GetInt("runner.region",region)));stageCameraMask=gameCamera.cullingMask;gameCamera.cullingMask=0;
             state=State.StageSelect;input.ResetGesture();
         }
         private void CloseStageSelection()
@@ -298,17 +367,18 @@ namespace IndianRunner
         {
             if(state!=State.StageSelect || regionReloading || stagePicker==null)return;
             int selected=RegionProfile.Valid(stagePicker.SelectedRegion);
-            if(selected==region){ gameCamera.cullingMask=stageCameraMask;StartRun();return; }
             SaveBest();SaveSettings();speech.Stop();breakSpeech?.Stop();
             PlayerPrefs.SetInt("runner.region",selected);PlayerPrefs.Save();
+            if(selected==region){ gameCamera.cullingMask=stageCameraMask;StartRun();return; }
             regionReloading=true;pendingStartRegion=selected;
             // The new scene constructs only this choice's pools, then consumes the
             // one-shot flag in Awake and starts that exact region automatically.
-            SceneManager.LoadScene(gameObject.scene.name);
+            ReleaseRuntime();SceneManager.LoadScene(gameObject.scene.name);
         }
         private void ReturnToMenu()
         {
             SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; guardian?.Reset(); magnetUntil=0; inRest=false;
+            journeyActive=false;coins=0;stageStartCoins=0;stageStartDistance=stageStartClock=0;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
@@ -333,7 +403,11 @@ namespace IndianRunner
         private void SaveBest()
         {
             SaveProgress();
-            if (CurrentScore > best) { best = CurrentScore; PlayerPrefs.SetInt(BestKey, best); PlayerPrefs.Save(); }
+            if(!journeyActive)return;
+            int stageScore=RunRules.Score(distance-stageStartDistance,coins-stageStartCoins);
+            if(stageScore>best){best=stageScore;PlayerPrefs.SetInt(BestKey,best);}
+            if(CurrentScore>journeyBest){journeyBest=CurrentScore;PlayerPrefs.SetInt("runner.best.journey",journeyBest);}
+            PlayerPrefs.Save();
         }
         private void SaveSettings()
         {
@@ -376,14 +450,21 @@ namespace IndianRunner
             Debug.Log("Exit to Home is available in the Android phone build.");
 #endif
         }
-        private void OnApplicationPause(bool paused) { if(paused) { speech?.Stop(); breakSpeech?.Stop(); } if (paused && (state==State.Running || state==State.DanceBreak)) Pause(); }
-        private void OnApplicationFocus(bool focus) { if(!focus) { speech?.Stop(); breakSpeech?.Stop(); } if (!focus && (state==State.Running || state==State.DanceBreak)) Pause(); }
+        private void OnApplicationPause(bool paused) { appPaused=paused; if(paused) { speech?.Stop(); breakSpeech?.Stop(); } if (paused && (state==State.Running || state==State.DanceBreak)) Pause(); }
+        private void OnApplicationFocus(bool focus) { appFocused=focus; if(!focus) { speech?.Stop(); breakSpeech?.Stop(); } if (!focus && (state==State.Running || state==State.DanceBreak)) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { speech?.Dispose(); breakSpeech?.Dispose(); guardian?.Dispose(); skin?.Dispose(); stagePicker?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void ReleaseRuntime()
+        {
+            if(runtimeReleased)return;runtimeReleased=true;
+            speech?.Dispose();breakSpeech?.Dispose();guardian?.Dispose();skin?.Dispose();stagePicker?.Dispose();
+            runner?.Dispose();world?.Dispose();audioPlayer?.Dispose();PrimitiveArt.Clear();
+            speech=breakSpeech=null;guardian=null;skin=null;stagePicker=null;runner=null;world=null;audioPlayer=null;
+        }
+        private void OnDestroy() { ReleaseRuntime(); }
         private void WeatherChoice()
         {
             weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);
-            weather.Tick(state == State.Menu ? menuClock : clock,10,reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity); RefreshHud();
+            weather.Tick(state == State.Menu ? menuClock : clock-stageStartClock,10,reduced); world.SetWeather(weather.Cloudiness); world.SetRain(weather.RainIntensity); RefreshHud();
         }
         private string VoiceLabel => !voices ? "VOICES OFF" : !sound ? "VOICES MUTED":"VOICES ON";
         private void DrawOptions(float xPos, float yPos, float width)
@@ -428,6 +509,11 @@ namespace IndianRunner
         }
         private void OnGUI()
         {
+            if(runtimeReleased)
+            {
+                var tint=GUI.color;GUI.color=new Color(.025f,.055f,.075f,1);
+                GUI.DrawTexture(new Rect(0,0,Screen.width,Screen.height),Texture2D.whiteTexture);GUI.color=tint;return;
+            }
             if (skin == null) skin = new RunnerSkin();
             float scale = Mathf.Min(Screen.width/480f,Screen.height/800f);
             float screenHeight = Screen.height/scale;
@@ -437,6 +523,16 @@ namespace IndianRunner
             var oldMatrix = GUI.matrix; var oldColour = GUI.color;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale,scale,1));
             GUI.enabled=!showingGoals && !regionReloading;
+            if(state==State.RegionTransition)
+            {
+                GUI.color=new Color(.025f,.055f,.075f,TransitionAlpha);
+                GUI.DrawTexture(new Rect(0,0,Screen.width/scale,screenHeight),Texture2D.whiteTexture);
+                GUI.color=new Color(1,1,1,TransitionAlpha);
+                GUI.Label(new Rect(left+24,screenHeight*.37f,width-48,30),arrivalFade ? "WELCOME TO":"NEXT STOP",skin.Subtitle);
+                GUI.Label(new Rect(left+20,screenHeight*.42f,width-40,66),RegionProfile.Name(nextRegion),skin.Title);
+                GUI.Label(new Rect(left+24,screenHeight*.52f,width-48,55),"Same journey. A new world.\nYour score and tokens travel with you.",skin.Caption);
+                GUI.enabled=true;GUI.color=oldColour;GUI.matrix=oldMatrix;return;
+            }
             if(state==State.StageSelect)
             {
                 var action=stagePicker.Draw(left,top,width,bottom,skin,!regionReloading);
@@ -519,10 +615,13 @@ namespace IndianRunner
                     GUI.Box(new Rect(left+12,panel,width-24,548),GUIContent.none,skin.Card);
                     GUI.Label(new Rect(left+25,panel+15,width-50,50),state == State.Paused ? "TAKE A BREATHER" : "GOOD RUN!",skin.Subtitle);
                     GUI.Label(new Rect(left+25,panel+61,width-50,60),hudScore,skin.Title);
-                    GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} tokens",skin.Caption);
+                    GUI.Label(new Rect(left+25,panel+121,width-50,30),$"POINTS   |   {(int)distance} m   |   {coins} tokens\nJOURNEY BEST   {journeyBest:N0}",skin.Caption);
                     GUI.Label(new Rect(left+30,panel+158,width-60,48),state == State.Paused ? "Your journey is waiting." : runEndMessage,skin.Text);
                     if (GUI.Button(new Rect(left+32,panel+219,width-64,57),state == State.Paused ? "CONTINUE RUN" : "RUN AGAIN",skin.Primary))
-                    { if (state == State.Paused) Resume(); else StartRun(); }
+                    {
+                        if (state == State.Paused) Resume(); else StartRun();
+                        if(runtimeReleased){GUI.enabled=true;GUI.color=oldColour;GUI.matrix=oldMatrix;return;}
+                    }
                     if (GUI.Button(new Rect(left+32,panel+286,width-64,46),"BACK TO START",skin.Secondary)) ReturnToMenu();
                     if (GUI.Button(new Rect(left+32,panel+350,(width-74)/2,45),"Music  "+(music ? "ON" : "OFF"),skin.Toggle)) { music = !music; SaveSettings(); }
                     if (GUI.Button(new Rect(center+5,panel+350,(width-74)/2,45),"Effects  "+(reduced ? "LOW" : "FULL"),skin.Toggle)) { reduced = !reduced; SaveSettings(); }

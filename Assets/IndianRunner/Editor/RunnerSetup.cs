@@ -279,6 +279,20 @@ namespace IndianRunner.Editor
                     newRegionRows++;
                 }
             }
+            Require(!JourneyRules.InTransferWindow(252,600) && JourneyRules.InTransferWindow(756,600),"Journey first transfer window incorrect");
+            Require(JourneyRules.InTransferWindow(775.9f,600) && !JourneyRules.InTransferWindow(776,600),"Journey window must end before unsafe approach");
+            for(int firstRegion=0;firstRegion<RegionProfile.Count;firstRegion++)
+            {
+                int current=firstRegion,visited=1<<current,bag=1<<current;
+                for(int visit=1;visit<64;visit++)
+                {
+                    int next=JourneyRules.NextRegion(current,visited,visit*31337,out visited);
+                    Require(next!=current && next>=0 && next<RegionProfile.Count,"Journey repeated current region");
+                    if(visit%4==0)bag=0;
+                    Require((bag&(1<<next))==0,"Journey shuffle bag repeated before all four states");
+                    bag|=1<<next;current=next;
+                }
+            }
             Require(RegionProfile.Count==4 && RegionProfile.Valid(-1)==0 && RegionProfile.Valid(9)==0,"Region selector bounds invalid");
             Require(RegionProfile.BestKey(0)=="runner.best" && RegionProfile.BestKey(1)=="runner.best.kerala","Legacy scores lost");
             Require(CloudGuardian.BaseHeight<2.5f,"Sky guardian was not lowered");

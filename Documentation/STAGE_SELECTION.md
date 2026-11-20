@@ -3,10 +3,10 @@
 ## Flow
 
 1. Welcome keeps the runner preview, settings, goals, outfit, voice preview and Home exit. LET’S RUN now opens the destination picker.
-2. The picker displays four illustrated cards in stable Rajasthan/Kerala/Punjab/Goa order, with state scenery, a short description and that state’s saved personal best. A gold border and SELECTED badge mark the draft choice. The last played state is preselected; a fresh installation defaults to Rajasthan. Cards are large touch targets.
+2. The picker displays four illustrated cards in stable Rajasthan/Kerala/Punjab/Goa order, with state scenery, a short description and that state’s saved personal best. A gold border and SELECTED badge mark the draft choice. The manually selected starting state is preselected; a fresh installation defaults to Rajasthan. Cards are large touch targets.
 3. START [STATE] RUN confirms the highlighted state. If it is already loaded, the run starts immediately. Otherwise its ID is saved and the existing bootstrap scene reloads. The new manager consumes an exact-region one-shot request and automatically starts that state, without returning the player to Welcome.
 
-Back (including desktop Escape/Android Back through the existing pause input) returns to Welcome without committing a draft choice. RUN AGAIN remains a quick restart of the same state; BACK TO START returns to Welcome and LET’S RUN opens the picker again. Scores/settings/outfits retain existing persistence keys.
+Back (including desktop Escape/Android Back through the existing pause input) returns to Welcome without committing a draft choice. RUN AGAIN returns to the chosen starting state; BACK TO START returns to Welcome and LET’S RUN opens the picker again. Scores/settings/outfits retain existing persistence keys.
 
 ## Presentation and footprint
 
@@ -21,3 +21,5 @@ Art and exact generation prompts are recorded in STAGE_SELECTION_ARTWORK.md. The
 C# syntax parsing, metadata uniqueness, JPEG decode/dimensions/resource names and source wiring checks pass. Numerical layout checks cover ordinary, notched/shorter safe areas and taller portrait layouts; a caption overlap found during these checks was corrected by increasing the minimum card height. These are source/numerical checks, not an executed Unity UI test.
 
 Required local acceptance: LET’S RUN always opens step two; every card highlights correctly; each named Start loads that exact state; switching never briefly runs the old route; saved bests match each state; Back cancels draft selection; reopening preselects the last played state; restart stays in that state; scroll/thumbs/text/footer work on the phone safe area; Sound/Voice/Home and pause/resume still work. Rebuild the APK after pulling the feature branch. No Unity Editor, APK build or phone UI verification was available here.
+
+Random Journey extension: cards now choose the first stop; later states change automatically during the same run. See JOURNEY_MODE.md for transition, score and restart semantics.

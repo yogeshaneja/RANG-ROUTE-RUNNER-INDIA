@@ -168,6 +168,14 @@ See [Punjab/Goa research, implementation and phone checks](Documentation/PUNJAB_
 
 ## Picture-based stage selection
 
-The second step is a dedicated destination picker, with four small original scenic illustrations, a gold selection border, state descriptions and separate personal bests. Tap a card, then the named Start button to run that state. Back returns to Welcome. The last selected state is preselected when reopening; choosing another card does not reload its world. Only Start confirms and saves the choice, and a different region automatically begins after its scene reload. RUN AGAIN restarts the same state.
+The second step is a dedicated destination picker, with four small original scenic illustrations, a gold selection border, state descriptions and separate personal bests. Tap a card, then the named Start button to run that state. Back returns to Welcome. The last selected state is preselected when reopening; choosing another card does not reload its world. Only Start confirms and saves the choice, and a different region automatically begins after its scene reload. RUN AGAIN restarts from the chosen starting state.
 
 Four bundled 512 × 288 previews total 242,273 source bytes (about 237 KiB), with mipmaps/readable copies disabled and compression requested. See [selection flow and checks](Documentation/STAGE_SELECTION.md) and [artwork prompts](Documentation/STAGE_SELECTION_ARTWORK.md). Phone UI appearance, import settings and runtime scene handoff still need local verification.
+
+## Random state changes during a run
+
+The picture-card selection chooses your **first stop**. After at least 600 m in a state, the game waits for a safe, grounded garden transfer window, fades to a random different state and continues the same run. The earliest first change is around 756 m (roughly a minute at the current speed curve). Later changes normally fall about 1,008 m apart; jumping/sliding/lane changes can defer them until a later safe window.
+
+A shuffled four-state order avoids adjacent repeats and visits every state once per bag. Distance, total score, tokens, speed progression, goal progress and remaining pouch power continue. Each region’s personal best measures its own leg; the full run also saves a separate Journey Best, shown on pause/game over. No pickups or scoring advance during the transition. RUN AGAIN returns to the state selected on the picture screen.
+
+The transition rebuilds the active region behind a fade rather than keeping all four worlds in memory. A phone may spend additional time on the opaque loading screen; target-device smoothness and repeated-transition memory behaviour still need profiling. See [Journey transition details](Documentation/JOURNEY_MODE.md).

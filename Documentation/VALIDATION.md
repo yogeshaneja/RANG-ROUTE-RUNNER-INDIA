@@ -251,3 +251,9 @@ Source checks: 31 C# syntax trees, 65 unique metadata GUIDs and whitespace check
 Added a dedicated StageSelect state and four-card picture picker; Welcome now opens it instead of running immediately. Selection is a draft until the named Start button. Same-region starts reuse the active scene; cross-region starts persist the exact chosen ID and consume a one-shot target in the new scene’s Awake. Back cancels the draft and RUN AGAIN remains a direct restart. Four compressed-source previews total 242,273 bytes.
 
 Source/numerical checks cover syntax, metadata, image decodes/dimensions/resource order, start/persistence wiring and four safe-area layout cases. Card minimum height was adjusted to avoid caption/best overlap. Actual Unity GUI input/rendering, scene handoff, APK build, imported texture footprint and phone performance remain unverified. See STAGE_SELECTION.md.
+
+## Automatic random state journey
+
+A protected grounded transfer window triggers a four-state shuffle-bag selection. The active world reloads behind a fade with an in-memory run checkpoint; total score/distance/power survive and passed pickup rows cannot score twice. Segment scores use per-leg baselines; a new whole-run Journey Best is separate. Auto travel preserves the manually selected first-stop preference. Restart returns to that first stop. Background/unfocused transfers freeze and gameplay input is cleared during the fade.
+
+Source/formula validation: all 33 C# files parse, metadata uniqueness and whitespace checks pass; 1,200 random journey orders / 76,800 visits pass bag/no-repeat checks; arbitrary-distance pool mapping, pickup boundary and score/power formulas pass. Added Editor transfer/order contracts remain unexecuted here. Unity compilation, real scene handoff, lifecycle sequencing, fade appearance/audio, phone loading time and repeated-transition memory need the checks listed in JOURNEY_MODE.md.
