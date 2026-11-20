@@ -30,7 +30,8 @@ The runtime also repairs cloned material shaders automatically. If surfaces rema
 2. In **File > Build Profiles**, add/activate Android. Confirm the Rajasthan scene is enabled in the build scene list.
 3. Connect the phone via USB, enable Developer options / USB debugging and accept its authorization prompt.
 4. Select the phone as Run Device and choose **Build and Run** with an APK output. Use Unity Hub's SDK/NDK/JDK for your installed Editor, not an arbitrary system Java installation.
-5. Disconnect USB after installation and verify the game works in airplane mode. No store account is needed for direct testing.
+5. The Rajasthan runner launcher icon is applied automatically after import and before building (including Android adaptive, round and legacy slots supported by your Editor). Pull these changes and Build and Run again to update the installed phone icon. If needed, use **Indian Runner > Apply Rajasthan app icon**.
+6. Disconnect USB after installation and verify the game works in airplane mode. No store account is needed for direct testing.
 
 Build And Run requires your licensed local Unity Editor and compatible Android toolchain. Neither an APK nor an Android build result is included in this PR. Final package identity and release signing are not configured.
 

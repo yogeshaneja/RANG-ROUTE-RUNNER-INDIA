@@ -55,6 +55,7 @@ namespace IndianRunner.Editor
         [MenuItem("Indian Runner/2 - Configure Android prototype")]
         public static void ConfigureAndroid()
         {
+            RunnerAppIcon.Apply();
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
             PlayerSettings.allowedAutorotateToLandscapeLeft = false;
             PlayerSettings.allowedAutorotateToLandscapeRight = false;

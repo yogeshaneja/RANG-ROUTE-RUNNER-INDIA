@@ -26,6 +26,7 @@ namespace IndianRunner.Editor
             }
             try
             {
+                RunnerAppIcon.Apply();
                 var material = AssetDatabase.LoadAssetAtPath<Material>("Assets/IndianRunner/Resources/RunnerBase.mat");
                 var shader = PrimitiveArt.ResolveShader();
                 if (material == null || material.shader == null || material.shader != shader)
@@ -33,7 +34,7 @@ namespace IndianRunner.Editor
             }
             catch (System.Exception error)
             {
-                Debug.LogError("Runner material preparation failed: " + error.Message + " Use Indian Runner > Repair runner materials before building.");
+                Debug.LogError("Runner build preparation failed: " + error.Message + " Check the icon asset and use Indian Runner > Repair runner materials before building.");
             }
         }
         public void OnPreprocessBuild(BuildReport report)
@@ -41,6 +42,7 @@ namespace IndianRunner.Editor
             // Also covers a build started without first opening the Rajasthan scene
             // or entering Play Mode; validation fails before packaging if repair fails.
             RunnerSetup.RepairMaterials();
+            RunnerAppIcon.Apply();
         }
     }
 }
