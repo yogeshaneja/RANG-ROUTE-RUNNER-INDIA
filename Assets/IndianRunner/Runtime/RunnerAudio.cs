@@ -10,12 +10,13 @@ namespace IndianRunner
         private const int MusicBpm = 126;
         public const int DanceBpm = 140;
         private const float MusicBeat = 60f/MusicBpm;
-        private readonly AudioSource effects, music, approach, animals;
+        private readonly AudioSource effects, music, approach, animals, festivalMusic;
         private readonly List<AudioClip> owned = new List<AudioClip>();
         private readonly AudioClip[] pickups = new AudioClip[4];
         private readonly AudioClip danceTrack,breakVoice,duckCall,boarCall,langurCall,buffaloCall,goatCall,dogCall;
         private readonly AudioClip jump, stumble, gameOverCrank, engine, saucer, camel, elephant, celebration, rolling, procession, cloth, peacock, repairs;
-        private bool paused, musicEnabled, dancing;
+        private bool paused, musicEnabled, dancing,festival;
+        private float festivalMix;
         private int savedMusicSample;
         private AudioClip runningTrack;
         private float danceFade=1;
@@ -28,6 +29,7 @@ namespace IndianRunner
             effects = Source(owner,.46f); animals = Source(owner,.34f);
             approach = Source(owner,0); approach.loop = true;
             music = Source(owner,0); music.loop = true;
+            festivalMusic=Source(owner,0);festivalMusic.loop=true;festivalMusic.clip=ComposeFestival(region);
             for (int i=0;i<pickups.Length;i++) pickups[i]=Cue("Mirror-work sparkle "+i,0,.32f,587.33f*Mathf.Pow(2,i*2/12f));
             jump=Cue("Soft jump swish",1,.24f,280);
             stumble=Cue("Gentle end-of-run drum",2,.38f,100);
@@ -66,17 +68,19 @@ namespace IndianRunner
         {
             effects.mute=animals.mute=approach.mute=!sound; musicEnabled=enabled;
             if(enabled && !paused && !music.isPlaying) music.Play();
+            if(enabled && !paused && festival && !festivalMusic.isPlaying)festivalMusic.Play();
         }
         public void Paused(bool value)
         {
             paused=value;
-            foreach(var source in new[]{music,effects,approach,animals})
+            foreach(var source in new[]{music,effects,approach,animals,festivalMusic})
                 if(value) source.Pause(); else source.UnPause();
             if(!value && musicEnabled && !music.isPlaying) music.Play();
+            if(!value && musicEnabled && festival && !festivalMusic.isPlaying)festivalMusic.Play();
         }
         public void ResetRun()
         {
-            EndDanceBreak();
+            EndDanceBreak();EndFestival(true);
             effects.Stop(); animals.Stop(); approach.Stop(); approach.volume=0;
             approachKind=0; lastAnimalKey=-1; pickupIndex=0; lastPickup=-1; duckUntil=speechDuckUntil=0;
         }
@@ -93,14 +97,17 @@ namespace IndianRunner
         public void Celebrate() { effects.PlayOneShot(celebration,.52f); }
         public void GuardianReveal() { effects.PlayOneShot(celebration,.40f); animals.PlayOneShot(saucer,.22f); }
         public void Jump() => effects.PlayOneShot(jump,.65f);
-        public void Stumble() { EndDanceBreak(); effects.Stop(); approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.65f); effects.PlayOneShot(gameOverCrank,.80f); duckUntil=Time.unscaledTime+.9f; }
+        public void Stumble() { EndFestival(true);EndDanceBreak(); effects.Stop(); approach.Stop(); animals.Stop(); effects.PlayOneShot(stumble,.65f); effects.PlayOneShot(gameOverCrank,.80f); duckUntil=Time.unscaledTime+.9f; }
         public void Tick(float dt,int kind=0,float ahead=100,float pan=0,int encounterKey=-1,bool scenic=false)
         {
             if(paused) return;
             float smoothing=1-Mathf.Exp(-7*dt);
             float musicTarget=musicEnabled ? (Time.unscaledTime<speechDuckUntil ? .12f : Time.unscaledTime<duckUntil ? .20f : dancing ? .34f*danceFade : scenic ? .29f : .27f) : 0;
             music.pitch=Mathf.Lerp(music.pitch,1,smoothing); // keep the groove in tune and on tempo
-            music.volume=Mathf.Lerp(music.volume,musicTarget,smoothing);
+            festivalMix=Mathf.Lerp(festivalMix,festival && !dancing ? 1:0,smoothing);
+            music.volume=Mathf.Lerp(music.volume,musicTarget*(1-festivalMix),smoothing);
+            festivalMusic.volume=Mathf.Lerp(festivalMusic.volume,musicTarget*festivalMix*1.15f,smoothing);
+            if((!festival || !musicEnabled) && festivalMusic.volume<.001f)festivalMusic.Stop();
             if(dancing) music.volume=Mathf.Min(music.volume,.34f*danceFade);
             if(!musicEnabled && music.volume<.001f) music.Stop();
             if(dancing) return;
@@ -134,9 +141,21 @@ namespace IndianRunner
                 animals.PlayOneShot((kind==RajasthanObstacles.ElephantSound || kind==RajasthanObstacles.OncomingElephant) ? elephant : kind==RajasthanObstacles.FallingCloth ? cloth : kind==RajasthanObstacles.Peacock ? peacock : kind==RajasthanObstacles.Roadworks ? repairs : camel,.65f); duckUntil=Time.unscaledTime+.7f;
             }
         }
+        public void BeginFestival()
+        {
+            if(festival || dancing)return;
+            festival=true;festivalMusic.volume=0;festivalMusic.timeSamples=0;
+            if(musicEnabled && !paused)festivalMusic.Play();
+        }
+        public void EndFestival(bool immediate=false)
+        {
+            festival=false;
+            if(immediate){festivalMix=0;festivalMusic.volume=0;festivalMusic.Stop();}
+        }
         public void BeginDanceBreak()
         {
             if(dancing) return;
+            EndFestival(true);
             savedMusicSample=music.timeSamples; dancing=true; danceFade=1;
             effects.Stop(); animals.Stop(); approach.Stop(); approach.volume=0; approachKind=0;
             duckUntil=speechDuckUntil=0;
@@ -152,6 +171,36 @@ namespace IndianRunner
             if(musicEnabled && !paused) music.Play();
         }
         public void SayRecordedBreakTime() { if(breakVoice!=null) effects.PlayOneShot(breakVoice,.9f); }
+        private AudioClip ComposeFestival(int region)
+        {
+            // An original 16-beat instrumental phrase. Synth timbres suggest drums,
+            // handclaps, warm plucked strings and an airy answering melody.
+            const int beatSamples=9450; // exactly 140 BPM at 22,050 Hz
+            var data=new float[beatSamples*16];
+            int[] melody={0,4,7,12,9,7,4,2,0,7,9,12,14,12,9,7,4,7,9,12,9,7,4,2,0,4,7,9,7,4,2,0};
+            float tonic=region==RegionProfile.Kerala ? 261.6256f:region==RegionProfile.Punjab ? 329.6276f:region==RegionProfile.Goa ? 349.2282f:293.6648f;
+            var pitches=new float[melody.Length];
+            for(int n=0;n<melody.Length;n++)pitches[n]=tonic*Mathf.Pow(2,melody[n]/12f);
+            uint noiseState=0x419fa3u;float previous=0;
+            for(int i=0;i<data.Length;i++)
+            {
+                int beat=i/beatSamples,eighth=i/(beatSamples/2);
+                float b=(float)(i%beatSamples)/Rate,h=(float)(i%(beatSamples/2))/Rate;
+                float gate=Mathf.Clamp01(h/.009f)*Mathf.Clamp01((beatSamples*.5f/Rate-h)/.025f);
+                float hz=pitches[eighth];
+                float pluck=(Sin(hz*h)+.24f*Sin(hz*2*h)+.08f*Sin(hz*3*h))*Mathf.Exp(-h*12)*gate*.19f;
+                float answer=beat>=8 ? Sin(hz*.5f*h+.012f*Sin(h*5))*Mathf.Sin(Mathf.PI*h/(beatSamples*.5f/Rate))*gate*.055f:0;
+                float low=Sin(62*b+1.6f*(1-Mathf.Exp(-b*44)))*Mathf.Exp(-b*18)*Mathf.Clamp01(b/.003f)*(beat%2==0 ? .27f:.11f);
+                float high=Sin(176*h+.4f*(1-Mathf.Exp(-h*40)))*Mathf.Exp(-h*33)*Mathf.Clamp01(h/.003f)*(eighth%4==3 ? .15f:.07f);
+                noiseState^=noiseState<<13;noiseState^=noiseState>>17;noiseState^=noiseState<<5;
+                float noise=(noiseState&0xffff)/32767.5f-1,bright=(noise-previous)*.5f;previous=noise;
+                float clap=beat%2==1 ? bright*Mathf.Exp(-b*38)*Mathf.Clamp01(b/.003f)*.14f:0;
+                data[i]=pluck+answer+low+high+clap;
+            }
+            int edge=Rate/200;
+            for(int i=0;i<edge;i++){float gain=Mathf.SmoothStep(0,1,(float)i/edge);data[i]*=gain;data[data.Length-1-i]*=gain;}
+            return Clip("Original regional Festival Rush instrumental - 140 BPM",data);
+        }
         private AudioClip ComposeDance()
         {
             const int samplesPerBeat=Rate*60/DanceBpm;

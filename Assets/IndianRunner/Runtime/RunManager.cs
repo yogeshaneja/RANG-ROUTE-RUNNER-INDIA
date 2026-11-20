@@ -24,7 +24,9 @@ namespace IndianRunner
         private RunnerModel runner;
         private VehicleAdventure vehicle;
         private RunnerCompanion companion;
-        private bool riding;
+        private bool riding,festivalActive;
+        private FestivalRush festival;
+        private int festivalTokens;
         private int lastRideWindow=-1,lastSectionWindow=-1;
         private float companionReadyAt;
         private WeatherController weather;
@@ -90,6 +92,7 @@ namespace IndianRunner
             sunlight.shadows = LightShadows.None; lightObject.transform.rotation = Quaternion.Euler(48, -32, 0);
             world = new TrackWorld(transform,region); world.Reset(seed);
             feedback = new RunFeedback(transform);
+            festival=new FestivalRush(transform,region);
             runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
             vehicle=new VehicleAdventure(transform,region);companion=new RunnerCompanion(transform);
             weather = new WeatherController(transform, gameCamera, sunlight,region);
@@ -102,7 +105,7 @@ namespace IndianRunner
         }
         public void ValidateStartup()
         {
-            if (progress == null || world == null || runner == null || vehicle == null || companion == null || weather == null || guardian == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
+            if (progress == null || world == null || runner == null || vehicle == null || companion == null || weather == null || guardian == null || audioPlayer == null || speech == null || festival == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
             world.ValidatePool(); runner.ValidateRig();
         }
@@ -113,6 +116,7 @@ namespace IndianRunner
                 SaveBest();pendingStartRegion=startingRegion;pendingJourney=null;regionReloading=true;
                 ReleaseRuntime();SceneManager.LoadScene(gameObject.scene.name);return;
             }
+            festivalActive=false;festivalTokens=0;festival.Reset();
             riding=false;lastRideWindow=lastSectionWindow=-1;companionReadyAt=0;vehicle.Reset();companion.Reset();
             startingRegion=region;visitedRegions=1<<region;nextStageDistance=JourneyRules.MinimumLegDistance;
             stageStartDistance=stageStartClock=0;stageStartCoins=0;journeyActive=true;
@@ -195,6 +199,7 @@ namespace IndianRunner
                 if(clock>=milestoneUntil){milestoneText="CHUTKU FOUND "+world.CompanionCollected+" TOKEN"+(world.CompanionCollected>1 ? "S!":"!");milestoneUntil=clock+1.5f;}
             }
             coins += gained;
+            if(festivalActive)festivalTokens+=gained;
             if (gained > 0) { audioPlayer.Coin(); feedback.Coin(x,height,reduced); }
             if(world.PouchesCollected>0 && !hit)
             {
@@ -212,6 +217,7 @@ namespace IndianRunner
             inRest=restNow;
             if (hit) { EndRun(world.CamelContact); }
             world.Position(distance, seed, clock, reduced, clock<magnetUntil, x, height); feedback.Tick(dt);
+            festival.Tick(clock,festivalActive && !hit,reduced);
             if(!hit && !riding && height<=.001f && verticalSpeed<=0 && !sliding && laneElapsed>=laneDuration && JourneyRules.InTransferWindow(distance,nextStageDistance))
             {
                 BeginRegionTransition();RefreshHud();return;
@@ -228,7 +234,7 @@ namespace IndianRunner
                 }
                 int atmosphere=riding ? region==RegionProfile.Goa ? RajasthanObstacles.Motorcycle:region==RegionProfile.Punjab ? RajasthanObstacles.Procession:region==RegionProfile.Rajasthan ? RajasthanObstacles.Wheel:0:world.SoundKind;
                 audioPlayer.Tick(dt,atmosphere,riding ? 12:world.SoundAhead,riding ? 0:world.SoundPan,world.SoundKey,inRest || riding);
-                if(!riding && (world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
+                if(!riding && !festivalActive && (world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
             }
             if (distance >= nextMilestone && clock >= milestoneUntil)
             {
@@ -256,6 +262,18 @@ namespace IndianRunner
         private void UpdateAdventureMode(bool sliding)
         {
             int row=AdventureRules.Row(distance),window=row/36;
+            bool rush=FestivalRushRules.ActiveRow(row);
+            if(rush && !festivalActive)
+            {
+                festivalActive=true;festivalTokens=0;audioPlayer.BeginFestival();audioPlayer.Celebrate();
+                speech.Stop();audioPlayer.EndSpeechDuck();
+                milestoneText=FestivalRushRules.Name(region)+" - 3X TOKENS!";milestoneUntil=clock+3;
+            }
+            else if(!rush && festivalActive)
+            {
+                festivalActive=false;festival.Reset();audioPlayer.EndFestival();
+                milestoneText="FESTIVAL COMPLETE - "+festivalTokens+" TOKENS!";milestoneUntil=clock+2.5f;
+            }
             if(riding && !AdventureRules.RideRow(row))
             {
                 riding=false;vehicle.Dismount(clock);milestoneText="BACK ON FOOT - jump & slide again";milestoneUntil=clock+2;
@@ -265,7 +283,7 @@ namespace IndianRunner
                 riding=true;lastRideWindow=window;vehicle.Mount(clock);audioPlayer.Celebrate();
                 milestoneText=AdventureRules.RideName(region)+" - STEER LEFT / RIGHT";milestoneUntil=clock+3;
             }
-            if(AdventureRules.SectionRow(row) && window!=lastSectionWindow)
+            if(AdventureRules.SectionRow(row) && !festivalActive && window!=lastSectionWindow)
             {
                 lastSectionWindow=window;audioPlayer.Celebrate();milestoneText=AdventureRules.SectionName(region)+" - 2X TOKENS";milestoneUntil=clock+3;
             }
@@ -297,6 +315,7 @@ namespace IndianRunner
         }
         private void RestoreJourney(JourneyCheckpoint saved)
         {
+            festivalActive=false;festivalTokens=0;festival.Reset();
             riding=false;lastRideWindow=lastSectionWindow=-1;companionReadyAt=saved.CompanionReadyAt;vehicle.Reset();companion.Reset();
             startingRegion=saved.StartingRegion;visitedRegions=saved.Visited;coins=saved.Coins;lane=saved.Lane;seed=saved.Seed;
             distance=saved.Distance;clock=saved.Clock;x=saved.X;magnetUntil=saved.MagnetUntil;nextMilestone=saved.NextMilestone;
@@ -372,7 +391,7 @@ namespace IndianRunner
             hudStatus = $"{RegionProfile.Code(region)}  {(int)distance} m    {weather.Description}";
             goalsSummary = progress.Ready ? "ALL 3 GOALS DONE - reward at Start" : $"GOALS {progress.Completed}/3  |  {progress.Tokens}/{progress.TokenGoal} tokens";
             int phase=AdventureRules.Phase(AdventureRules.Row(distance));
-            powerSummary = riding ? "RIDE: LEFT / RIGHT  |  2X TOKENS":AdventureRules.SectionRow(AdventureRules.Row(distance)) ? "ADVENTURE: JUMP & SLIDE  |  2X TOKENS":phase==17 ? "RIDE AHEAD - LEFT / RIGHT STEERING":clock<magnetUntil ? $"POUCH POWER  {Mathf.CeilToInt(magnetUntil-clock)}s" : inRest ? "FESTIVAL GARDEN  |  BREATHE & COLLECT" : goalsSummary;
+            powerSummary = festivalActive ? "FESTIVAL RUSH  |  3X TOKENS  |  "+festivalTokens+" COLLECTED":FestivalRushRules.Approaching(AdventureRules.Row(distance)) ? "FESTIVAL AHEAD - FOLLOW THE BRIGHT TRAIL!":riding ? "RIDE: LEFT / RIGHT  |  2X TOKENS":AdventureRules.SectionRow(AdventureRules.Row(distance)) ? "ADVENTURE: JUMP & SLIDE  |  2X TOKENS":phase==17 ? "RIDE AHEAD - LEFT / RIGHT STEERING":clock<magnetUntil ? $"POUCH POWER  {Mathf.CeilToInt(magnetUntil-clock)}s" : inRest ? "FESTIVAL GARDEN  |  BREATHE & COLLECT" : goalsSummary;
         }
         private void PositionCamera(float dt = 0)
         {
@@ -419,6 +438,7 @@ namespace IndianRunner
         private void ReturnToMenu()
         {
             SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; guardian?.Reset(); magnetUntil=0; inRest=false;
+            festivalActive=false;festivalTokens=0;festival.Reset();
             riding=false;vehicle.Reset();companion.Reset();companionReadyAt=0;
             journeyActive=false;coins=0;stageStartCoins=0;stageStartDistance=stageStartClock=0;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
@@ -431,7 +451,7 @@ namespace IndianRunner
         private void Resume() { state = pausedDanceBreak ? State.DanceBreak:State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
         private void EndRun(bool camelContact)
         {
-            state = State.GameOver; guardian?.Reset(); speech.Stop(); audioPlayer.EndSpeechDuck();
+            state = State.GameOver; festivalActive=false;festival.Reset();guardian?.Reset(); speech.Stop(); audioPlayer.EndSpeechDuck();
             runEndMessage = world.ContactMessage.Length > 0 ? world.ContactMessage : camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
             SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
@@ -636,12 +656,23 @@ namespace IndianRunner
                         GUI.Box(new Rect(left+12,top+79,width-24,43),GUIContent.none,skin.Card);
                         GUI.Label(new Rect(left+20,top+81,width-40,39),world.WarningMessage,skin.Subtitle);
                     }
-                    if (clock < milestoneUntil && string.IsNullOrEmpty(world.WarningMessage))
+                    if(festivalActive && string.IsNullOrEmpty(world.WarningMessage))
+                    {
+                        var colour=GUI.color;
+                        GUI.color=new Color(1,.67f,.12f,.94f);
+                        GUI.DrawTexture(new Rect(left+14,top+77,width-28,46),Texture2D.whiteTexture);
+                        GUI.color=new Color(.12f,.10f,.07f,1);
+                        GUI.Label(new Rect(left+20,top+78,width-40,28),FestivalRushRules.Name(region),skin.Subtitle);
+                        GUI.color=new Color(.04f,.73f,.72f,1);
+                        GUI.DrawTexture(new Rect(left+14,top+119,(width-28)*Mathf.Clamp01(FestivalRushRules.Remaining(distance)/(4*RunRules.RowSpacing)),4),Texture2D.whiteTexture);
+                        GUI.color=colour;
+                    }
+                    if (!festivalActive && clock < milestoneUntil && string.IsNullOrEmpty(world.WarningMessage))
                     {
                         GUI.Box(new Rect(center-160,top+82,320,42),GUIContent.none,skin.Card);
                         GUI.Label(new Rect(center-152,top+84,304,38),milestoneText,skin.Subtitle);
                     }
-                    if(banter.Visible(clock))
+                    if(!festivalActive && banter.Visible(clock))
                     {
                         GUI.Box(new Rect(left+14,top+131,width-28,78),GUIContent.none,skin.Card);
                         GUI.Label(new Rect(left+26,top+133,width-52,22),banter.Current.Speaker,skin.Subtitle);

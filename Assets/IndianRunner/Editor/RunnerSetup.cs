@@ -302,7 +302,28 @@ namespace IndianRunner.Editor
                 adventureRows++;
             }
             Require(AdventureRules.BoardingWindow(504) && !AdventureRules.BoardingWindow(532),"Boarding window incorrect");
-            Require(AdventureRules.PickupValue(4)==2 && AdventureRules.PickupValue(18)==2 && AdventureRules.PickupValue(9)==1,"Adventure token values incorrect");
+            Require(AdventureRules.PickupValue(4)==3 && AdventureRules.PickupValue(40)==2 && AdventureRules.PickupValue(18)==2 && AdventureRules.PickupValue(9)==1,"Adventure token values incorrect");
+            // The rare bonus replaces only a complete authored passage, never a vehicle,
+            // traffic, rain visitor, rest or state-transfer encounter.
+            int festivalRows=0;
+            for(int row=0;row<FestivalRushRules.PeriodRows*20;row++)
+            {
+                if(!FestivalRushRules.ActiveRow(row))continue;
+                festivalRows++;
+                Require(AdventureRules.SectionRow(row) && !AdventureRules.RideRow(row) && !RunRules.RestBuffer(row),"Festival overlaps another encounter");
+                Require(AdventureRules.PickupValue(row)==3,"Festival reward value changed");
+                for(int stage=0;stage<RegionProfile.Count;stage++)
+                {
+                    Require(RegionRules.DynamicKind(row,stage)==0,"Moving hazard entered festival");
+                    Require(!AdventureRules.RainVisitorRow(row,stage),"Rain visitor entered festival");
+                    for(int lane=0;lane<3;lane++)
+                        Require(RegionRules.ObstacleFor(row,lane,7301,stage)==0,"Festival bonus road is blocked");
+                }
+            }
+            Require(festivalRows==80,"Festival repeats too frequently");
+            Require(!FestivalRushRules.ActiveRow(3) && FestivalRushRules.ActiveRow(4) && FestivalRushRules.ActiveRow(7) && !FestivalRushRules.ActiveRow(8),"Festival entry/exit boundaries incorrect");
+            Require(!FestivalRushRules.ActiveRow(40) && !FestivalRushRules.ActiveRow(76) && FestivalRushRules.ActiveRow(112),"Festival rarity incorrect");
+            Require(FestivalRushRules.Approaching(3) && FestivalRushRules.Remaining(112)==112 && FestivalRushRules.Remaining(224)==0,"Festival cue/progress incorrect");
             Require(AdventureRules.CompanionCooldown>=8,"Companion collection cooldown too short");
             Debug.Log($"PASS: {adventureRows} adventure/vehicle generation rows; companion cooldown and token values.");
             Require(!JourneyRules.InTransferWindow(252,600) && JourneyRules.InTransferWindow(756,600),"Journey first transfer window incorrect");

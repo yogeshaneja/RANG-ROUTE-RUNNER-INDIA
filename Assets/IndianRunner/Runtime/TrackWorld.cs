@@ -26,7 +26,7 @@ namespace IndianRunner
         private sealed class Tile
         {
             public Transform Root;
-            public Transform Village,AdventureSection,RideSection;
+            public Transform Village,AdventureSection,RideSection,FestivalSection;
             public int Index;
             public bool HasElephant;
             public readonly Row[] Rows = { new Row(), new Row() };
@@ -119,6 +119,7 @@ namespace IndianRunner
                 }
                 tile.AdventureSection=AdventureArt.Tile(tile.Root,region,TileLength,false);
                 tile.RideSection=AdventureArt.Tile(tile.Root,region,TileLength,true);
+                tile.FestivalSection=FestivalRush.Tile(tile.Root,region,TileLength);
                 foreach (var row in tile.Rows)
                 {
                     for (int lane = 0; lane < 3; lane++)
@@ -144,7 +145,7 @@ namespace IndianRunner
         public void ValidatePool()
         {
             foreach(var tile in tiles)
-                if(tile.AdventureSection==null || tile.RideSection==null)
+                if(tile.AdventureSection==null || tile.RideSection==null || tile.FestivalSection==null)
                     throw new System.InvalidOperationException("Pooled tile is missing its adventure overlays.");
             foreach (var tile in tiles) foreach (var row in tile.Rows)
             {
@@ -179,7 +180,8 @@ namespace IndianRunner
         private void Configure(Tile tile, int index, int seed)
         {
             tile.Index = index;
-            tile.AdventureSection.gameObject.SetActive(AdventureRules.SectionRow(index*2));
+            tile.AdventureSection.gameObject.SetActive(AdventureRules.SectionRow(index*2) && !FestivalRushRules.ActiveRow(index*2));
+            tile.FestivalSection.gameObject.SetActive(FestivalRushRules.ActiveRow(index*2));
             tile.RideSection.gameObject.SetActive(AdventureRules.RideRow(index*2));
             // Reuse the same meshes with a small deterministic layout variation.
             // Ground, lanes and gameplay obstacles are never shifted or scaled.
@@ -217,6 +219,7 @@ namespace IndianRunner
                     row.Taken[c] = row.Pulled[c] = false; row.Coins[c].gameObject.SetActive(true);
                     row.Coins[c].localPosition = new Vector3(RunRules.LaneX(row.Safe), 1.1f, RunRules.RowSpacing * .5f + r * RunRules.RowSpacing + (c - 2) * 2.2f);
                     row.Coins[c].localRotation = Quaternion.identity;
+                    row.Coins[c].localScale=Vector3.one*(FestivalRushRules.ActiveRow(rowNumber) ? 1.22f:1);
                 }
             }
         }

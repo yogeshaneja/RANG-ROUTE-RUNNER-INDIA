@@ -194,3 +194,7 @@ Every state now has a short vehicle bonus and a themed jump/slide passage. The f
 Rides are announced before boarding, steer with **left/right only**, then return to normal jumping/sliding after the finish. The ride lasts roughly 9–12 seconds at the current speed curve, depending on boarding and speed; gameplay remains active. Existing momentum is preserved. Clear first/last ride rows and recovery buffers protect the control changes. The boy uses a seated/reaching pose rather than running through the vehicle.
 
 **Chutku**, an original little street-dog companion with a saffron bandana and turquoise collar, follows the runner and can retrieve one missed token every eight seconds. He rides along on the vehicle, never collides with hazards and cannot score a token twice. His collection cooldown survives random stage changes. No paid/downloaded art, image assets or runtime packages were added. See [adventure implementation and validation](Documentation/ADVENTURE_FEATURES.md). Unity visuals, controls and Android performance still require local testing.
+
+## Festival Rush bonus
+
+Rare state-themed festival passages now start at 112–224 m, then recur every 3,024 m across the journey. They include original colourful decorations, a light petal shower, an upbeat music change, a clear road and 3× regional tokens. Ordinary adventure passages and vehicle rides remain between festivals. See [Festival Rush](Documentation/FESTIVAL_RUSH.md) for timing, budgets and device checks.
