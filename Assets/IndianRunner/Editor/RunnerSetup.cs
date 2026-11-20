@@ -258,6 +258,32 @@ namespace IndianRunner.Editor
             }
             Require(RegionRules.BridgeTile(1) && RegionRules.BridgeTile(3) && !RegionRules.BridgeTile(4),"Bridge/forest sequence lost");
             Require(FestivalObstacles.Shape(RegionRules.Bamboo).x+RunRules.PlayerHalfWidth<RunRules.LaneWidth,"Shelter overlaps neighbouring lane");
+            int newRegionRows=0;
+            for(int region=RegionProfile.Punjab;region<=RegionProfile.Goa;region++)
+            {
+                for(int regionSeed=0;regionSeed<32;regionSeed++) for(int row=0;row<1000;row++)
+                {
+                    int safe=RunRules.SafeLane(row,regionSeed),moving=RegionRules.DynamicKind(row,region);
+                    Require(RegionRules.ObstacleFor(row,safe,regionSeed,region)==0,"New region safe lane blocked");
+                    for(int lane=0;lane<3;lane++)
+                    {
+                        int kind=RegionRules.ObstacleFor(row,lane,regionSeed,region);
+                        if(RunRules.RestBuffer(row))Require(kind==0,"New region rest buffer blocked");
+                        if(kind==0)continue;
+                        Require(RegionRules.UsesKind(region,kind),"Obstacle does not belong to selected region");
+                        var shape=FestivalObstacles.Shape(kind)*RajasthanObstacles.VisualScale(kind);
+                        Require(Mathf.Abs(RunRules.LaneX(lane)-RunRules.LaneX(safe))>shape.x+RunRules.PlayerHalfWidth,"New region hazard overlaps safe lane");
+                    }
+                    if(moving!=0)foreach(int neighbour in new[]{row-1,row+1})for(int lane=0;lane<3;lane++)
+                        Require(RegionRules.ObstacleFor(neighbour,lane,regionSeed,region)==0,"New region recovery row occupied");
+                    newRegionRows++;
+                }
+            }
+            Require(RegionProfile.Count==4 && RegionProfile.Valid(-1)==0 && RegionProfile.Valid(9)==0,"Region selector bounds invalid");
+            Require(RegionProfile.BestKey(0)=="runner.best" && RegionProfile.BestKey(1)=="runner.best.kerala","Legacy scores lost");
+            Require(CloudGuardian.BaseHeight<2.5f,"Sky guardian was not lowered");
+            Require(RunRules.HazardZ(RegionRules.Tractor,100,90)>100 && RunRules.HazardZ(RegionRules.Tractor,100,110)<100,"Tractor must approach the runner");
+            Debug.Log($"PASS: {newRegionRows} Punjab/Goa rows and region/guardian contracts.");
             Debug.Log($"PASS: {keralaRows} Kerala safe-route/habitat/bounds rows. Run live startup checks in each selected region.");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }

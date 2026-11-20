@@ -9,6 +9,7 @@ namespace IndianRunner
     public sealed class CloudGuardian : IDisposable
     {
         public const float Duration=4;
+        public const float BaseHeight=.25f;
         private readonly Transform root, head;
         private readonly Transform[] arms=new Transform[2],banks=new Transform[3],sparkles=new Transform[8];
         private readonly List<Material> materials=new List<Material>();
@@ -16,20 +17,20 @@ namespace IndianRunner
         private float appearedAt;
         private int lastGarden=-1;
         public bool Active { get; private set; }
-        public CloudGuardian(Transform parent)
+        public CloudGuardian(Transform parent,int region=RegionProfile.Rajasthan)
         {
-            root=Pivot(parent,"Original Thar Cloud Guardian",new Vector3(0,2.5f,70));
+            root=Pivot(parent,RegionProfile.GuardianName(region),new Vector3(0,BaseHeight,70));
             var shader=Resources.Load<Shader>("Scenery/CloudGuardian");
             if(shader==null || !shader.isSupported)
             { root.gameObject.SetActive(false); Debug.LogWarning("Cloud Guardian disabled: its sky shader is unavailable."); return; }
             var skin=Tint(shader,"Warm sandstone face",new Color(.83f,.55f,.35f,1));
             var dark=Tint(shader,"Indigo moustache",new Color(.075f,.055f,.13f,1));
-            var teal=Tint(shader,"Turquoise guardian coat",new Color(.04f,.56f,.58f,.93f));
-            var pink=Tint(shader,"Bright rose turban",new Color(.96f,.16f,.44f,1));
+            var teal=Tint(shader,"Turquoise guardian coat",region==RegionProfile.Punjab ? new Color(.08f,.27f,.78f,.93f):region==RegionProfile.Kerala ? new Color(.06f,.48f,.25f,.93f):region==RegionProfile.Goa ? new Color(.95f,.29f,.19f,.93f):new Color(.04f,.56f,.58f,.93f));
+            var pink=Tint(shader,"Bright rose turban",region==RegionProfile.Punjab ? new Color(1,.55f,.07f,1):region==RegionProfile.Kerala ? new Color(.98f,.91f,.68f,1):region==RegionProfile.Goa ? new Color(.95f,.78f,.38f,1):new Color(.96f,.16f,.44f,1));
             var gold=Tint(shader,"Warm golden embroidery",new Color(1,.76f,.25f,1));
             var eyeGlow=Tint(shader,"Soft glowing eyes",new Color(.87f,.98f,1,.95f));
             var cloudWhite=Tint(shader,"Pearl cloud",new Color(.91f,.95f,1,.66f));
-            var cloudRose=Tint(shader,"Rose cloud",new Color(.96f,.66f,.76f,.47f));
+            var cloudRose=Tint(shader,"Rose cloud",region==RegionProfile.Goa ? new Color(.36f,.83f,.94f,.47f):region==RegionProfile.Kerala ? new Color(.48f,.85f,.66f,.47f):new Color(.96f,.66f,.76f,.47f));
             var cloudViolet=Tint(shader,"Lavender cloud",new Color(.65f,.62f,.89f,.53f));
             var body=Pivot(root,"Broad embroidered cloud coat",Vector3.zero);
             NaturalMesh.Oval(body,"Giant shoulders",new Vector3(0,9,1),new Vector3(20,10,7),teal,14);
@@ -40,13 +41,22 @@ namespace IndianRunner
                 float side=i-3;
                 NaturalMesh.Oval(body,"Necklace bead",new Vector3(side*1.1f,10.6f+side*side*.11f,-2.5f),new Vector3(.65f,.75f,.35f),gold,8);
             }
+            if(region==RegionProfile.Punjab)
+            {
+                NaturalMesh.Oval(body,"Fantasy cloud dancer dhol",new Vector3(0,7.7f,-3.3f),new Vector3(8,3.8f,3.2f),gold,14);
+                foreach(float side in new[]{-1f,1f}) NaturalMesh.Oval(body,"Dhol drum head",new Vector3(side*3.5f,7.7f,-3.3f),new Vector3(.30f,3.5f,2.9f),pink,12);
+            }
+            else if(region==RegionProfile.Goa)
+                NaturalMesh.Oval(body,"Captain shell medallion",new Vector3(0,9,-2.8f),new Vector3(2.4f,2.4f,.4f),gold,12);
+            else if(region==RegionProfile.Kerala)
+                for(int leaf=0;leaf<5;leaf++) NaturalMesh.Oval(body,"Monsoon leaf cloak trim",new Vector3((leaf-2)*2,9,-2.6f),new Vector3(1.8f,3,.45f),pink,12);
             PrimitiveArt.CombineScenery(body,true);
             head=Pivot(root,"Guardian face and turban",new Vector3(0,17,0));
             NaturalMesh.Oval(head,"Rounded giant face",Vector3.zero,new Vector3(7.6f,8.4f,5),skin,16);
             foreach(float side in new[]{-1f,1f})
             {
                 NaturalMesh.Oval(head,"Ear",new Vector3(side*3.6f,-.2f,0),new Vector3(1.3f,2.3f,1),skin,10);
-                NaturalMesh.Oval(head,"Gold earring",new Vector3(side*3.8f,-1.7f,-.35f),new Vector3(.7f,1,.3f),gold,10);
+                if(region!=RegionProfile.Punjab) NaturalMesh.Oval(head,"Gold earring",new Vector3(side*3.8f,-1.7f,-.35f),new Vector3(.7f,1,.3f),gold,10);
                 NaturalMesh.Oval(head,"Glowing eye",new Vector3(side*1.5f,.8f,-2.38f),new Vector3(1.3f,.7f,.45f),eyeGlow,12);
                 NaturalMesh.Oval(head,"Indigo pupil",new Vector3(side*1.5f,.76f,-2.63f),new Vector3(.30f,.42f,.12f),dark,10);
                 NaturalMesh.Branch(head,"Expressive eyebrow",new Vector3(side*.85f,1.55f,-2.1f),new Vector3(side*2.2f,1.7f,-1.9f),.18f,dark);
@@ -55,14 +65,41 @@ namespace IndianRunner
             }
             NaturalMesh.Oval(head,"Sculpted nose",new Vector3(0,-.1f,-2.65f),new Vector3(.85f,1.4f,1.1f),skin,12);
             NaturalMesh.Branch(head,"Small warm smile",new Vector3(-.8f,-1.75f,-2.37f),new Vector3(.8f,-1.75f,-2.37f),.12f,dark);
-            for(int i=0;i<4;i++)
+            if(region==RegionProfile.Goa)
             {
-                var fold=NaturalMesh.Oval(head,"Layered colourful turban",new Vector3((i-1.5f)*.2f,3.7f+i*.62f,.1f),new Vector3(10.1f-i*.55f,2,6.1f),i%2==0 ? pink:teal,14);
-                fold.localRotation=Quaternion.Euler(0,0,-12+i*7);
+                NaturalMesh.Oval(head,"Sea-breeze captain straw hat brim",new Vector3(0,3.6f,0),new Vector3(12,.75f,7.4f),pink,18);
+                NaturalMesh.Oval(head,"Rounded straw hat crown",new Vector3(0,4.5f,.1f),new Vector3(7.6f,3.1f,5.3f),pink,16);
+                PrimitiveArt.Box(head,"Captain turquoise hat band",new Vector3(0,3.95f,-2.5f),new Vector3(6.7f,.65f,.17f),teal);
             }
-            var jewel=PrimitiveArt.Box(head,"Turban diamond",new Vector3(0,3.1f,-3.02f),new Vector3(1.3f,1.3f,.3f),gold);
-            jewel.localRotation=Quaternion.Euler(0,0,45);
-            NaturalMesh.Oval(head,"Turban crest",new Vector3(.4f,6.6f,.2f),new Vector3(2,3,2),pink,12);
+            else if(region==RegionProfile.Kerala)
+            {
+                NaturalMesh.Oval(head,"Monsoon keeper leaf canopy",new Vector3(0,3.9f,0),new Vector3(11,2.1f,7.1f),teal,16);
+                for(int leaf=0;leaf<5;leaf++)
+                {
+                    var blade=NaturalMesh.Oval(head,"Cream edged canopy leaf",new Vector3((leaf-2)*1.7f,4.3f,-.3f),new Vector3(2.3f,3.6f,2),pink,12);
+                    blade.localRotation=Quaternion.Euler(0,0,(leaf-2)*-17);
+                }
+            }
+            else
+            {
+                for(int i=0;i<4;i++)
+                {
+                    var fold=NaturalMesh.Oval(head,"Layered colourful turban",new Vector3((i-1.5f)*.2f,3.7f+i*.62f,.1f),new Vector3(10.1f-i*.55f,2,6.1f),i%2==0 ? pink:teal,14);
+                    fold.localRotation=Quaternion.Euler(0,0,-12+i*7);
+                }
+                if(region==RegionProfile.Punjab)
+                    for(int fan=0;fan<5;fan++)
+                    {
+                        var plume=NaturalMesh.Oval(head,"Bhangra dancer fan crest",new Vector3((fan-2)*.75f,7,.1f),new Vector3(1.5f,4,1.1f),fan%2==0 ? pink:gold,12);
+                        plume.localRotation=Quaternion.Euler(0,0,(fan-2)*-15);
+                    }
+                else
+                {
+                    var jewel=PrimitiveArt.Box(head,"Turban diamond",new Vector3(0,3.1f,-3.02f),new Vector3(1.3f,1.3f,.3f),gold);
+                    jewel.localRotation=Quaternion.Euler(0,0,45);
+                    NaturalMesh.Oval(head,"Turban crest",new Vector3(.4f,6.6f,.2f),new Vector3(2,3,2),pink,12);
+                }
+            }
             PrimitiveArt.CombineScenery(head,true);
             for(int i=0;i<arms.Length;i++)
             {

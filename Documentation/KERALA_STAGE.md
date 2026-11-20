@@ -2,7 +2,7 @@
 
 ## Play
 
-Use the start-screen STAGE button to switch between Rajasthan and Kerala, then LET’S RUN. Switching reloads the existing bootstrap scene from the menu so the outgoing stage and its owned resources are disposed. The selected region persists in `runner.region`. Rajasthan retains its existing `runner.best`; Kerala uses `runner.best.kerala`. Outfits, festival progress, controls, voice/audio settings and the runner are shared. Restart keeps the selected stage.
+Use the start-screen STAGE button to cycle Rajasthan, Kerala, Punjab and Goa, then LET’S RUN. Switching reloads the existing bootstrap scene from the menu so the outgoing stage and its owned resources are disposed. The selected region persists in `runner.region`. Rajasthan retains its existing `runner.best`; Kerala uses `runner.best.kerala`. Outfits, festival progress, controls, voice/audio settings and the runner are shared. Restart keeps the selected stage.
 
 ## Route and art
 
@@ -29,7 +29,7 @@ Animal contact ends the run with an unharmed-animal message. Animals are origina
 
 Kerala begins with visible rain and transitions gradually through a 180-second cycle: rain, cloud, sunshine. The existing manual sky selector still works. Linear mist starts at 85 m; it does not hide the roughly 45 m warning window. Rain remains capped at 48 reusable streaks, or 10 with reduced effects. Weather has no traction, damage or control penalties.
 
-Seven pooled tiles, fourteen rows, forty-two obstacle slots and seventy token slots remain fixed. The active region alone constructs its scenery, catalogue and optional effects; inactive Rajasthan panorama/scenery, camel legs and Guardian are skipped in Kerala. Rigid geometry is combined once by material; no new scenery meshes or animals are instantiated while running. Region switching creates replacement pools during the menu scene reload. This is bounded resource management, not a measured frame-rate or memory claim. Both regions’ source assets still ship in the APK. Future expansion may need asset bundles/addressable region packs, but none are introduced here.
+Seven pooled tiles, fourteen rows, forty-two obstacle slots and seventy token slots remain fixed. The active region alone constructs its scenery, catalogue and optional effects; inactive Rajasthan panorama/scenery, camel legs and Thar guardian variant are skipped in Kerala. Kerala now constructs its own Monsoon Leaf Keeper, positioned lower like the other state guardians. Rigid geometry is combined once by material; no new scenery meshes or animals are instantiated while running. Region switching creates replacement pools during the menu scene reload. This is bounded resource management, not a measured frame-rate or memory claim. Both regions’ source assets still ship in the APK. Future expansion may need asset bundles/addressable region packs, but none are introduced here.
 
 ## Research references
 
@@ -43,6 +43,8 @@ The official Kerala Tourism sources below guided scenery and habitat choices. No
 
 ## Validation and remaining device checks
 
-All 28 C# files pass syntax parsing. Independent numerical mapping checks cover 128,000 rows: safe-lane separation, rest buffers, empty dynamic-neighbour rows, forest restrictions, all ten Kerala hazard kinds, maximum-speed lane timing, bridge-rail clearance and frond mesh indices. These are formula/source checks, not execution of the C# game. The existing Indian Runner core-rule menu now also checks 32,000 Kerala rows in Unity when run locally. Asset metadata GUIDs are complete and unique; whitespace checks pass.
+All 31 C# files pass syntax parsing. Independent numerical mapping checks cover 128,000 rows: safe-lane separation, rest buffers, empty dynamic-neighbour rows, forest restrictions, all ten Kerala hazard kinds, maximum-speed lane timing, bridge-rail clearance and frond mesh indices. These are formula/source checks, not execution of the C# game. The existing Indian Runner core-rule menu now also checks 32,000 Kerala rows in Unity when run locally. Asset metadata GUIDs are complete and unique; whitespace checks pass.
 
 No Unity Editor, APK build, rendering or audio audition was available here. Before accepting: build/run, switch stages several times, verify remembered stage and separate scores, test jump/slide hitboxes, rain-lady timing, rest/restart/pause/home, look for scenery gaps at bridge joins and invisible surfaces, check animal silhouettes, and profile frame times/memory on the target phone over sustained runs and repeated region switches.
+
+The Punjab/Goa expansion adds state-specific guardians to every region; earlier notes about skipping the Rajasthan Guardian refer to that particular Thar design, not the new Kerala Leaf Keeper. See PUNJAB_GOA_STAGES.md.

@@ -1,6 +1,6 @@
 # Rang Route Runner India — Unity prototype
 
-An original offline Android 3D endless runner. **Two-region source prototype**, with selectable Rajasthan and Kerala routes and procedural character/environment art. This is Unity/C#, not Expo or a React Native simulation.
+An original offline Android 3D endless runner. **Four-region source prototype**, with selectable Rajasthan, Kerala, Punjab and Goa routes and procedural character/environment art. This is Unity/C#, not Expo or a React Native simulation.
 
 ## Open and play
 
@@ -155,3 +155,13 @@ Pull the feature branch and rebuild the Android APK. At the start screen, tap **
 Kerala adds coconut palms, banana plants, paddy-green banks, backwater bridge decks with railings, original houseboat models, tiled-roof houses, forest stretches, misty green hills and a rain-first weather cycle. Collect golden lotus tokens. Dodge ducks, forest boar/langurs and an occasional forest elephant; jump coconut baskets/coir/logs, slide under palm shelters and dodge fish carts. Existing motorcycle and rain-lady encounters continue.
 
 Only the selected scenery/catalogue is constructed. Art is original runtime geometry, without new image/model downloads or packages. See [Kerala stage details and research](Documentation/KERALA_STAGE.md). Source/rule checks pass; Unity build, visual inspection and real-phone profiling remain required.
+
+## Punjab, Goa and regional sky guardians
+
+The start-screen STAGE button now cycles **Rajasthan → Kerala → Punjab → Goa**. Tap until the desired state appears, then LET’S RUN. Pull this branch and Build and Run again to update the installed phone app. All four stages use the existing bootstrap scene; no additional scene setup is required.
+
+- **Punjab — Harvest Hustle:** green/gold fields, village farmhouses, irrigation channels, Phulkari wall details, buffalo/goats, an approaching tractor, hay/grain obstacles and low cloth stalls. Collect golden Phulkari flower tokens.
+- **Goa — Coastal Colour Run:** sea and surf beside a sand promenade, coconut palms, colourful tiled-roof houses, beach shacks and fishing boats. Dodge crabs/dogs, fishing baskets, boat handcarts and low drying nets; collect golden shell tokens. Dolphins and a turtle remain background scenery.
+- **Sky guardians:** Rajasthan’s Thar guardian, Kerala’s Monsoon Leaf Keeper, Punjab’s Bhangra Cloud Dancer and Goa’s Sea-Breeze Captain. All are original fantasy characters, appear rarely in clear garden buffers and sit lower than before. Existing road-view masking stays active.
+
+See [Punjab/Goa research, implementation and phone checks](Documentation/PUNJAB_GOA_STAGES.md). Source/numerical checks passed; Unity compilation, rendered appearance, sound audition and Android performance have not been verified here.

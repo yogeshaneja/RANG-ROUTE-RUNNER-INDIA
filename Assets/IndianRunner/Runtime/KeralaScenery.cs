@@ -104,7 +104,9 @@ namespace IndianRunner
                     foreach(int k in new[]{a,c,b,b,c,d,a,b,c,b,d,c})triangles[cursor++]=k;
                 }
             }
-            NaturalMesh.Make(root,"Curving tropical frond",vertices,uv,triangles,youngLeaf);
+            var frond=NaturalMesh.Make(root,"Curving tropical frond",vertices,uv,triangles,youngLeaf);
+            var normals=new Vector3[vertices.Length];for(int i=0;i<normals.Length;i++)normals[i]=Vector3.up;
+            frond.GetComponent<MeshFilter>().sharedMesh.normals=normals;
         }
         private void Tree(Transform root,Vector3 position,int variant)
         {

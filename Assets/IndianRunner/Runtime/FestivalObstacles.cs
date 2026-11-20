@@ -8,6 +8,14 @@ namespace IndianRunner
         // X/Z are half extents; Y is height above the moving object's base.
         public static Vector3 Shape(int kind)
         {
+            if(kind==RegionRules.Buffalo) return new Vector3(.85f,1.68f,1.45f);
+            if(kind==RegionRules.Goat) return new Vector3(.55f,1.12f,1.0f);
+            if(kind==RegionRules.Tractor) return new Vector3(1.05f,2.50f,1.45f);
+            if(kind==RegionRules.Hay || kind==RegionRules.Grain || kind==RegionRules.FishCrates) return new Vector3(.72f,.86f,.47f);
+            if(kind==RegionRules.PhulkariGate || kind==RegionRules.NetGate) return new Vector3(.96f,2.40f,.68f);
+            if(kind==RegionRules.Crab) return new Vector3(.96f,.58f,.62f);
+            if(kind==RegionRules.Dog) return new Vector3(.48f,.92f,.9f);
+            if(kind==RegionRules.BoatCart) return new Vector3(1f,1.45f,1.30f);
             if(kind==RegionRules.Ducks) return new Vector3(.70f,.68f,.73f);
             if(kind==RegionRules.Boar) return new Vector3(.49f,1.16f,1.12f);
             if(kind==RegionRules.Langur) return new Vector3(.64f,1.48f,.48f);
@@ -28,6 +36,17 @@ namespace IndianRunner
         }
         public static string Warning(int kind)
         {
+            if(kind==RegionRules.Buffalo) return "BUFFALO ON THE LANE";
+            if(kind==RegionRules.Goat) return "GOAT AHEAD";
+            if(kind==RegionRules.Tractor) return "TRACTOR COMING - change lane";
+            if(kind==RegionRules.Hay) return "HAY BALES - jump";
+            if(kind==RegionRules.Grain) return "GRAIN SACKS - jump";
+            if(kind==RegionRules.PhulkariGate) return "LOW PHULKARI STALL - slide";
+            if(kind==RegionRules.Crab) return "CRAB ON THE PROMENADE";
+            if(kind==RegionRules.Dog) return "DOG AHEAD - give it space";
+            if(kind==RegionRules.FishCrates) return "FISHING BASKETS - jump";
+            if(kind==RegionRules.BoatCart) return "BOAT HANDCART - change lane";
+            if(kind==RegionRules.NetGate) return "LOW FISHING NET - slide";
             if(kind==RegionRules.Ducks) return "DUCKS ON THE PATH";
             if(kind==RegionRules.Boar) return "FOREST BOAR AHEAD";
             if(kind==RegionRules.Langur) return "LANGUR ON THE PATH";
@@ -47,8 +66,9 @@ namespace IndianRunner
         }
         public static string Contact(int kind)
         {
-            if(kind==RegionRules.Ducks || kind==RegionRules.Boar || kind==RegionRules.Langur) return "The animal is safe. Give it room and follow the open lane.";
-            if(kind>=RegionRules.Coconuts) return "Watch the warning. Jump, slide or follow the lotus lane.";
+            if(kind==RegionRules.Tractor) return "Tractor contact. Follow the warning and take the open lane.";
+            if(kind==RegionRules.Buffalo || kind==RegionRules.Goat || kind==RegionRules.Crab || kind==RegionRules.Dog || kind==RegionRules.Ducks || kind==RegionRules.Boar || kind==RegionRules.Langur) return "The animal is safe. Give it room and follow the open lane.";
+            if(kind>=RegionRules.Coconuts) return "Watch the warning. Jump, slide or follow the token lane.";
             if(kind==RajasthanObstacles.OncomingElephant) return "Gentle elephant stumble. Give the big fellow his own lane.";
             if(kind==RajasthanObstacles.UmbrellaLady) return "Gentle umbrella stumble. Give her marked lane some room.";
             if(kind==RajasthanObstacles.Peacock) return "Peacock is unharmed. Give its marked lane some space.";

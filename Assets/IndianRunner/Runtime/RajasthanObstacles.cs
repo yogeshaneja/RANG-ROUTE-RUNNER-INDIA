@@ -7,7 +7,7 @@ namespace IndianRunner
     public sealed class RajasthanObstacles
     {
         public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14, OncomingElephant = 15;
-        public const int MaxKind=RegionRules.Log, ElephantSound=100;
+        public const int MaxKind=RegionRules.NetGate, ElephantSound=100;
         public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {
@@ -19,9 +19,9 @@ namespace IndianRunner
         private Part[] camelLeg;
         public int MaxParts { get; private set; }
 
-        public RajasthanObstacles(bool kerala=false)
+        public RajasthanObstacles(int region=RegionProfile.Rajasthan)
         {
-            if(!kerala)
+            if(region==RegionProfile.Rajasthan)
             {
             var legRoot = new GameObject("Shared sculpted camel leg").transform;
             var legHide = PrimitiveArt.Mat(new Color(.66f,.40f,.19f));
@@ -34,19 +34,23 @@ namespace IndianRunner
             camelLeg = legParts.ToArray(); Object.Destroy(legRoot.gameObject);
             }
             else camelLeg=new Part[0];
+            var elephantLegParts=new List<Part>();
+            if(RegionRules.UsesKind(region,OncomingElephant))
+            {
             var elephantLegRoot=new GameObject("Shared walking elephant leg").transform;
             RajasthanDecor.MovingElephantLeg(elephantLegRoot); PrimitiveArt.CombineScenery(elephantLegRoot,true);
-            var elephantLegParts=new List<Part>();
             foreach(var renderer in elephantLegRoot.GetComponentsInChildren<MeshRenderer>()) if(renderer.enabled)
                 elephantLegParts.Add(new Part { Mesh=renderer.GetComponent<MeshFilter>().sharedMesh,Material=renderer.sharedMaterial });
             Object.Destroy(elephantLegRoot.gameObject);
+            }
             for (int kind = 1; kind <= MaxKind; kind++)
             {
-                if((!kerala && kind>=RegionRules.Ducks) || (kerala && kind<RegionRules.Ducks && kind!=Motorcycle && kind!=UmbrellaLady && kind!=OncomingElephant))
+                if(!RegionRules.UsesKind(region,kind))
                 { models[kind]=new Part[0]; continue; }
                 var root = new GameObject("Shared regional obstacle " + kind).transform;
-                if(kind>=RegionRules.Ducks) KeralaArt.Build(root,kind);
-                else if(kerala && kind==OncomingElephant) RajasthanDecor.BuildElephant(root,false,false);
+                if(kind>=RegionRules.Buffalo) RegionalArt.Build(root,kind);
+                else if(kind>=RegionRules.Ducks) KeralaArt.Build(root,kind);
+                else if(region==RegionProfile.Kerala && kind==OncomingElephant) RajasthanDecor.BuildElephant(root,false,false);
                 else Build(root, kind);
                 PrimitiveArt.CombineScenery(root,true);
                 var parts = new List<Part>();

@@ -79,3 +79,7 @@ Runner portrait polish: original C# sculpt/hair/embroidery geometry in RunnerScu
 ## Kerala route assets
 
 All Kerala palms/fronds, forest canopy, houseboats, bridges, houses, banks/hills, lotus tokens, duck/boar/langur models, market props and shelter geometry are original C#/Unity meshes in KeralaScenery.cs and KeralaArt.cs. The existing original elephant builder supports an unadorned forest variant. No downloaded images, models, fonts or packages were added. Three original short animal-call approximations are synthesized in RunnerAudio.cs; existing background music/runner/voice recordings are reused. Research links and habitat decisions are recorded in KERALA_STAGE.md. These are stylised prototype assets requiring device visual/audio review.
+
+## Punjab / Goa and four-state guardians
+
+RegionalArt.cs and RegionalScenery.cs contain original procedural farms, crop rows, irrigation channels, houses, coastal sea/surf, boats, shacks, palms, buffalo/goat/dog/crab models, tractor/farmer, harvest/fishing props and Phulkari/shell tokens. No downloaded images, characters or packages are included. Three added short animal-call approximations are original synthesized audio, allocated only in their active region. CloudGuardian.cs adds original regional costume/headwear/colour variants; these are invented fantasy characters, not depictions of real individuals or sacred figures. Public reference sources and validation limits are in PUNJAB_GOA_STAGES.md.
