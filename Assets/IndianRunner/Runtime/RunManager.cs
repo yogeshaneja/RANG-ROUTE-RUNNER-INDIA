@@ -5,10 +5,13 @@ namespace IndianRunner
 {
     public sealed class RunManager : MonoBehaviour
     {
-        private enum State { Menu, Running, DanceBreak, Paused, GameOver }
+        private enum State { Menu, StageSelect, Running, DanceBreak, Paused, GameOver }
         private State state;
         private int region;
         private bool regionReloading;
+        private StageSelectionScreen stagePicker;
+        private int stageCameraMask;
+        private static int pendingStartRegion=-1;
         private string BestKey => RegionProfile.BestKey(region);
         private TrackWorld world;
         private RunnerModel runner;
@@ -51,6 +54,7 @@ namespace IndianRunner
             Application.targetFrameRate = 60;
             Screen.orientation = ScreenOrientation.Portrait;
             region=RegionProfile.Valid(PlayerPrefs.GetInt("runner.region",0));
+            bool startRequested=pendingStartRegion==region; pendingStartRegion=-1;
             best = PlayerPrefs.GetInt(BestKey, 0);
             progress = new FestivalProgress(PlayerPrefs.GetInt("festival.set",0),PlayerPrefs.GetInt("festival.tokens",0),PlayerPrefs.GetInt("festival.slides",0),PlayerPrefs.GetInt("festival.distance",0),PlayerPrefs.GetInt("festival.outfit",0));
             reduced = PlayerPrefs.GetInt("runner.reduced", 0) == 1;
@@ -77,6 +81,7 @@ namespace IndianRunner
             audioPlayer = new RunnerAudio(gameObject,region); audioPlayer.Settings(sound, music);
             speech=new AndroidSpeech(dialogueLanguage,gameObject); speech.SetEnabled(voices && sound); banter.Reset(seed);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); world.SetRain(weather.RainIntensity); RefreshHud();
+            if(startRequested) StartRun();
         }
         public void ValidateStartup()
         {
@@ -86,7 +91,7 @@ namespace IndianRunner
         }
         private void StartRun()
         {
-            bool fromMenu = state == State.Menu; showingGoals=false; magnetUntil=0; inRest=false;
+            bool fromMenu = state == State.Menu || state==State.StageSelect; showingGoals=false; magnetUntil=0; inRest=false;
             introCameraPosition = gameCamera.transform.position; introCameraRotation = gameCamera.transform.rotation;
             introDuration = reduced ? 0 : fromMenu ? .7f : .25f;
             danceElapsed=0; pausedDanceBreak=breakCuePending=false; introStartedAt=0; breakSpeech?.Stop();
@@ -113,7 +118,9 @@ namespace IndianRunner
             {
                 if (state == State.Running) Pause();
                 else if (state == State.Paused) Resume();
+                else if(state==State.StageSelect)CloseStageSelection();
             }
+            if(state==State.StageSelect){audioPlayer.Tick(dt);return;}
             if (state == State.Menu)
             {
                 menuClock += dt; runner.Animate(menuClock,false,false,0,reduced);
@@ -259,7 +266,7 @@ namespace IndianRunner
         }
         private void PositionCamera(float dt = 0)
         {
-            if (state == State.Menu)
+            if (state == State.Menu || state==State.StageSelect)
             {
                 gameCamera.transform.position = transform.position+new Vector3(2.7f,1.8f,-4.4f);
                 gameCamera.transform.LookAt(transform.position+new Vector3(0,1.2f,0));
@@ -275,14 +282,28 @@ namespace IndianRunner
             float fov = reduced ? 62 : Mathf.Lerp(62,65,Mathf.InverseLerp(9,18,RunRules.Speed(distance)));
             gameCamera.fieldOfView = dt <= 0 ? 62 : Mathf.Lerp(gameCamera.fieldOfView,fov,1-Mathf.Exp(-3*dt));
         }
-        private void SwitchRegion()
+        private void OpenStageSelection()
         {
-            if(state!=State.Menu || regionReloading) return;
-            SaveBest(); SaveSettings(); speech.Stop(); breakSpeech?.Stop();
-            regionReloading=true;
-            PlayerPrefs.SetInt("runner.region",(region+1)%RegionProfile.Count); PlayerPrefs.Save();
-            // Reload only from the menu. OnDestroy releases the previous region's
-            // meshes/material caches before the new scene constructs its pools.
+            if(state!=State.Menu || regionReloading)return;
+            SaveBest(); showingGoals=false; speech.Stop(); breakSpeech?.Stop();
+            if(stagePicker==null)stagePicker=new StageSelectionScreen();
+            stagePicker.Open(region);stageCameraMask=gameCamera.cullingMask;gameCamera.cullingMask=0;
+            state=State.StageSelect;input.ResetGesture();
+        }
+        private void CloseStageSelection()
+        {
+            gameCamera.cullingMask=stageCameraMask;state=State.Menu;input.ResetGesture();
+        }
+        private void StartSelectedStage()
+        {
+            if(state!=State.StageSelect || regionReloading || stagePicker==null)return;
+            int selected=RegionProfile.Valid(stagePicker.SelectedRegion);
+            if(selected==region){ gameCamera.cullingMask=stageCameraMask;StartRun();return; }
+            SaveBest();SaveSettings();speech.Stop();breakSpeech?.Stop();
+            PlayerPrefs.SetInt("runner.region",selected);PlayerPrefs.Save();
+            regionReloading=true;pendingStartRegion=selected;
+            // The new scene constructs only this choice's pools, then consumes the
+            // one-shot flag in Awake and starts that exact region automatically.
             SceneManager.LoadScene(gameObject.scene.name);
         }
         private void ReturnToMenu()
@@ -358,7 +379,7 @@ namespace IndianRunner
         private void OnApplicationPause(bool paused) { if(paused) { speech?.Stop(); breakSpeech?.Stop(); } if (paused && (state==State.Running || state==State.DanceBreak)) Pause(); }
         private void OnApplicationFocus(bool focus) { if(!focus) { speech?.Stop(); breakSpeech?.Stop(); } if (!focus && (state==State.Running || state==State.DanceBreak)) Pause(); }
         private void OnApplicationQuit() { SaveBest(); }
-        private void OnDestroy() { speech?.Dispose(); breakSpeech?.Dispose(); guardian?.Dispose(); skin?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
+        private void OnDestroy() { speech?.Dispose(); breakSpeech?.Dispose(); guardian?.Dispose(); skin?.Dispose(); stagePicker?.Dispose(); runner?.Dispose(); world?.Dispose(); audioPlayer?.Dispose(); PrimitiveArt.Clear(); }
         private void WeatherChoice()
         {
             weather.Selection = (WeatherController.Mode)(((int)weather.Selection+1)%4);
@@ -416,6 +437,13 @@ namespace IndianRunner
             var oldMatrix = GUI.matrix; var oldColour = GUI.color;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale,scale,1));
             GUI.enabled=!showingGoals && !regionReloading;
+            if(state==State.StageSelect)
+            {
+                var action=stagePicker.Draw(left,top,width,bottom,skin,!regionReloading);
+                if(action==StageSelectionScreen.Action.Start)StartSelectedStage();
+                else if(action==StageSelectionScreen.Action.Back)CloseStageSelection();
+                GUI.enabled=true;GUI.color=oldColour;GUI.matrix=oldMatrix;return;
+            }
             if (state == State.Menu)
             {
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
@@ -426,8 +454,8 @@ namespace IndianRunner
                 float sheet = bottom-548;
                 GUI.Box(new Rect(left+12,sheet,width-24,548),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
-                if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
-                if(GUI.Button(new Rect(xPos,sheet+86,w,44),"STAGE: "+RegionProfile.Name(region)+"   |   SWITCH >",skin.Secondary)) SwitchRegion();
+                if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN  >",skin.Primary)) OpenStageSelection();
+                GUI.Label(new Rect(xPos,sheet+86,w,44),"NEXT: CHOOSE YOUR STATE\nRajasthan  /  Kerala  /  Punjab  /  Goa",skin.Caption);
                 DrawOptions(xPos,sheet+146,w);
                 if(GUI.Button(new Rect(xPos,sheet+306,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
                 if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+306,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))

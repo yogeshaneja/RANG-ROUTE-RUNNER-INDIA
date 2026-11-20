@@ -8,7 +8,7 @@ An original offline Android 3D endless runner. **Four-region source prototype**,
 2. Clone this repository and check out `feature/rajasthan-unity-prototype` (or use `main` after the PR is merged).
 3. In Unity Hub choose **Add > Add project from disk** and select the repository folder containing `Assets`, `Packages` and `ProjectSettings`.
 4. Wait for Unity to import and compile. Open **Indian Runner > 1 - Create or open Rajasthan scene**. This also prepares the correct build material for the active render pipeline. Unity now prepares it automatically after script import and again before a build.
-5. Set Game view to **portrait / 9:16**, then press **Play** and **START RUN**.
+5. Set Game view to **portrait / 9:16**, then press **Play**, **LET’S RUN**, select a state card and **START [STATE] RUN**.
 6. Use arrow keys or WASD; Space also jumps. P/Escape pauses. Mouse drags emulate swipes.
 
 The route and character appear at runtime; the scene is intentionally an empty setup object outside Play Mode. If no image appears, check Console errors and confirm `Rajasthan.unity` is the open scene.
@@ -150,7 +150,7 @@ Oncoming elephants now reuse the decorated roadside look, walk towards the runne
 
 ## Kerala stage — Monsoon Trail
 
-Pull the feature branch and rebuild the Android APK. At the start screen, tap **STAGE: RAJASTHAN | SWITCH >** to select **KERALA**, then **LET’S RUN**. The stage choice is remembered locally; each region has its own best score and shares outfits/settings. The same Rajasthan bootstrap scene loads the selected route; no extra scene needs adding to Build Profiles.
+Pull the feature branch and rebuild the Android APK. From the welcome screen tap **LET’S RUN**, select the **KERALA** picture card, then **START KERALA RUN**. The stage choice is remembered locally; each region has its own best score and shares outfits/settings. The same Rajasthan bootstrap scene loads the selected route; no extra scene needs adding to Build Profiles.
 
 Kerala adds coconut palms, banana plants, paddy-green banks, backwater bridge decks with railings, original houseboat models, tiled-roof houses, forest stretches, misty green hills and a rain-first weather cycle. Collect golden lotus tokens. Dodge ducks, forest boar/langurs and an occasional forest elephant; jump coconut baskets/coir/logs, slide under palm shelters and dodge fish carts. Existing motorcycle and rain-lady encounters continue.
 
@@ -158,10 +158,16 @@ Only the selected scenery/catalogue is constructed. Art is original runtime geom
 
 ## Punjab, Goa and regional sky guardians
 
-The start-screen STAGE button now cycles **Rajasthan → Kerala → Punjab → Goa**. Tap until the desired state appears, then LET’S RUN. Pull this branch and Build and Run again to update the installed phone app. All four stages use the existing bootstrap scene; no additional scene setup is required.
+The second screen shows picture cards for **Rajasthan, Kerala, Punjab and Goa**. From Welcome tap **LET’S RUN**, choose a state card, then **START [STATE] RUN**. Pull this branch and Build and Run again to update the installed phone app. All four stages use the existing bootstrap scene; no additional scene setup is required.
 
 - **Punjab — Harvest Hustle:** green/gold fields, village farmhouses, irrigation channels, Phulkari wall details, buffalo/goats, an approaching tractor, hay/grain obstacles and low cloth stalls. Collect golden Phulkari flower tokens.
 - **Goa — Coastal Colour Run:** sea and surf beside a sand promenade, coconut palms, colourful tiled-roof houses, beach shacks and fishing boats. Dodge crabs/dogs, fishing baskets, boat handcarts and low drying nets; collect golden shell tokens. Dolphins and a turtle remain background scenery.
 - **Sky guardians:** Rajasthan’s Thar guardian, Kerala’s Monsoon Leaf Keeper, Punjab’s Bhangra Cloud Dancer and Goa’s Sea-Breeze Captain. All are original fantasy characters, appear rarely in clear garden buffers and sit lower than before. Existing road-view masking stays active.
 
 See [Punjab/Goa research, implementation and phone checks](Documentation/PUNJAB_GOA_STAGES.md). Source/numerical checks passed; Unity compilation, rendered appearance, sound audition and Android performance have not been verified here.
+
+## Picture-based stage selection
+
+The second step is a dedicated destination picker, with four small original scenic illustrations, a gold selection border, state descriptions and separate personal bests. Tap a card, then the named Start button to run that state. Back returns to Welcome. The last selected state is preselected when reopening; choosing another card does not reload its world. Only Start confirms and saves the choice, and a different region automatically begins after its scene reload. RUN AGAIN restarts the same state.
+
+Four bundled 512 × 288 previews total 242,273 source bytes (about 237 KiB), with mipmaps/readable copies disabled and compression requested. See [selection flow and checks](Documentation/STAGE_SELECTION.md) and [artwork prompts](Documentation/STAGE_SELECTION_ARTWORK.md). Phone UI appearance, import settings and runtime scene handoff still need local verification.

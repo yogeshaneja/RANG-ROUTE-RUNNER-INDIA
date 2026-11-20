@@ -2,7 +2,7 @@
 
 ## Play
 
-Use the start-screen STAGE button to cycle Rajasthan, Kerala, Punjab and Goa, then LET’S RUN. Switching reloads the existing bootstrap scene from the menu so the outgoing stage and its owned resources are disposed. The selected region persists in `runner.region`. Rajasthan retains its existing `runner.best`; Kerala uses `runner.best.kerala`. Outfits, festival progress, controls, voice/audio settings and the runner are shared. Restart keeps the selected stage.
+From Welcome tap LET’S RUN, choose the Kerala picture card on step two, then START KERALA RUN. Switching reloads the existing bootstrap scene from the menu so the outgoing stage and its owned resources are disposed. The selected region persists in `runner.region`. Rajasthan retains its existing `runner.best`; Kerala uses `runner.best.kerala`. Outfits, festival progress, controls, voice/audio settings and the runner are shared. Restart keeps the selected stage.
 
 ## Route and art
 

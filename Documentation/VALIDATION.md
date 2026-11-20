@@ -245,3 +245,9 @@ Validation: 28 C# files syntax-parse, all 62 asset metadata GUIDs are unique, wh
 Four stable region IDs, independent bests, state-specific source/catalogue filtering, two new route designs and eleven new obstacle kinds are connected to the existing start-screen selector. All four states now have their own rare sky guardian; base Y is lowered from 2.5 to 0.25 with the road mask preserved. Double-sided crop/frond normals are explicitly set so opposite triangles cannot cancel their lighting normals.
 
 Source checks: 31 C# syntax trees, 65 unique metadata GUIDs and whitespace checks pass. Independent numerical mapping audits cover 384,000 Kerala/Punjab/Goa rows plus crop-index and nominal guardian-projection checks. Editor checks now also include 64,000 Punjab/Goa rows and selection/save/height/tractor contracts, but are unexecuted here. Unity compilation, generated mesh appearance, guardian/HUD overlap, audio quality, stage-reload behavior and phone performance remain manual acceptance checks; see PUNJAB_GOA_STAGES.md.
+
+## Second-step scenic destination selection
+
+Added a dedicated StageSelect state and four-card picture picker; Welcome now opens it instead of running immediately. Selection is a draft until the named Start button. Same-region starts reuse the active scene; cross-region starts persist the exact chosen ID and consume a one-shot target in the new scene’s Awake. Back cancels the draft and RUN AGAIN remains a direct restart. Four compressed-source previews total 242,273 bytes.
+
+Source/numerical checks cover syntax, metadata, image decodes/dimensions/resource order, start/persistence wiring and four safe-area layout cases. Card minimum height was adjusted to avoid caption/best overlap. Actual Unity GUI input/rendering, scene handoff, APK build, imported texture footprint and phone performance remain unverified. See STAGE_SELECTION.md.

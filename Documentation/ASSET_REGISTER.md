@@ -83,3 +83,7 @@ All Kerala palms/fronds, forest canopy, houseboats, bridges, houses, banks/hills
 ## Punjab / Goa and four-state guardians
 
 RegionalArt.cs and RegionalScenery.cs contain original procedural farms, crop rows, irrigation channels, houses, coastal sea/surf, boats, shacks, palms, buffalo/goat/dog/crab models, tractor/farmer, harvest/fishing props and Phulkari/shell tokens. No downloaded images, characters or packages are included. Three added short animal-call approximations are original synthesized audio, allocated only in their active region. CloudGuardian.cs adds original regional costume/headwear/colour variants; these are invented fantasy characters, not depictions of real individuals or sacred figures. Public reference sources and validation limits are in PUNJAB_GOA_STAGES.md.
+
+## Stage-selection thumbnails
+
+Four original AI-generated scenic illustrations are bundled in Assets/IndianRunner/Resources/StageSelection as Rajasthan.jpg, Kerala.jpg, Punjab.jpg and Goa.jpg. No stock/reference imagery or third-party logos were used. The built-in generator produced each image separately; inspected originals were downscaled to 512 x 288 JPEG for the selection cards. Exact prompts and paths are in STAGE_SELECTION_ARTWORK.md. These are illustrated previews, not screenshots of the game’s procedural art.

@@ -2,7 +2,7 @@
 
 ## Selection and saves
 
-RegionProfile centralises stable IDs, names, stage titles, token labels, best-score keys and guardian titles. The menu selector cycles Rajasthan (0), Kerala (1), Punjab (2), Goa (3), then returns to Rajasthan. Existing region IDs and best-score keys are preserved; new scores use runner.best.punjab and runner.best.goa. Invalid saved region values fall back to Rajasthan. The chosen region is remembered offline. Outfits, goal progress, the runner and general settings stay shared.
+RegionProfile centralises stable IDs, names, stage titles, token labels, best-score keys and guardian titles. The second-step picker offers individual picture cards for Rajasthan (0), Kerala (1), Punjab (2) and Goa (3); the named Start button confirms the choice. Existing region IDs and best-score keys are preserved; new scores use runner.best.punjab and runner.best.goa. Invalid saved region values fall back to Rajasthan. The chosen region is remembered offline. Outfits, goal progress, the runner and general settings stay shared.
 
 Selection still reloads the existing bootstrap scene from the menu. Only the selected state’s scenery, obstacle recipes and guardian variant are constructed. Seven tiles, fourteen rows, forty-two obstacle slots, seventy token slots and the capped rain pool are retained. Unused camel/elephant leg recipes are skipped where those animals do not belong. All stage source assets ship together; this is not downloadable content.
 
