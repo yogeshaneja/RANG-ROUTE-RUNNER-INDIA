@@ -75,3 +75,7 @@ Generation prompt: “Square Android launcher icon for an original Indian endles
 Integration uses Unity 6.3 icon APIs: https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/playersettings/setplatformicons and https://docs.unity.com/en-us/engine/6000.3/script-reference/unityeditor/platformicon/settextures . Source checks and PNG decode passed; actual Unity import, APK packaging and launcher appearance require local Build and Run.
 
 Runner portrait polish: original C# sculpt/hair/embroidery geometry in RunnerSculpt.cs and RunnerModel.cs, informed by this project’s generated launcher art. No new downloaded character, image texture or animation asset. See SCULPTED_RUNNER.md for scope and verification limits.
+
+## Kerala route assets
+
+All Kerala palms/fronds, forest canopy, houseboats, bridges, houses, banks/hills, lotus tokens, duck/boar/langur models, market props and shelter geometry are original C#/Unity meshes in KeralaScenery.cs and KeralaArt.cs. The existing original elephant builder supports an unadorned forest variant. No downloaded images, models, fonts or packages were added. Three original short animal-call approximations are synthesized in RunnerAudio.cs; existing background music/runner/voice recordings are reused. Research links and habitat decisions are recorded in KERALA_STAGE.md. These are stylised prototype assets requiring device visual/audio review.

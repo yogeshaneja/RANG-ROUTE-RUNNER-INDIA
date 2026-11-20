@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace IndianRunner
 {
@@ -6,6 +7,8 @@ namespace IndianRunner
     {
         private enum State { Menu, Running, DanceBreak, Paused, GameOver }
         private State state;
+        private bool kerala,regionReloading;
+        private string BestKey => kerala ? "runner.best.kerala":"runner.best";
         private TrackWorld world;
         private RunnerModel runner;
         private WeatherController weather;
@@ -46,7 +49,8 @@ namespace IndianRunner
         {
             Application.targetFrameRate = 60;
             Screen.orientation = ScreenOrientation.Portrait;
-            best = PlayerPrefs.GetInt("runner.best", 0);
+            kerala=PlayerPrefs.GetInt("runner.region",0)==1;
+            best = PlayerPrefs.GetInt(BestKey, 0);
             progress = new FestivalProgress(PlayerPrefs.GetInt("festival.set",0),PlayerPrefs.GetInt("festival.tokens",0),PlayerPrefs.GetInt("festival.slides",0),PlayerPrefs.GetInt("festival.distance",0),PlayerPrefs.GetInt("festival.outfit",0));
             reduced = PlayerPrefs.GetInt("runner.reduced", 0) == 1;
             music = PlayerPrefs.GetInt("runner.music", 1) == 1;
@@ -61,21 +65,21 @@ namespace IndianRunner
             if (QualitySettings.renderPipeline == null && UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline == null)
                 QualitySettings.antiAliasing = 2;
             cameraObject.AddComponent<AudioListener>();
-            var lightObject = new GameObject("Rajasthan sunlight"); lightObject.transform.SetParent(transform, false);
+            var lightObject = new GameObject(kerala ? "Kerala monsoon sunlight":"Rajasthan sunlight"); lightObject.transform.SetParent(transform, false);
             var sunlight = lightObject.AddComponent<Light>(); sunlight.type = LightType.Directional;
             sunlight.shadows = LightShadows.None; lightObject.transform.rotation = Quaternion.Euler(48, -32, 0);
-            world = new TrackWorld(transform); world.Reset(seed);
+            world = new TrackWorld(transform,kerala); world.Reset(seed);
             feedback = new RunFeedback(transform);
             runner = new RunnerModel(transform); runner.SetOutfit(progress.Outfit);
-            weather = new WeatherController(transform, gameCamera, sunlight);
-            guardian=new CloudGuardian(transform);
-            audioPlayer = new RunnerAudio(gameObject); audioPlayer.Settings(sound, music);
+            weather = new WeatherController(transform, gameCamera, sunlight,kerala);
+            if(!kerala) guardian=new CloudGuardian(transform);
+            audioPlayer = new RunnerAudio(gameObject,kerala); audioPlayer.Settings(sound, music);
             speech=new AndroidSpeech(dialogueLanguage,gameObject); speech.SetEnabled(voices && sound); banter.Reset(seed);
             state = State.Menu; runner.Root.localRotation = Quaternion.Euler(0,180,0); PositionCamera(); world.Position(0, seed, 0, reduced); weather.Tick(0, 0, reduced); world.SetRain(weather.RainIntensity); RefreshHud();
         }
         public void ValidateStartup()
         {
-            if (progress == null || world == null || runner == null || weather == null || guardian == null || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
+            if (progress == null || world == null || runner == null || weather == null || (!kerala && guardian == null) || audioPlayer == null || speech == null || feedback == null || gameCamera == null)
                 throw new System.InvalidOperationException("Runner startup did not complete. Check the first Console exception.");
             world.ValidatePool(); runner.ValidateRig();
         }
@@ -90,7 +94,7 @@ namespace IndianRunner
             laneStartX = laneTargetX = laneElapsed = laneDuration = cameraX = nextHudUpdate = 0;
             runEndMessage = "Try the open lane for a safe route.";
             coins = 0; lane = 1; seed = (seed + 379) & 0x7fffffff;
-            world.Reset(seed); world.Position(0, seed, 0, reduced); guardian.Reset(); audioPlayer.ResetRun(); banter.Reset(seed); speech.Stop(); state = State.Running;
+            world.Reset(seed); world.Position(0, seed, 0, reduced); guardian?.Reset(); audioPlayer.ResetRun(); banter.Reset(seed); speech.Stop(); state = State.Running;
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = fromMenu && !reduced ? Quaternion.Euler(0,180,0) : Quaternion.identity;
             runner.Animate(0, false, false, 0, reduced); PositionCamera();
             input.ResetGesture(); audioPlayer.Paused(false); RefreshHud();
@@ -167,7 +171,7 @@ namespace IndianRunner
             }
             if(!hit)
             {
-                if(guardian.Tick(distance,clock,reduced))
+                if(!kerala && guardian.Tick(distance,clock,reduced))
                 {
                     audioPlayer.GuardianReveal(); milestoneText="THE THAR CLOUD GUARDIAN"; milestoneUntil=clock+2;
                 }
@@ -248,7 +252,7 @@ namespace IndianRunner
         private void RefreshHud()
         {
             hudScore = CurrentScore.ToString("N0"); hudCoins = coins.ToString();
-            hudStatus = $"{(int)distance} m    {weather.Description}";
+            hudStatus = $"{(kerala ? "KL":"RJ")}  {(int)distance} m    {weather.Description}";
             goalsSummary = progress.Ready ? "ALL 3 GOALS DONE - reward at Start" : $"GOALS {progress.Completed}/3  |  {progress.Tokens}/{progress.TokenGoal} tokens";
             powerSummary = clock<magnetUntil ? $"POUCH POWER  {Mathf.CeilToInt(magnetUntil-clock)}s" : inRest ? "FESTIVAL GARDEN  |  BREATHE & COLLECT" : goalsSummary;
         }
@@ -270,9 +274,19 @@ namespace IndianRunner
             float fov = reduced ? 62 : Mathf.Lerp(62,65,Mathf.InverseLerp(9,18,RunRules.Speed(distance)));
             gameCamera.fieldOfView = dt <= 0 ? 62 : Mathf.Lerp(gameCamera.fieldOfView,fov,1-Mathf.Exp(-3*dt));
         }
+        private void SwitchRegion()
+        {
+            if(state!=State.Menu || regionReloading) return;
+            SaveBest(); SaveSettings(); speech.Stop(); breakSpeech?.Stop();
+            regionReloading=true;
+            PlayerPrefs.SetInt("runner.region",kerala ? 0:1); PlayerPrefs.Save();
+            // Reload only from the menu. OnDestroy releases the previous region's
+            // meshes/material caches before the new scene constructs its pools.
+            SceneManager.LoadScene(gameObject.scene.name);
+        }
         private void ReturnToMenu()
         {
-            SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; guardian.Reset(); magnetUntil=0; inRest=false;
+            SaveBest(); speech.Stop(); breakSpeech?.Stop(); breakCuePending=pausedDanceBreak=false; banter.Reset(seed); state = State.Menu; showingGoals=false; guardian?.Reset(); magnetUntil=0; inRest=false;
             distance = x = height = verticalSpeed = slideUntil = clock = menuClock = 0;
             lane = 1; feedback.Reset(); world.Reset(seed); world.Position(0,seed,0,reduced);
             runner.Root.localPosition = Vector3.zero; runner.Root.localRotation = Quaternion.Euler(0,180,0);
@@ -283,7 +297,7 @@ namespace IndianRunner
         private void Resume() { state = pausedDanceBreak ? State.DanceBreak:State.Running; input.ResetGesture(); audioPlayer.Paused(false); }
         private void EndRun(bool camelContact)
         {
-            state = State.GameOver; guardian.Reset(); speech.Stop(); audioPlayer.EndSpeechDuck();
+            state = State.GameOver; guardian?.Reset(); speech.Stop(); audioPlayer.EndSpeechDuck();
             runEndMessage = world.ContactMessage.Length > 0 ? world.ContactMessage : camelContact ? "Camel is safe. Follow the warning lane." : "Jump, slide or use the open lane.";
             SaveBest(); RefreshHud(); feedback.Reset(); audioPlayer.Stumble();
         }
@@ -297,7 +311,7 @@ namespace IndianRunner
         private void SaveBest()
         {
             SaveProgress();
-            if (CurrentScore > best) { best = CurrentScore; PlayerPrefs.SetInt("runner.best", best); PlayerPrefs.Save(); }
+            if (CurrentScore > best) { best = CurrentScore; PlayerPrefs.SetInt(BestKey, best); PlayerPrefs.Save(); }
         }
         private void SaveSettings()
         {
@@ -371,7 +385,7 @@ namespace IndianRunner
             float y=Mathf.Max(top+80,(screenHeight-390)/2);
             GUI.Box(new Rect(left+16,y,width-32,390),GUIContent.none,skin.Card);
             GUI.Label(new Rect(left+28,y+12,width-56,38),"FESTIVAL GOALS  "+(progress.Set+1),skin.Subtitle);
-            GUI.Label(new Rect(left+34,y+61,width-68,30),$"MIRROR TOKENS   {progress.Tokens} / {progress.TokenGoal}",skin.Text);
+            GUI.Label(new Rect(left+34,y+61,width-68,30),$"{(kerala ? "LOTUS":"MIRROR")} TOKENS   {progress.Tokens} / {progress.TokenGoal}",skin.Text);
             GUI.Label(new Rect(left+34,y+99,width-68,30),$"{(progress.Set==0 ? "PRACTICE A SLIDE" : "SLIDE UNDER LOW BARRIERS")}   {progress.Slides} / {progress.SlideGoal}",skin.Text);
             GUI.Label(new Rect(left+34,y+137,width-68,30),$"DISTANCE IN ONE RUN   {progress.Distance} / {progress.DistanceGoal} m",skin.Text);
             string reward=progress.Set<3 ? "Reward: "+FestivalProgress.OutfitName(progress.Set+1)+" kurta" : "Reward: another festival badge";
@@ -400,11 +414,11 @@ namespace IndianRunner
             float center = left+width/2,bottom = screenHeight-safe.yMin/scale-12;
             var oldMatrix = GUI.matrix; var oldColour = GUI.color;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale,scale,1));
-            GUI.enabled=!showingGoals;
+            GUI.enabled=!showingGoals && !regionReloading;
             if (state == State.Menu)
             {
                 GUI.Label(new Rect(left+16,top+12,width-32,55),"RANG ROUTE",skin.Title);
-                GUI.Label(new Rect(left+20,top+65,width-40,30),"THE RAJASTHAN RUN",skin.Subtitle);
+                GUI.Label(new Rect(left+20,top+65,width-40,30),kerala ? "KERALA - MONSOON TRAIL":"THE RAJASTHAN RUN",skin.Subtitle);
                 GUI.Box(new Rect(center-85,top+108,170,38),"BEST  "+best.ToString("N0"),skin.Chip);
                 if(menuClock<rewardRevealUntil)
                     GUI.Label(new Rect(left+24,top+158,width-48,62),"SURPRISE UNLOCKED!\n"+rewardRevealName,skin.Subtitle);
@@ -412,7 +426,7 @@ namespace IndianRunner
                 GUI.Box(new Rect(left+12,sheet,width-24,548),GUIContent.none,skin.Card);
                 float xPos = left+32,w = width-64;
                 if (GUI.Button(new Rect(xPos,sheet+18,w,58),"LET'S RUN",skin.Primary)) StartRun();
-                GUI.Label(new Rect(xPos,sheet+86,w,49),"Collect mirror-work tokens. Jump pots and cloth.\nSlide under low bars. Follow hazard warnings.",skin.Text);
+                if(GUI.Button(new Rect(xPos,sheet+86,w,44),"STAGE: "+(kerala ? "KERALA":"RAJASTHAN")+"   |   SWITCH >",skin.Secondary)) SwitchRegion();
                 DrawOptions(xPos,sheet+146,w);
                 if(GUI.Button(new Rect(xPos,sheet+306,(w-10)/2,44),"GOALS  "+progress.Completed+"/3",skin.Secondary)) showingGoals=true;
                 if(GUI.Button(new Rect(xPos+(w+10)/2,sheet+306,(w-10)/2,44),FestivalProgress.OutfitName(progress.Outfit),skin.Secondary))

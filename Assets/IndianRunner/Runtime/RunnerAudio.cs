@@ -13,7 +13,7 @@ namespace IndianRunner
         private readonly AudioSource effects, music, approach, animals;
         private readonly List<AudioClip> owned = new List<AudioClip>();
         private readonly AudioClip[] pickups = new AudioClip[4];
-        private readonly AudioClip danceTrack,breakVoice;
+        private readonly AudioClip danceTrack,breakVoice,duckCall,boarCall,langurCall;
         private readonly AudioClip jump, stumble, gameOverCrank, engine, saucer, camel, elephant, celebration, rolling, procession, cloth, peacock, repairs;
         private bool paused, musicEnabled, dancing;
         private int savedMusicSample;
@@ -23,7 +23,7 @@ namespace IndianRunner
         private int pickupIndex, approachKind, lastAnimalKey = -1;
         private float lastPickup = -1, duckUntil, speechDuckUntil;
 
-        public RunnerAudio(GameObject owner)
+        public RunnerAudio(GameObject owner,bool kerala=false)
         {
             effects = Source(owner,.46f); animals = Source(owner,.34f);
             approach = Source(owner,0); approach.loop = true;
@@ -42,6 +42,12 @@ namespace IndianRunner
             cloth=Cue("Soft falling textile rustle",10,.65f,420);
             peacock=Cue("Gentle stylised peacock call",11,.70f,660);
             repairs=Cue("Wooden roadwork warning knock",12,.50f,220);
+            if(kerala)
+            {
+                duckCall=Cue("Original soft stylised duck quacks",14,.62f,310);
+                boarCall=Cue("Original soft forest boar grunt",15,.65f,95);
+                langurCall=Cue("Original stylised langur chatter",16,.72f,520);
+            }
             runningTrack=Compose(); music.clip=runningTrack;
             danceTrack=ComposeDance(); breakVoice=Resources.Load<AudioClip>("Dialogue/hi/break_time");
         }
@@ -104,6 +110,12 @@ namespace IndianRunner
             }
             approach.panStereo=Mathf.Lerp(approach.panStereo,Mathf.Clamp(pan,-.65f,.65f),smoothing);
             approach.pitch=Mathf.Lerp(approach.pitch,kind==RajasthanObstacles.Procession ? 1 : ahead<0 ? .88f : 1.06f,smoothing);
+            if(kind>=RegionRules.Ducks && kind<=RegionRules.Langur && ahead<28 && ahead>0 && encounterKey!=lastAnimalKey)
+            {
+                lastAnimalKey=encounterKey; animals.panStereo=Mathf.Clamp(pan,-.65f,.65f);
+                var call=kind==RegionRules.Ducks ? duckCall:kind==RegionRules.Boar ? boarCall:langurCall;
+                if(call!=null) animals.PlayOneShot(call,.55f);
+            }
             if((kind==RajasthanObstacles.Camel || kind==RajasthanObstacles.ElephantSound || kind==RajasthanObstacles.OncomingElephant || kind==RajasthanObstacles.FallingCloth || kind==RajasthanObstacles.Peacock || kind==RajasthanObstacles.Roadworks) && ahead<(kind==RajasthanObstacles.OncomingElephant ? 42:24) && ahead>0 && encounterKey!=lastAnimalKey)
             {
                 lastAnimalKey=encounterKey; animals.panStereo=Mathf.Clamp(pan,-.65f,.65f);
@@ -191,6 +203,17 @@ namespace IndianRunner
                 }
                 else if(type==10) value=(.055f*Sin(2400*t+.2f*Sin(37*t))+.035f*Sin(3100*t)+.12f*Sin(hz*t-130*t*t))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2);
                 else if(type==11) value=(Sin(hz*t+1.5f*Sin(3*t))+.15f*Sin(hz*2*t))*Mathf.Pow(Mathf.Sin(Mathf.PI*u),2)*.25f;
+                else if(type==14)
+                {
+                    float local=Mathf.Repeat(t,.27f);
+                    value=(Sin(hz*local-100*local*local)+.36f*Sin(hz*2*local))*Mathf.Exp(-local*18)*Mathf.Clamp01(local/.015f)*.30f;
+                }
+                else if(type==15) value=(Sin(hz*t+.28f*Sin(19*t))+.32f*Sin(hz*2*t))*Mathf.Sin(Mathf.PI*u)*.28f;
+                else if(type==16)
+                {
+                    float local=Mathf.Repeat(t,.18f);
+                    value=Sin(hz*local+180*local*local)*Mathf.Exp(-local*24)*Mathf.Clamp01(local/.012f)*.25f;
+                }
                 else if(type==13)
                 {
                     // Non-verbal "awrr"-like comic crank, not synthesized words.

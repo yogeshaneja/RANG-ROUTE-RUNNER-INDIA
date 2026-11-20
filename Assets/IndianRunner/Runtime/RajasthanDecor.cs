@@ -85,7 +85,7 @@ namespace IndianRunner
             root.localPosition=position; root.localRotation=Quaternion.Euler(0,-35,0);
             BuildElephant(root);
         }
-        public static void BuildElephant(Transform root,bool includeLegs=true)
+        public static void BuildElephant(Transform root,bool includeLegs=true,bool decorated=true)
         {
             var grey=PrimitiveArt.Mat(new Color(.43f,.46f,.47f));
             var soft=PrimitiveArt.Mat(new Color(.54f,.53f,.50f));
@@ -103,13 +103,13 @@ namespace IndianRunner
                     NaturalMesh.Lathe(root,"Rounded elephant leg",new[]{new Vector3(.24f,.08f,.25f),new Vector3(.22f,.65f,.22f),new Vector3(.29f,1.55f,.28f)},grey,14).localPosition=new Vector3(side*.53f,0,z);
                     for(int n=0;n<3;n++) NaturalMesh.Oval(root,"Elephant toenail",new Vector3(side*.53f-.13f+n*.13f,.15f,z+.23f),new Vector3(.10f,.14f,.04f),soft,8);
                 }
-                PrimitiveArt.Box(root,"Embroidered saddle border",new Vector3(side*.84f,1.92f,-.1f),new Vector3(.06f,.11f,1.46f),gold);
-                for(int i=0;i<5;i++) NaturalMesh.Oval(root,"Saddle tassel",new Vector3(side*.87f,1.64f,-.65f+i*.28f),new Vector3(.09f,.18f,.09f),gold,8);
+                if(decorated) PrimitiveArt.Box(root,"Embroidered saddle border",new Vector3(side*.84f,1.92f,-.1f),new Vector3(.06f,.11f,1.46f),gold);
+                for(int i=0;i<(decorated ? 5:0);i++) NaturalMesh.Oval(root,"Saddle tassel",new Vector3(side*.87f,1.64f,-.65f+i*.28f),new Vector3(.09f,.18f,.09f),gold,8);
             }
             var trunk=NaturalMesh.Lathe(root,"Long softly curved trunk",new[]{new Vector3(.12f,0,.12f),new Vector3(.15f,.45f,.15f),new Vector3(.20f,.95f,.20f),new Vector3(.27f,1.6f,.27f)},grey,16);
             trunk.localPosition=new Vector3(0,.53f,1.78f); trunk.localRotation=Quaternion.Euler(12,0,0);
             NaturalMesh.Oval(root,"Trunk tip",new Vector3(0,.61f,1.83f),new Vector3(.28f,.25f,.30f),soft,14);
-            NaturalMesh.Oval(root,"Woven pink saddle cloth",new Vector3(0,2.18f,-.15f),new Vector3(1.87f,1.1f,1.55f),cloth,18);
+            if(decorated) NaturalMesh.Oval(root,"Woven pink saddle cloth",new Vector3(0,2.18f,-.15f),new Vector3(1.87f,1.1f,1.55f),cloth,18);
             NaturalMesh.Branch(root,"Elephant tail",new Vector3(0,1.86f,-1.3f),new Vector3(.15f,.65f,-1.56f),.055f,grey);
             NaturalMesh.Oval(root,"Tail tuft",new Vector3(.15f,.63f,-1.56f),new Vector3(.14f,.25f,.13f),dark,10);
         }

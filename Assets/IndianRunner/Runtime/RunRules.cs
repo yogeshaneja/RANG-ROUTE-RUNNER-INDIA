@@ -70,7 +70,7 @@ namespace IndianRunner
             return LaneX(lane)+(lane==0 ? -offset:offset);
         }
         // Bike meets the runner at its row, but travels towards them before and after.
-        public static float HazardZ(int kind, float rowZ, float distance) => rowZ + (kind == 6 ? .65f : kind==15 ? .35f : kind==8 ? .45f : kind==9 ? -.20f : 0)*(rowZ-distance);
+        public static float HazardZ(int kind, float rowZ, float distance) => rowZ + (kind == 6 ? .65f : kind==15 ? .35f : kind==17 ? .18f : kind==8 ? .45f : kind==9 ? -.20f : 0)*(rowZ-distance);
         public static float HazardY(int kind, float ahead)
         {
             float t = Math.Max(0,Math.Min(1,(40-ahead)/32));

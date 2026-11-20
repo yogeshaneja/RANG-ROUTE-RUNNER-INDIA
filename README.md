@@ -1,6 +1,6 @@
 # Rang Route Runner India — Unity prototype
 
-An original offline Android 3D endless runner. **Stage 1 source implementation**, with procedural Rajasthan-inspired scenery and temporary character art. This is Unity/C#, not Expo or a React Native simulation.
+An original offline Android 3D endless runner. **Two-region source prototype**, with selectable Rajasthan and Kerala routes and procedural character/environment art. This is Unity/C#, not Expo or a React Native simulation.
 
 ## Open and play
 
@@ -147,3 +147,11 @@ Sky surprise: the original Thar Cloud Guardian appears around 288 m after the fi
 Pacing/framing adjustment: dance rests are now three seconds and skip two gardens between appearances. The Cloud Guardian/Maharaja is positioned 4.5 world units lower so the face clears top notifications; the lower-screen sky mask remains in place. Pull and Build and Run again.
 
 Oncoming elephants now reuse the decorated roadside look, walk towards the runner in one warned lane and leave an escape route. First encounter around 462 m, then occasionally; existing elephant Hindi dialogue/trumpet are reused. Game over has a short original raspy comic crank/groan (a non-verbal sound effect). Pull and Build and Run; visual/collision/audio/device checks remain local.
+
+## Kerala stage — Monsoon Trail
+
+Pull the feature branch and rebuild the Android APK. At the start screen, tap **STAGE: RAJASTHAN | SWITCH >** to select **KERALA**, then **LET’S RUN**. The stage choice is remembered locally; each region has its own best score and shares outfits/settings. The same Rajasthan bootstrap scene loads the selected route; no extra scene needs adding to Build Profiles.
+
+Kerala adds coconut palms, banana plants, paddy-green banks, backwater bridge decks with railings, original houseboat models, tiled-roof houses, forest stretches, misty green hills and a rain-first weather cycle. Collect golden lotus tokens. Dodge ducks, forest boar/langurs and an occasional forest elephant; jump coconut baskets/coir/logs, slide under palm shelters and dodge fish carts. Existing motorcycle and rain-lady encounters continue.
+
+Only the selected scenery/catalogue is constructed. Art is original runtime geometry, without new image/model downloads or packages. See [Kerala stage details and research](Documentation/KERALA_STAGE.md). Source/rule checks pass; Unity build, visual inspection and real-phone profiling remain required.

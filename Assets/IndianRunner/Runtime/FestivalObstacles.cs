@@ -8,6 +8,14 @@ namespace IndianRunner
         // X/Z are half extents; Y is height above the moving object's base.
         public static Vector3 Shape(int kind)
         {
+            if(kind==RegionRules.Ducks) return new Vector3(.70f,.68f,.73f);
+            if(kind==RegionRules.Boar) return new Vector3(.49f,1.16f,1.12f);
+            if(kind==RegionRules.Langur) return new Vector3(.64f,1.48f,.48f);
+            if(kind==RegionRules.Coconuts) return new Vector3(.70f,.89f,.52f);
+            if(kind==RegionRules.Coir) return new Vector3(.75f,.87f,.42f);
+            if(kind==RegionRules.FishCart) return new Vector3(1.0f,1.72f,.76f);
+            if(kind==RegionRules.Bamboo) return new Vector3(.96f,2.40f,.68f);
+            if(kind==RegionRules.Log) return new Vector3(.78f,.78f,.40f);
             if(kind==RajasthanObstacles.OncomingElephant) return new Vector3(1.05f,3f,2.45f);
             if(kind==RajasthanObstacles.Motorcycle) return new Vector3(.50f,1.97f,1.06f);
             if(kind==RajasthanObstacles.Spaceship) return new Vector3(.92f,.74f,.92f);
@@ -20,6 +28,14 @@ namespace IndianRunner
         }
         public static string Warning(int kind)
         {
+            if(kind==RegionRules.Ducks) return "DUCKS ON THE PATH";
+            if(kind==RegionRules.Boar) return "FOREST BOAR AHEAD";
+            if(kind==RegionRules.Langur) return "LANGUR ON THE PATH";
+            if(kind==RegionRules.Log) return "FALLEN PALM - jump or dodge";
+            if(kind==RegionRules.Bamboo) return "LOW PALM SHELTER - slide";
+            if(kind==RegionRules.Coconuts) return "COCONUT BASKETS - jump";
+            if(kind==RegionRules.Coir) return "COIR MATS - jump";
+            if(kind==RegionRules.FishCart) return "FISH CART - change lane";
             if(kind==RajasthanObstacles.OncomingElephant) return "ELEPHANT COMING";
             if(kind==RajasthanObstacles.UmbrellaLady) return "LADY WITH UMBRELLA";
             if(kind==RajasthanObstacles.Wheel) return "ROLLING WHEEL";
@@ -31,6 +47,8 @@ namespace IndianRunner
         }
         public static string Contact(int kind)
         {
+            if(kind==RegionRules.Ducks || kind==RegionRules.Boar || kind==RegionRules.Langur) return "The animal is safe. Give it room and follow the open lane.";
+            if(kind>=RegionRules.Coconuts) return "Watch the warning. Jump, slide or follow the lotus lane.";
             if(kind==RajasthanObstacles.OncomingElephant) return "Gentle elephant stumble. Give the big fellow his own lane.";
             if(kind==RajasthanObstacles.UmbrellaLady) return "Gentle umbrella stumble. Give her marked lane some room.";
             if(kind==RajasthanObstacles.Peacock) return "Peacock is unharmed. Give its marked lane some space.";

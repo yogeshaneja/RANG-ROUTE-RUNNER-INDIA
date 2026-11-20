@@ -7,7 +7,7 @@ namespace IndianRunner
     public sealed class RajasthanObstacles
     {
         public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14, OncomingElephant = 15;
-        public const int MaxKind=15, ElephantSound=100;
+        public const int MaxKind=RegionRules.Log, ElephantSound=100;
         public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {
@@ -19,8 +19,10 @@ namespace IndianRunner
         private Part[] camelLeg;
         public int MaxParts { get; private set; }
 
-        public RajasthanObstacles()
+        public RajasthanObstacles(bool kerala=false)
         {
+            if(!kerala)
+            {
             var legRoot = new GameObject("Shared sculpted camel leg").transform;
             var legHide = PrimitiveArt.Mat(new Color(.66f,.40f,.19f));
             NaturalMesh.Lathe(legRoot,"Tapered camel leg",new[] {new Vector3(.07f,-1.05f,.065f),new Vector3(.055f,-.65f,.055f),new Vector3(.085f,-.48f,.08f),new Vector3(.10f,0,.09f)},legHide,10);
@@ -30,6 +32,8 @@ namespace IndianRunner
             foreach(var r in legRoot.GetComponentsInChildren<MeshRenderer>()) if(r.enabled)
                 legParts.Add(new Part {Mesh=r.GetComponent<MeshFilter>().sharedMesh,Material=r.sharedMaterial});
             camelLeg = legParts.ToArray(); Object.Destroy(legRoot.gameObject);
+            }
+            else camelLeg=new Part[0];
             var elephantLegRoot=new GameObject("Shared walking elephant leg").transform;
             RajasthanDecor.MovingElephantLeg(elephantLegRoot); PrimitiveArt.CombineScenery(elephantLegRoot,true);
             var elephantLegParts=new List<Part>();
@@ -38,8 +42,12 @@ namespace IndianRunner
             Object.Destroy(elephantLegRoot.gameObject);
             for (int kind = 1; kind <= MaxKind; kind++)
             {
-                var root = new GameObject("Shared Rajasthan obstacle " + kind).transform;
-                Build(root, kind);
+                if((!kerala && kind>=RegionRules.Ducks) || (kerala && kind<RegionRules.Ducks && kind!=Motorcycle && kind!=UmbrellaLady && kind!=OncomingElephant))
+                { models[kind]=new Part[0]; continue; }
+                var root = new GameObject("Shared regional obstacle " + kind).transform;
+                if(kind>=RegionRules.Ducks) KeralaArt.Build(root,kind);
+                else if(kerala && kind==OncomingElephant) RajasthanDecor.BuildElephant(root,false,false);
+                else Build(root, kind);
                 PrimitiveArt.CombineScenery(root,true);
                 var parts = new List<Part>();
                 foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>())
@@ -99,6 +107,7 @@ namespace IndianRunner
                 if(legs != null) foreach(var leg in legs) leg.gameObject.SetActive(kind == Camel);
                 if (kind == 0) return;
                 var parts = catalog.models[kind];
+                if(parts==null || parts.Length==0) throw new System.InvalidOperationException("Missing regional obstacle artwork for kind "+kind);
                 for (int i = 0; i < filters.Length; i++)
                 {
                     bool active = i < parts.Length; renderers[i].enabled = active;

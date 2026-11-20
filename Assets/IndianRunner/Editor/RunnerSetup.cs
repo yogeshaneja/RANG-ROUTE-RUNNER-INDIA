@@ -234,6 +234,31 @@ namespace IndianRunner.Editor
             Require(!chatter.Tick(0,RajasthanObstacles.Motorcycle,8,1,true),"Other chatter did not leave room for rain line");
             Require(chatter.Tick(0,RajasthanObstacles.UmbrellaLady,8,2,true) && chatter.Current.Caption.Contains("It's raining"),"Requested rain dialogue missing");
             Require(!chatter.Tick(1,RajasthanObstacles.UmbrellaLady,7,2,true),"Rain dialogue repeats every frame");
+            int keralaRows=0;
+            for(int regionSeed=0;regionSeed<32;regionSeed++) for(int row=0;row<1000;row++)
+            {
+                int safe=RunRules.SafeLane(row,regionSeed),moving=RegionRules.DynamicKind(row,true);
+                Require(RegionRules.ObstacleFor(row,safe,regionSeed,true)==0,"Kerala reserved lane blocked");
+                for(int lane=0;lane<3;lane++)
+                {
+                    int kind=RegionRules.ObstacleFor(row,lane,regionSeed,true);
+                    Require(kind==0 || kind==RajasthanObstacles.Motorcycle || kind==RajasthanObstacles.OncomingElephant || (kind>=RegionRules.Ducks && kind<=RegionRules.Log),"Foreign Kerala obstacle");
+                    if(kind==RegionRules.Boar || kind==RegionRules.Langur || kind==RajasthanObstacles.OncomingElephant)
+                        Require(RegionRules.ForestRow(row),"Wild forest animal in backwater village");
+                    if(RunRules.RestBuffer(row)) Require(kind==0,"Kerala rest buffer blocked");
+                    if(kind!=0)
+                    {
+                        var shape=FestivalObstacles.Shape(kind)*RajasthanObstacles.VisualScale(kind);
+                        Require(Mathf.Abs(RunRules.LaneX(lane)-RunRules.LaneX(safe))>shape.x+RunRules.PlayerHalfWidth,"Kerala visual bounds overlap safe lane");
+                    }
+                }
+                if(moving!=0) foreach(int neighbour in new[]{row-1,row+1}) for(int lane=0;lane<3;lane++)
+                    Require(RegionRules.ObstacleFor(neighbour,lane,regionSeed,true)==0,"Kerala moving hazard recovery row occupied");
+                keralaRows++;
+            }
+            Require(RegionRules.BridgeTile(1) && RegionRules.BridgeTile(3) && !RegionRules.BridgeTile(4),"Bridge/forest sequence lost");
+            Require(FestivalObstacles.Shape(RegionRules.Bamboo).x+RunRules.PlayerHalfWidth<RunRules.LaneWidth,"Shelter overlaps neighbouring lane");
+            Debug.Log($"PASS: {keralaRows} Kerala safe-route/habitat/bounds rows. Run live startup checks in each selected region.");
             Debug.Log($"PASS: {checkedRows} deterministic rows, route timing, speed, score, jump recovery and swept collision checks. Phone gameplay/performance remain separate manual checks.");
         }
         [MenuItem("Indian Runner/4 - Check live startup (Play Mode)")]
