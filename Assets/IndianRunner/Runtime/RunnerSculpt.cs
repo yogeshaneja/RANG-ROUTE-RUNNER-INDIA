@@ -6,8 +6,8 @@ namespace IndianRunner
     public static class RunnerSculpt
     {
         private static readonly Vector3[] FaceProfile = {
-            new Vector3(.025f,-.168f,.045f),new Vector3(.067f,-.152f,.082f),
-            new Vector3(.093f,-.123f,.100f),new Vector3(.114f,-.082f,.108f),
+            new Vector3(.025f,-.168f,.045f),new Vector3(.072f,-.152f,.084f),
+            new Vector3(.101f,-.123f,.103f),new Vector3(.114f,-.082f,.108f),
             new Vector3(.124f,-.035f,.115f),new Vector3(.123f,.025f,.112f),
             new Vector3(.119f,.080f,.108f),new Vector3(.107f,.125f,.098f),
             new Vector3(.074f,.156f,.070f),new Vector3(.014f,.174f,.020f)
@@ -27,9 +27,10 @@ namespace IndianRunner
         {
             float nose=.028f*Bell(x,y,0,.004f,.020f,.047f)+.033f*Bell(x,y,0,-.040f,.024f,.019f);
             float wings=.007f*(Bell(x,y,-.023f,-.045f,.011f,.014f)+Bell(x,y,.023f,-.045f,.011f,.014f));
-            float cheeks=.004f*(Bell(x,y,-.074f,-.038f,.031f,.034f)+Bell(x,y,.074f,-.038f,.031f,.034f));
+            float cheeks=.007f*(Bell(x,y,-.074f,-.038f,.031f,.034f)+Bell(x,y,.074f,-.038f,.031f,.034f));
             float sockets=.006f*(Bell(x,y,-.052f,.027f,.029f,.016f)+Bell(x,y,.052f,.027f,.029f,.016f));
-            return nose+wings+cheeks-sockets;
+            float chin=.005f*Bell(x,y,0,-.139f,.045f,.020f);
+            return nose+wings+cheeks+chin-sockets;
         }
         public static float FaceZ(float x,float y)
         {
@@ -82,17 +83,22 @@ namespace IndianRunner
         }
         public static void Hair(Transform parent,Material material)
         {
-            const int rings=15,sides=36; var vertices=new Vector3[rings*(sides+1)]; var uv=new Vector2[vertices.Length];
+            const int rings=21,sides=48; var vertices=new Vector3[rings*(sides+1)]; var uv=new Vector2[vertices.Length];
             for(int r=0;r<rings;r++) for(int s=0;s<=sides;s++)
             {
                 float v=(float)r/(rings-1),a=s*Mathf.PI*2/sides,front=Mathf.Max(0,Mathf.Sin(a));
                 float radial=Mathf.Sin(Mathf.Lerp(.025f,Mathf.PI*.5f,v));
                 float line=-.025f+.115f*Mathf.Pow(front,4);
-                float comb=.0015f*Mathf.Sin(a*9+v*4)*Mathf.Sin(v*Mathf.PI);
+                // Integer harmonics keep the duplicated UV seam closed. Broad waves
+                // sculpt an asymmetric swept quiff, readable from behind as well.
+                float wave=Mathf.Sin(a*7+v*8)*.004f+Mathf.Sin(a*13-v*5)*.0018f;
+                float comb=wave*Mathf.Sin(v*Mathf.PI);
+                float sweep=Mathf.Sin(v*Mathf.PI);
+                float quiff=.038f*front*sweep*(.7f+.3f*Mathf.Cos(a));
                 int i=r*(sides+1)+s;
-                vertices[i]=new Vector3(Mathf.Cos(a)*(.132f+comb)*radial-.017f*(1-v),
-                    Mathf.Lerp(.195f,line,1-Mathf.Cos(v*Mathf.PI*.5f))+.022f*front*Mathf.Sin(v*Mathf.PI),
-                    Mathf.Sin(a)*(.124f+comb)*radial-.010f);
+                vertices[i]=new Vector3(Mathf.Cos(a)*(.137f+comb)*radial-.026f*(1-v)-.012f*sweep,
+                    Mathf.Lerp(.211f,line,1-Mathf.Cos(v*Mathf.PI*.5f))+quiff+wave*sweep,
+                    Mathf.Sin(a)*(.129f+comb)*radial-.010f);
                 uv[i]=new Vector2((float)s/sides,v);
             }
             StaticSurface(parent,"Swept short hair with shaped hairline",Surface("Original swept hair surface",vertices,uv,SurfaceTriangles(rings,sides,true),rings,sides),material);
@@ -140,6 +146,41 @@ namespace IndianRunner
                 uv[i]=new Vector2((float)s/sides,(profile[r].y+.16f)/.76f);
             }
             StaticSurface(parent,"Tailored continuous kurta with gentle cloth folds",Surface("Original tailored kurta",vertices,uv,SurfaceTriangles(profile.Length,sides,false),profile.Length,sides),material);
+        }
+        // Small embroidery pieces are authored once, then combined with the
+        // shirt into its existing material batches. No animated objects added.
+        public static void Embroidery(Transform parent,Material gold)
+        {
+            foreach(float side in new[]{-1f,1f})
+            {
+                for(int row=0;row<4;row++) for(int column=0;column<3;column++)
+                {
+                    float cx=(column-1)*.108f,cy=.08f+row*.105f;
+                    Diamond(parent,cx,cy,.012f,.020f,side,gold);
+                }
+                // A larger rosette on the back reads from the gameplay camera.
+                if(side<0) for(int petal=0;petal<8;petal++)
+                {
+                    float a=petal*Mathf.PI*.25f;
+                    Diamond(parent,Mathf.Cos(a)*.043f,.475f+Mathf.Sin(a)*.037f,.008f,.011f,side,gold);
+                }
+            }
+        }
+        private static void Diamond(Transform parent,float x,float y,float rx,float ry,float side,Material gold)
+        {
+            var vertices=new Vector3[4]; var uv=new Vector2[4];
+            for(int i=0;i<4;i++)
+            {
+                float a=i*Mathf.PI*.5f,px=x+Mathf.Cos(a)*rx,py=y+Mathf.Sin(a)*ry;
+                Vector3 low=py<.18f ? new Vector3(.211f,.04f,.133f):py<.34f ? new Vector3(.200f,.18f,.127f):py<.48f ? new Vector3(.219f,.34f,.143f):new Vector3(.244f,.48f,.151f);
+                Vector3 high=py<.18f ? new Vector3(.200f,.18f,.127f):py<.34f ? new Vector3(.219f,.34f,.143f):py<.48f ? new Vector3(.244f,.48f,.151f):new Vector3(.226f,.55f,.135f);
+                var radius=Vector3.Lerp(low,high,Mathf.InverseLerp(low.y,high.y,py));
+                // Follow the actual tailoring profile; stand clear of its tiny folds.
+                vertices[i]=new Vector3(px,py,side*(radius.z*Mathf.Sqrt(Mathf.Max(0,1-px*px/(radius.x*radius.x)))+.004f));
+                uv[i]=new Vector2((Mathf.Cos(a)+1)*.5f,(Mathf.Sin(a)+1)*.5f);
+            }
+            var triangles=side>0 ? new[]{0,1,2,0,2,3}:new[]{0,2,1,0,3,2};
+            NaturalMesh.Make(parent,"Gold woven diamond",vertices,uv,triangles,gold);
         }
         public static void Limb(Transform upper,Transform lower,string name,Vector3[] profile,float joint,Material upperMaterial,Material lowerMaterial)
         {
@@ -190,7 +231,7 @@ namespace IndianRunner
             for(int r=0;r<rings;r++) for(int s=0;s<stride;s++)
             {
                 float depth=r*.045f,angle=s*Mathf.PI*.5f; int i=r*stride+s;
-                vertices[i]=new Vector3(Mathf.Cos(angle)*(.068f+depth*.018f),-depth,Mathf.Sin(angle)*.012f);
+                vertices[i]=new Vector3(Mathf.Cos(angle)*(.086f+depth*.026f),-depth,Mathf.Sin(angle)*.012f);
                 uv[i]=new Vector2((float)s/(stride-1),depth*2);
                 float span=Mathf.Clamp01(depth<.27f ? depth/.27f:(depth-.27f)/.27f);
                 weights[i]=new BoneWeight {boneIndex0=depth<.27f ? 0:1,boneIndex1=depth<.27f ? 1:2,weight0=1-span,weight1=span};

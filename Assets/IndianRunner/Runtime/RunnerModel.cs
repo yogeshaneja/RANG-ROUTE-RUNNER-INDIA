@@ -21,17 +21,20 @@ namespace IndianRunner
             Root=Pivot(parent,"Original sculpted Indian runner",Vector3.zero);
             var skin=PrimitiveArt.Mat(new Color(.57f,.345f,.225f));
             var skinWarm=PrimitiveArt.Mat(new Color(.61f,.365f,.245f));
-            outfitMaterial=new Material(PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.08f,.55f,.61f),new Vector2(2,3)));
-            var trim=PrimitiveArt.Mat(new Color(.89f,.68f,.29f));
+            outfitMaterial=new Material(PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.025f,.43f,.48f),new Vector2(2,3)));
+            var trim=PrimitiveArt.Mat(new Color(.95f,.70f,.27f));
             var trousers=PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.97f,.94f,.86f),new Vector2(2,3));
             var hair=PrimitiveArt.Mat(new Color(.040f,.029f,.023f));
             var shoe=PrimitiveArt.Mat(new Color(.24f,.105f,.047f));
-            var orange=PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(.98f,.39f,.10f),new Vector2(1,2));
+            var orange=PrimitiveArt.TexturedMat("Scenery/CottonReal",new Color(1f,.46f,.055f),new Vector2(1,2));
             var white=PrimitiveArt.Mat(new Color(.91f,.88f,.79f));
+            var stubble=PrimitiveArt.Mat(new Color(.27f,.16f,.105f));
+            var iris=PrimitiveArt.Mat(new Color(.14f,.075f,.035f));
             var lip=PrimitiveArt.Mat(new Color(.38f,.195f,.145f));
             torso=Pivot(Root,"Runner torso",new Vector3(0,StandingHip,0));
             var shirt=Pivot(torso,"Tailored kurta details",Vector3.zero);
             RunnerSculpt.Kurta(shirt,outfitMaterial);
+            RunnerSculpt.Embroidery(shirt,trim);
             NaturalMesh.Lathe(shirt,"Subtle embroidered hem",new[]{new Vector3(.235f,-.159f,.148f),new Vector3(.234f,-.144f,.147f)},trim,28);
             NaturalMesh.Lathe(shirt,"Nehru band collar",new[]{new Vector3(.104f,.582f,.088f),new Vector3(.102f,.645f,.086f)},outfitMaterial,20);
             PrimitiveArt.Box(shirt,"Fine collar edge",new Vector3(0,.615f,.090f),new Vector3(.014f,.055f,.009f),trim);
@@ -49,20 +52,22 @@ namespace IndianRunner
             {
                 NaturalMesh.Oval(faceRigid,"Shaped ear",new Vector3(side*.124f,-.008f,-.003f),new Vector3(.044f,.079f,.038f),skin,12);
                 NaturalMesh.Oval(faceRigid,"Inner ear contour",new Vector3(side*.143f,-.008f,.003f),new Vector3(.012f,.040f,.020f),skinWarm,10);
-                RunnerSculpt.FaceLine(faceRigid,"Tapered natural eyebrow",side*.052f,.054f,.054f,.006f,.003f,hair);
+                RunnerSculpt.FaceLine(faceRigid,"Tapered natural eyebrow",side*.052f,.054f,.059f,.008f,.004f,hair);
                 RunnerSculpt.FaceLine(faceRigid,"Upper eyelid",side*.052f,.029f,.047f,.0025f,.005f,skin);
+                RunnerSculpt.FaceLine(faceRigid,"Soft tapered moustache",side*.020f,-.076f,.035f,.005f,.002f,stubble);
+                RunnerSculpt.FaceLine(faceRigid,"Subtle jaw stubble",side*.048f,-.127f,.043f,.010f,-.007f,stubble);
                 float nx=side*.017f,ny=-.049f;
                 NaturalMesh.Oval(faceRigid,"Subtle nostril",new Vector3(nx,ny,RunnerSculpt.FaceZ(nx,ny)+.001f),new Vector3(.008f,.0045f,.004f),lip,8);
             }
             RunnerSculpt.FaceLine(faceRigid,"Relaxed closed mouth",0,-.091f,.062f,.0035f,-.0015f,lip);
             RunnerSculpt.FaceLine(faceRigid,"Soft lower lip",0,-.098f,.054f,.004f,-.002f,skin);
             PrimitiveArt.CombineScenery(faceRigid,true);
-            eyes[0]=RunnerSculpt.Eye(head,-1,white,hair,white); eyes[1]=RunnerSculpt.Eye(head,1,white,hair,white);
+            eyes[0]=RunnerSculpt.Eye(head,-1,white,iris,white); eyes[1]=RunnerSculpt.Eye(head,1,white,iris,white);
             NaturalMesh.Lathe(torso,"Saffron scarf neck wrap",new[]{new Vector3(.111f,.607f,.100f),new Vector3(.115f,.646f,.102f),new Vector3(.100f,.676f,.089f)},orange,20);
             scarf=Pivot(torso,"Soft scarf root",new Vector3(.145f,.58f,-.128f));
             scarfMiddle=Pivot(scarf,"Scarf middle",new Vector3(0,-.27f,0)); scarfTip=Pivot(scarfMiddle,"Scarf tip",new Vector3(0,-.27f,0));
             RunnerSculpt.Scarf(scarf,scarfMiddle,scarfTip,orange);
-            for(int i=0;i<4;i++) NaturalMesh.Branch(scarfTip,"Fine scarf fringe",new Vector3(-.058f+i*.039f,0,0),new Vector3(-.058f+i*.039f,-.05f,0),.004f,trim);
+            for(int i=0;i<4;i++) NaturalMesh.Branch(scarfTip,"Fine scarf fringe",new Vector3(-.078f+i*.052f,0,0),new Vector3(-.078f+i*.052f,-.05f,0),.004f,trim);
             PrimitiveArt.CombineScenery(scarfTip,true);
             leftArm=Arm(torso,-1,outfitMaterial,skinWarm,trim,out leftElbow,out wrists[0]);
             rightArm=Arm(torso,1,outfitMaterial,skinWarm,trim,out rightElbow,out wrists[1]);
@@ -170,7 +175,7 @@ namespace IndianRunner
             leftElbow.localRotation=Quaternion.Euler(Mathf.Lerp(bend+Mathf.Sin(gaitPhase+.7f)*9*locomotionBlend,-65,slideBlend),0,0);
             rightElbow.localRotation=Quaternion.Euler(Mathf.Lerp(bend-Mathf.Sin(gaitPhase+.7f)*9*locomotionBlend,-65,slideBlend),0,0);
             for(int i=0;i<wrists.Length;i++) wrists[i].localRotation=Quaternion.Euler(-7,reduced ? 0:Mathf.Sin(gaitPhase+i*Mathf.PI)*4*activity,i==0 ? 6:-6);
-            float scarfTarget=reduced ? 7:Mathf.Lerp(4,32,locomotionBlend)+Mathf.Sin(clock*6)*4*activity;
+            float scarfTarget=reduced ? 7:Mathf.Lerp(4,49,locomotionBlend)+Mathf.Sin(clock*6)*4*activity;
             scarfPitch=Mathf.Lerp(scarfPitch,scarfTarget,reset ? 1:1-Mathf.Exp(-9*dt));
             scarfBend=Mathf.Lerp(scarfBend,reduced ? 0:Mathf.Sin(clock*5.5f-.5f)*8*activity,reset ? 1:1-Mathf.Exp(-7*dt));
             scarf.localRotation=Quaternion.Euler(Mathf.Lerp(scarfPitch,6,slideBlend),reduced ? 0:Mathf.Sin(clock*3)*3*activity,0);
@@ -238,7 +243,7 @@ namespace IndianRunner
         }
         public void SetOutfit(int index)
         {
-            Color colour=index==1 ? new Color(1,.57f,.055f):index==2 ? new Color(.96f,.12f,.43f):index==3 ? new Color(.12f,.27f,.94f):new Color(.08f,.55f,.61f);
+            Color colour=index==1 ? new Color(1,.57f,.055f):index==2 ? new Color(.96f,.12f,.43f):index==3 ? new Color(.12f,.27f,.94f):new Color(.025f,.43f,.48f);
             if(outfitMaterial.HasProperty("_BaseColor")) outfitMaterial.SetColor("_BaseColor",colour);
             if(outfitMaterial.HasProperty("_Color")) outfitMaterial.SetColor("_Color",colour);
         }

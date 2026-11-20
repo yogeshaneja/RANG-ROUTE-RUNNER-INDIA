@@ -31,3 +31,11 @@ Indian Runner > 4 - Check live startup (Play Mode) now also inspects the actual 
 4. Compare reduced effects. Rebuild with Build and Run to update Android; inspect materials/mesh bounds and sustained CPU/GPU frame time/memory on the actual phone. Skinning quality, lighting, perceived realism and actual phone performance require this visual/runtime review.
 
 No Unity screenshot, Unity compiler result, phone capture, subjective visual approval or measured FPS is claimed for this implementation workspace.
+
+## Launcher portrait character pass
+
+The launcher illustration guides the existing real-time model: richer teal cotton and saffron, brighter gold embroidery on both chest and back, an eight-petal back rosette, fuller asymmetric swept hair, defined cheeks/chin/jaw, thicker brows, brown irises and understated moustache/jaw stubble. The scarf is wider with matching fringe and a stronger backward streaming angle during running. Default outfit reset uses the new teal consistently; alternate unlocked colours remain available.
+
+Embroidery adds 32 four-vertex diamonds (64 triangles) combined into the existing shirt/gold material groups during construction. Hair increases from 555 to 1,029 vertices. Facial detailing reuses the existing head combine; the scarf retains its three-bone renderer and reduced-effects behavior. No external models, textures, packages or downloads added. This is an approximation in the procedural 3D art style, not a claim of matching the rendered portrait exactly.
+
+Validation: all 25 C# source files parse; numerical checks confirm finite hair coordinates and a closed duplicated UV seam, and whitespace checks pass. No Unity Editor or Android runtime test is available here. Locally inspect the face in menu/dance views, back embroidery during running, scarf/shoulder clearance in jumps/slides, alternate outfits and reduced effects, then profile sustained play on the target phone.
