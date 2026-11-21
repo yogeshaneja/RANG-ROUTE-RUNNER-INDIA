@@ -6,15 +6,18 @@ namespace IndianRunner
     {
         public const int Ducks=16, Boar=17, Langur=18, Coconuts=19, Coir=20, FishCart=21, Bamboo=22, Log=23;
         public const int Buffalo=24, Goat=25, Tractor=26, Hay=27, Grain=28, PhulkariGate=29, Crab=30, Dog=31, FishCrates=32, BoatCart=33, NetGate=34, CanalBuoy=35;
+        public const int PineappleBasket=36,HillBus=37,SweetCrates=38,FlowerAwning=39,YellowTaxi=40,ForestBaskets=41,ForestBranch=42,Deer=43,SafariJeep=44,AppleCrates=45,WoolAwning=46,Sheep=47;
+        public static bool IsTraffic(int kind) => kind==6 || kind==Tractor || kind==HillBus || kind==YellowTaxi || kind==SafariJeep;
         public static bool UsesKind(int region,int kind)
         {
+            if(ExpandedRegionRules.IsExpanded(region))return ExpandedRegionRules.UsesKind(region,kind);
             if(region==RegionProfile.Rajasthan) return kind>=1 && kind<=15;
             if(kind==14) return true; // shared rain visitor
             if(region==RegionProfile.Kerala) return kind==6 || kind==15 || kind==CanalBuoy || (kind>=Ducks && kind<=Log);
             if(region==RegionProfile.Punjab) return kind>=Buffalo && kind<=PhulkariGate;
             return kind==6 || kind==Coconuts || (kind>=Crab && kind<=NetGate);
         }
-        public static bool IsSlide(int kind) => kind==4 || kind==13 || kind==Bamboo || kind==PhulkariGate || kind==NetGate;
+        public static bool IsSlide(int kind) => kind==4 || kind==13 || kind==Bamboo || kind==PhulkariGate || kind==NetGate || kind==FlowerAwning || kind==ForestBranch || kind==WoolAwning;
         public static bool ForestRow(int row) => row>=0 && (row/2)%7>=4;
         public static bool BridgeTile(int index) => index%7==1 || index%7==3;
         public static int DynamicKind(int row,bool kerala) => DynamicKind(row,kerala ? RegionProfile.Kerala:RegionProfile.Rajasthan);
@@ -22,8 +25,9 @@ namespace IndianRunner
         {
             if(AdventureRules.OverridesRow(row))return 0;
             // Keep oncoming traffic outside the new authored encounters.
-            if(row>=36 && row%36==0)return region==RegionProfile.Punjab ? Tractor:6;
+            if(row>=36 && row%36==0)return ExpandedRegionRules.IsExpanded(region) ? ExpandedRegionRules.Traffic(region):region==RegionProfile.Punjab ? Tractor:6;
             int original=RunRules.DynamicKind(row);
+            if(ExpandedRegionRules.IsExpanded(region))return ExpandedRegionRules.Dynamic(original,row,region);
             if(region==RegionProfile.Rajasthan || original==0) return original;
             if(region==RegionProfile.Punjab) return original==6 ? Tractor:row%4==0 ? Buffalo:Goat;
             if(region==RegionProfile.Goa) return original==6 ? 6:row%4==0 ? Crab:Dog;
@@ -43,6 +47,7 @@ namespace IndianRunner
             if(AdventureRules.RoadworksRow(row,region))return lane==(RunRules.SafeLane(row,seed)+1)%3 ? 11:13;
             if(region==RegionProfile.Rajasthan)return RunRules.ObstacleFor(row,lane,seed);
             int kind=RunRules.Kind(row,lane,seed);
+            if(ExpandedRegionRules.IsExpanded(region))return ExpandedRegionRules.Static(kind,region);
             if(region==RegionProfile.Punjab) return kind==1 ? Hay:kind==2 ? Grain:kind==3 ? Hay:PhulkariGate;
             if(region==RegionProfile.Goa) return kind==1 ? Coconuts:kind==2 ? FishCrates:kind==3 ? BoatCart:NetGate;
             return kind==1 ? Coconuts:kind==2 ? Coir:kind==3 ? FishCart:Bamboo;

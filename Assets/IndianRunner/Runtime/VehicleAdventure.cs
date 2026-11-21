@@ -18,6 +18,7 @@ namespace IndianRunner
             var body=new GameObject("Batched original adventure vehicle").transform;body.SetParent(root,false);
             var teal=AdventureArt.Colour(.025f,.58f,.62f);var gold=AdventureArt.Colour(1,.74f,.12f);
             var pink=AdventureArt.Colour(.96f,.19f,.37f);var cream=AdventureArt.Colour(.98f,.91f,.74f);
+            if(ExpandedRegionRules.IsExpanded(region)){teal=PrimitiveArt.Mat(ExpandedRegionArt.Accent(region));pink=PrimitiveArt.Mat(ExpandedRegionArt.Secondary(region));}
             var wood=AdventureArt.Colour(.38f,.20f,.09f);var dark=AdventureArt.Colour(.07f,.10f,.10f);
             if(region==RegionProfile.Kerala)
             {
@@ -45,7 +46,7 @@ namespace IndianRunner
             }
             else
             {
-                bool farm=region==RegionProfile.Punjab;
+                bool farm=region==RegionProfile.Punjab || ExpandedRegionRules.IsExpanded(region);
                 PrimitiveArt.Box(body,"Bright cart platform",new Vector3(0,.38f,0),new Vector3(1.36f,.22f,2.1f),farm ? teal:pink);
                 PrimitiveArt.Box(body,"Comfortable cart bench",new Vector3(0,.64f,-.12f),new Vector3(1.16f,.19f,.65f),cream);
                 foreach(float side in new[]{-1f,1f})
@@ -62,6 +63,16 @@ namespace IndianRunner
                 }
                 wheels=new Transform[4];int at=0;
                 foreach(float side in new[]{-1f,1f})foreach(float z in new[]{-.72f,.72f})wheels[at++]=Wheel(root,new Vector3(side*.58f,.23f,z),.23f,dark,gold);
+            }
+            if(ExpandedRegionRules.IsExpanded(region))
+            {
+                if(region==RegionProfile.MadhyaPradesh)
+                {
+                    PrimitiveArt.Box(body,"Forest buggy nose",new Vector3(0,.62f,.90f),new Vector3(1.1f,.35f,.42f),teal);
+                    foreach(float side in new[]{-1f,1f})NaturalMesh.Oval(body,"Buggy headlamp",new Vector3(side*.40f,.75f,1.12f),new Vector3(.18f,.16f,.035f),cream,10);
+                }
+                if(region==RegionProfile.Himachal)for(int i=0;i<3;i++)NaturalMesh.Oval(body,"Harvest trolley red apple",new Vector3((i-1)*.30f,.65f,-.82f),Vector3.one*.25f,pink,10);
+                if(region==RegionProfile.Shillong)NaturalMesh.Oval(body,"Pine explorer trolley badge",new Vector3(0,.52f,1.07f),new Vector3(.30f,.38f,.04f),gold,10);
             }
             PrimitiveArt.CombineScenery(body,true);root.gameObject.SetActive(false);
         }

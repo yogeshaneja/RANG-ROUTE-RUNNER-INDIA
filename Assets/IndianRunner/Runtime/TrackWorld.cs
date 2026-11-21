@@ -64,17 +64,19 @@ namespace IndianRunner
         private readonly bool kerala;
         private readonly int region;
         private readonly RegionalScenery regionalScenery;
+        private readonly ExpandedScenery expandedScenery;
         public TrackWorld(Transform parent,int region=RegionProfile.Rajasthan)
         {
             this.region=region; kerala=region==RegionProfile.Kerala;
             if(kerala) keralaScenery=new KeralaScenery(parent);
             else if(region==RegionProfile.Rajasthan) scenery=new RajasthanScenery(parent);
+            else if(ExpandedRegionRules.IsExpanded(region))expandedScenery=new ExpandedScenery(parent,region);
             else regionalScenery=new RegionalScenery(parent,region);
             obstacleArt = new RajasthanObstacles(region); if(region==RegionProfile.Rajasthan) decor = new RajasthanDecor();
             yellow = PrimitiveArt.Mat(new Color(1f, .75f, .05f));
             coral = PrimitiveArt.Mat(new Color(.91f, .23f, .14f));
             teal = PrimitiveArt.Mat(new Color(.04f, .43f, .50f));
-            var road = kerala ? keralaScenery.RoadSurface:regionalScenery!=null ? regionalScenery.RoadSurface:scenery.RoadSurface;
+            var road = expandedScenery!=null ? expandedScenery.RoadSurface:kerala ? keralaScenery.RoadSurface:regionalScenery!=null ? regionalScenery.RoadSurface:scenery.RoadSurface;
             var white = PrimitiveArt.Mat(new Color(.68f,.57f,.41f));
             var camel = PrimitiveArt.Mat(new Color(.66f, .40f, .19f));
             var blue = PrimitiveArt.Mat(new Color(.03f, .27f, .8f));
@@ -85,7 +87,7 @@ namespace IndianRunner
                 tile.Root.SetParent(parent,false); tiles[i] = tile;
                 var ground = new GameObject("Batched road and terrain").transform; ground.SetParent(tile.Root,false);
                 tile.Village = new GameObject("Reusable varied roadside").transform; tile.Village.SetParent(tile.Root,false);
-                if(kerala) keralaScenery.AddGround(ground,i,TileLength); else if(regionalScenery!=null) regionalScenery.AddGround(ground,i,TileLength); else scenery.AddGround(ground,i,TileLength);
+                if(expandedScenery!=null)expandedScenery.AddGround(ground,i,TileLength);else if(kerala) keralaScenery.AddGround(ground,i,TileLength); else if(regionalScenery!=null) regionalScenery.AddGround(ground,i,TileLength); else scenery.AddGround(ground,i,TileLength);
                 PrimitiveArt.Box(ground, "Road", new Vector3(0, -.045f, TileLength / 2), new Vector3(8.5f, .12f, TileLength), road);
                 for (int dash = 0; dash < 8; dash++) foreach (float x in new[] { -RunRules.LaneWidth / 2, RunRules.LaneWidth / 2 })
                     PrimitiveArt.Box(ground, "Lane dash", new Vector3(x, .025f, dash * 6.5f + 2), new Vector3(.11f, .03f, 2.4f), white);
@@ -93,7 +95,7 @@ namespace IndianRunner
                 if (region==RegionProfile.Rajasthan && i%3 == 2) PrimitiveArt.Peacock(tile.Village,6.3f,29+i,blue,green,RajasthanScenery.GroundY(i,6.3f,29+i,TileLength));
                 tile.HasElephant = region==RegionProfile.Rajasthan && i%3 == 0;
                 if(tile.HasElephant) RajasthanDecor.Elephant(tile.Village,new Vector3(9.5f,RajasthanScenery.GroundY(i,9.5f,31,TileLength),31));
-                if(kerala) keralaScenery.AddGeometry(tile.Village,i); else if(regionalScenery!=null) regionalScenery.AddGeometry(tile.Village,i); else scenery.AddGeometry(tile.Village,i);
+                if(expandedScenery!=null)expandedScenery.AddGeometry(tile.Village,i);else if(kerala) keralaScenery.AddGeometry(tile.Village,i); else if(regionalScenery!=null) regionalScenery.AddGeometry(tile.Village,i); else scenery.AddGeometry(tile.Village,i);
                 PrimitiveArt.CombineScenery(ground,true);
                 PrimitiveArt.CombineScenery(tile.Village,true);
                 for (int b = 0; b < 2; b++)
@@ -137,7 +139,7 @@ namespace IndianRunner
                     row.LandingMarker.gameObject.SetActive(false);
                     row.Pouch=RajasthanDecor.Pouch(tile.Root); row.Garden=region!=RegionProfile.Rajasthan ? KeralaArt.Garden(tile.Root):RajasthanDecor.RestGarden(tile.Root);
                     for (int c = 0; c < 5; c++)
-                        row.Coins[c] = kerala ? KeralaArt.Token(tile.Root):region!=RegionProfile.Rajasthan ? RegionalArt.Token(tile.Root,region):decor.Token(tile.Root);
+                        row.Coins[c] = expandedScenery!=null ? ExpandedRegionArt.Token(tile.Root,region):kerala ? KeralaArt.Token(tile.Root):region!=RegionProfile.Rajasthan ? RegionalArt.Token(tile.Root,region):decor.Token(tile.Root);
                 }
             }
         }
@@ -269,13 +271,14 @@ namespace IndianRunner
                             var hazard=row.Obstacles[lane].Root;
                             hazard.localPosition=new Vector3(RunRules.HazardX(row.DynamicKind,lane,ahead),RunRules.HazardY(row.DynamicKind,ahead),RunRules.HazardZ(row.DynamicKind,row.Z,distance)-tile.Index*TileLength);
                             if(row.DynamicKind==RajasthanObstacles.Spaceship) hazard.localRotation=Quaternion.Euler(0,reduced ? 0:clock*24,0);
-                            if(row.DynamicKind==RegionRules.Boar || row.DynamicKind==RegionRules.Langur || row.DynamicKind==RegionRules.Ducks || row.DynamicKind==RegionRules.Buffalo || row.DynamicKind==RegionRules.Goat || row.DynamicKind==RegionRules.Tractor || row.DynamicKind==RegionRules.Dog)
+                            if(row.DynamicKind>=RegionRules.PineappleBasket || row.DynamicKind==RegionRules.Boar || row.DynamicKind==RegionRules.Langur || row.DynamicKind==RegionRules.Ducks || row.DynamicKind==RegionRules.Buffalo || row.DynamicKind==RegionRules.Goat || row.DynamicKind==RegionRules.Tractor || row.DynamicKind==RegionRules.Dog)
                                 hazard.localRotation=Quaternion.Euler(0,180,0);
                             if(row.DynamicKind==RajasthanObstacles.OncomingElephant)
                             {
                                 hazard.localRotation=Quaternion.Euler(0,180,0);
                                 row.Obstacles[lane].AnimateElephant(distance,reduced);
                             }
+                            row.Obstacles[lane].AnimateRegionalAnimal(distance,reduced);
                             // Rolling is gameplay motion: reduced effects preserves it.
                             if(row.DynamicKind==RajasthanObstacles.Wheel) hazard.localRotation=Quaternion.Euler(-distance*1.45f/.62f*Mathf.Rad2Deg,0,0);
                         }
@@ -456,7 +459,7 @@ namespace IndianRunner
                 new Vector3(x - halfWidth - RunRules.PlayerHalfWidth, bottom - playerHeight + .02f, z - halfDepth - RunRules.PlayerHalfWidth),
                 new Vector3(x + halfWidth + RunRules.PlayerHalfWidth, top - .02f, z + halfDepth + RunRules.PlayerHalfWidth));
         }
-        public void SetWeather(float cloudiness) { scenery?.SetWeather(cloudiness); keralaScenery?.SetWeather(cloudiness); regionalScenery?.SetWeather(cloudiness); }
+        public void SetWeather(float cloudiness) { scenery?.SetWeather(cloudiness); keralaScenery?.SetWeather(cloudiness); regionalScenery?.SetWeather(cloudiness); expandedScenery?.SetWeather(cloudiness); }
         public void Dispose() => scenery?.Dispose();
         public static bool SegmentBox(Vector3 a, Vector3 b, Vector3 min, Vector3 max)
         {

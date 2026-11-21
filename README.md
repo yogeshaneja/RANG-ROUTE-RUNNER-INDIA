@@ -1,6 +1,6 @@
 # Rang Route Runner India — Unity prototype
 
-An original offline Android 3D endless runner. **Four-region source prototype**, with selectable Rajasthan, Kerala, Punjab and Goa routes and procedural character/environment art. This is Unity/C#, not Expo or a React Native simulation.
+An original offline Android 3D endless runner. **Eight-destination source prototype**, with selectable Rajasthan, Kerala, Punjab, Goa, Shillong/Meghalaya, Kolkata/West Bengal, Madhya Pradesh and Himachal Pradesh routes and procedural character/environment art. This is Unity/C#, not Expo or a React Native simulation.
 
 ## Open and play
 
@@ -158,7 +158,7 @@ Only the selected scenery/catalogue is constructed. Art is original runtime geom
 
 ## Punjab, Goa and regional sky guardians
 
-The second screen shows picture cards for **Rajasthan, Kerala, Punjab and Goa**. From Welcome tap **LET’S RUN**, choose a state card, then **START [STATE] RUN**. Pull this branch and Build and Run again to update the installed phone app. All four stages use the existing bootstrap scene; no additional scene setup is required.
+The second screen shows picture cards for **Rajasthan, Kerala, Punjab, Goa, Shillong, Kolkata, Madhya Pradesh and Himachal**. From Welcome tap **LET’S RUN**, choose a state card, then **START [STATE] RUN**. Pull this branch and Build and Run again to update the installed phone app. All eight destinations use the existing bootstrap scene; no additional scene setup is required.
 
 - **Punjab — Harvest Hustle:** green/gold fields, village farmhouses, irrigation channels, Phulkari wall details, buffalo/goats, an approaching tractor, hay/grain obstacles and low cloth stalls. Collect golden Phulkari flower tokens.
 - **Goa — Coastal Colour Run:** sea and surf beside a sand promenade, coconut palms, colourful tiled-roof houses, beach shacks and fishing boats. Dodge crabs/dogs, fishing baskets, boat handcarts and low drying nets; collect golden shell tokens. Dolphins and a turtle remain background scenery.
@@ -168,21 +168,21 @@ See [Punjab/Goa research, implementation and phone checks](Documentation/PUNJAB_
 
 ## Picture-based stage selection
 
-The second step is a dedicated destination picker, with four small original scenic illustrations, a gold selection border, state descriptions and separate personal bests. Tap a card, then the named Start button to run that state. Back returns to Welcome. The last selected state is preselected when reopening; choosing another card does not reload its world. Only Start confirms and saves the choice, and a different region automatically begins after its scene reload. RUN AGAIN restarts from the chosen starting state.
+The second step is a dedicated destination picker, with eight small original scenic illustrations, a gold selection border, state descriptions and separate personal bests. Tap a card, then the named Start button to run that state. Back returns to Welcome. The last selected state is preselected when reopening; choosing another card does not reload its world. Only Start confirms and saves the choice, and a different region automatically begins after its scene reload. RUN AGAIN restarts from the chosen starting state.
 
-Four bundled 512 × 288 previews total 242,273 source bytes (about 237 KiB), with mipmaps/readable copies disabled and compression requested. See [selection flow and checks](Documentation/STAGE_SELECTION.md) and [artwork prompts](Documentation/STAGE_SELECTION_ARTWORK.md). Phone UI appearance, import settings and runtime scene handoff still need local verification.
+Eight bundled 512 × 288 previews total 471,354 source bytes (about 460 KiB), with mipmaps/readable copies disabled and compression requested. See [selection flow and checks](Documentation/STAGE_SELECTION.md) and [artwork prompts](Documentation/STAGE_SELECTION_ARTWORK.md). Phone UI appearance, import settings and runtime scene handoff still need local verification.
 
 ## Random state changes during a run
 
 The picture-card selection chooses your **first stop**. After at least 600 m in a state, the game waits for a safe, grounded garden transfer window, fades to a random different state and continues the same run. The earliest first change is around 756 m (roughly a minute at the current speed curve). Later changes normally fall about 1,008 m apart; jumping/sliding/lane changes can defer them until a later safe window.
 
-A shuffled four-state order avoids adjacent repeats and visits every state once per bag. Distance, total score, tokens, speed progression, goal progress and remaining pouch power continue. Each region’s personal best measures its own leg; the full run also saves a separate Journey Best, shown on pause/game over. No pickups or scoring advance during the transition. RUN AGAIN returns to the state selected on the picture screen.
+A shuffled eight-destination order avoids adjacent repeats and visits every state once per bag. Distance, total score, tokens, speed progression, goal progress and remaining pouch power continue. Each region’s personal best measures its own leg; the full run also saves a separate Journey Best, shown on pause/game over. No pickups or scoring advance during the transition. RUN AGAIN returns to the state selected on the picture screen.
 
-The transition rebuilds the active region behind a fade rather than keeping all four worlds in memory. A phone may spend additional time on the opaque loading screen; target-device smoothness and repeated-transition memory behaviour still need profiling. See [Journey transition details](Documentation/JOURNEY_MODE.md).
+The transition rebuilds the active region behind a fade rather than keeping all eight worlds in memory. A phone may spend additional time on the opaque loading screen; target-device smoothness and repeated-transition memory behaviour still need profiling. See [Journey transition details](Documentation/JOURNEY_MODE.md).
 
 ## Vehicle rides, adventure passages and Chutku
 
-Every state now has a short vehicle bonus and a themed jump/slide passage. The first passage begins at 112 m; the first ride begins near 504 m. Events recur every 1,008 m, so a continuing journey encounters them in its next state. Both use double-value token trails and keep a reserved open lane.
+Every destination has a short vehicle bonus and a themed jump/slide passage. The first passage at 112 m is a Festival Rush bonus; the first ride begins near 504 m. Authored encounters recur every 1,008 m across the journey. Ordinary passages and rides use double-value tokens and keep a reserved open lane. One passage every third cycle becomes a clear-road, triple-value Festival Rush.
 
 | State | Vehicle | Adventure passage |
 | --- | --- | --- |
@@ -190,11 +190,19 @@ Every state now has a short vehicle bonus and a themed jump/slide passage. The f
 | Kerala | Backwater canoe | Canopy Bridge Dash |
 | Punjab | Harvest trolley | Harvest Festival Alley |
 | Goa | Coastal scooter | Coastal Boardwalk |
+| Shillong / Meghalaya | Hill garden trolley | Pine Lake Bridge |
+| Kolkata / West Bengal | Riverfront flower cart | Riverfront Flower Arcade |
+| Madhya Pradesh | Forest discovery buggy | Sal Forest Canopy |
+| Himachal Pradesh | Apple harvest trolley | Apple Orchard Walk |
 
 Rides are announced before boarding, steer with **left/right only**, then return to normal jumping/sliding after the finish. The ride lasts roughly 9–12 seconds at the current speed curve, depending on boarding and speed; gameplay remains active. Existing momentum is preserved. Clear first/last ride rows and recovery buffers protect the control changes. The boy uses a seated/reaching pose rather than running through the vehicle.
 
-**Chutku**, an original little street-dog companion with a saffron bandana and turquoise collar, follows the runner and can retrieve one missed token every eight seconds. He rides along on the vehicle, never collides with hazards and cannot score a token twice. His collection cooldown survives random stage changes. No paid/downloaded art, image assets or runtime packages were added. See [adventure implementation and validation](Documentation/ADVENTURE_FEATURES.md). Unity visuals, controls and Android performance still require local testing.
+**Chutku**, an original little street-dog companion with a saffron bandana and turquoise collar, follows the runner and can retrieve one missed token every eight seconds. He rides along on the vehicle, never collides with hazards and cannot score a token twice. His collection cooldown survives random stage changes. No paid assets, network services or runtime packages are required. See [adventure implementation and validation](Documentation/ADVENTURE_FEATURES.md). Unity visuals, controls and Android performance still require local testing.
 
 ## Festival Rush bonus
 
 Rare state-themed festival passages now start at 112–224 m, then recur every 3,024 m across the journey. They include original colourful decorations, a light petal shower, an upbeat music change, a clear road and 3× regional tokens. Ordinary adventure passages and vehicle rides remain between festivals. See [Festival Rush](Documentation/FESTIVAL_RUSH.md) for timing, budgets and device checks.
+
+## Four new destinations
+
+Shillong/Meghalaya, Kolkata (Calcutta)/West Bengal, Madhya Pradesh and Himachal Pradesh extend the existing stage-selection, weather, fantasy guardian, Festival Rush, ride and random-journey pattern. Only the selected region builds its pooled world. Existing destination IDs and personal best keys remain stable. See [regional designs, research and phone checks](Documentation/FOUR_NEW_DESTINATIONS.md) and [new preview artwork prompts](Documentation/NEW_DESTINATION_ARTWORK.md).

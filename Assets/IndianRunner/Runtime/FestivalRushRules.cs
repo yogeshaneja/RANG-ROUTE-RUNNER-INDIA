@@ -9,7 +9,7 @@ namespace IndianRunner
         public static bool Approaching(int row) => row>=0 && row%PeriodRows==FirstRow-1;
         public static float Remaining(float distance) => ActiveRow(AdventureRules.Row(distance)) ?
             ((AdventureRules.Row(distance)/PeriodRows)*PeriodRows+LastRow+1)*RunRules.RowSpacing-distance:0;
-        public static string Name(int region) => region==RegionProfile.Kerala ? "FLOWER FESTIVAL RUSH":
+        public static string Name(int region) => ExpandedRegionRules.IsExpanded(region) ? ExpandedRegionRules.Festival(region):region==RegionProfile.Kerala ? "FLOWER FESTIVAL RUSH":
             region==RegionProfile.Punjab ? "HARVEST MELA RUSH":region==RegionProfile.Goa ? "COASTAL CARNIVAL RUSH":"DESERT KITE FESTIVAL RUSH";
     }
 }

@@ -232,7 +232,7 @@ namespace IndianRunner
                 {
                     audioPlayer.GuardianReveal(); milestoneText=RegionProfile.GuardianName(region); milestoneUntil=clock+2;
                 }
-                int atmosphere=riding ? region==RegionProfile.Goa ? RajasthanObstacles.Motorcycle:region==RegionProfile.Punjab ? RajasthanObstacles.Procession:region==RegionProfile.Rajasthan ? RajasthanObstacles.Wheel:0:world.SoundKind;
+                int atmosphere=riding ? region==RegionProfile.Goa ? RajasthanObstacles.Motorcycle:region==RegionProfile.Punjab ? RajasthanObstacles.Procession:region==RegionProfile.Rajasthan || ExpandedRegionRules.IsExpanded(region) ? RajasthanObstacles.Wheel:0:world.SoundKind;
                 audioPlayer.Tick(dt,atmosphere,riding ? 12:world.SoundAhead,riding ? 0:world.SoundPan,world.SoundKey,inRest || riding);
                 if(!riding && !festivalActive && (world.SoundKind!=RajasthanObstacles.UmbrellaLady || weather.RainIntensity>.08f) && banter.Tick(clock,world.SoundKind,world.SoundAhead,world.SoundKey,world.UmbrellaAhead<RunRules.Speed(distance)*10.5f) && speech.Speak(banter.Current)) audioPlayer.DuckSpeech();
             }

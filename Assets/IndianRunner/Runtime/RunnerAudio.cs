@@ -50,12 +50,13 @@ namespace IndianRunner
                 boarCall=Cue("Original soft forest boar grunt",15,.65f,95);
                 langurCall=Cue("Original stylised langur chatter",16,.72f,520);
             }
+            if(region==RegionProfile.Shillong)langurCall=Cue("Original soft hill langur chatter",16,.72f,520);
+            if((RegionRules.UsesKind(region,RegionRules.Goat) || RegionRules.UsesKind(region,RegionRules.Sheep)))goatCall=Cue("Original gentle goat bleat",18,.65f,330);
             if(region==RegionProfile.Punjab)
             {
                 buffaloCall=Cue("Original soft buffalo moo",17,.85f,105);
-                goatCall=Cue("Original gentle goat bleat",18,.65f,330);
             }
-            if(region==RegionProfile.Goa) dogCall=Cue("Original friendly coastal dog bark",19,.52f,230);
+            if(region==RegionProfile.Goa || region==RegionProfile.Kolkata) dogCall=Cue("Original friendly coastal dog bark",19,.52f,230);
             runningTrack=Compose(); music.clip=runningTrack;
             danceTrack=ComposeDance(); breakVoice=Resources.Load<AudioClip>("Dialogue/hi/break_time");
         }
@@ -111,7 +112,7 @@ namespace IndianRunner
             if(dancing) music.volume=Mathf.Min(music.volume,.34f*danceFade);
             if(!musicEnabled && music.volume<.001f) music.Stop();
             if(dancing) return;
-            bool motor=kind==RajasthanObstacles.Motorcycle || kind==RegionRules.Tractor, ship=kind==RajasthanObstacles.Spaceship;
+            bool motor=RegionRules.IsTraffic(kind), ship=kind==RajasthanObstacles.Spaceship;
             int nextKind=motor || ship || kind==RajasthanObstacles.Wheel || kind==RajasthanObstacles.Procession ? kind : 0;
             // Fade an outgoing loop before changing its clip, avoiding a sharp switch.
             float target=nextKind!=0 && nextKind==approachKind ? .30f*Mathf.Clamp01(1-Mathf.Abs(ahead)/55) : 0;
@@ -123,10 +124,10 @@ namespace IndianRunner
             }
             approach.panStereo=Mathf.Lerp(approach.panStereo,Mathf.Clamp(pan,-.65f,.65f),smoothing);
             approach.pitch=Mathf.Lerp(approach.pitch,kind==RajasthanObstacles.Procession ? 1 : (ahead<0 ? .88f : 1.06f)*(kind==RegionRules.Tractor ? .68f:1),smoothing);
-            if((kind==RegionRules.Buffalo || kind==RegionRules.Goat || kind==RegionRules.Dog) && ahead<30 && ahead>0 && encounterKey!=lastAnimalKey)
+            if((kind==RegionRules.Buffalo || kind==RegionRules.Goat || kind==RegionRules.Sheep || kind==RegionRules.Dog) && ahead<30 && ahead>0 && encounterKey!=lastAnimalKey)
             {
                 lastAnimalKey=encounterKey; animals.panStereo=Mathf.Clamp(pan,-.65f,.65f);
-                var call=kind==RegionRules.Buffalo ? buffaloCall:kind==RegionRules.Goat ? goatCall:dogCall;
+                var call=kind==RegionRules.Buffalo ? buffaloCall:kind==RegionRules.Goat || kind==RegionRules.Sheep ? goatCall:dogCall;
                 if(call!=null) animals.PlayOneShot(call,.52f);
             }
             if(kind>=RegionRules.Ducks && kind<=RegionRules.Langur && ahead<28 && ahead>0 && encounterKey!=lastAnimalKey)
@@ -178,7 +179,7 @@ namespace IndianRunner
             const int beatSamples=9450; // exactly 140 BPM at 22,050 Hz
             var data=new float[beatSamples*16];
             int[] melody={0,4,7,12,9,7,4,2,0,7,9,12,14,12,9,7,4,7,9,12,9,7,4,2,0,4,7,9,7,4,2,0};
-            float tonic=region==RegionProfile.Kerala ? 261.6256f:region==RegionProfile.Punjab ? 329.6276f:region==RegionProfile.Goa ? 349.2282f:293.6648f;
+            float tonic=ExpandedRegionRules.IsExpanded(region) ? (region==RegionProfile.Shillong ? 311.127f:region==RegionProfile.Kolkata ? 277.183f:region==RegionProfile.MadhyaPradesh ? 246.942f:369.994f):region==RegionProfile.Kerala ? 261.6256f:region==RegionProfile.Punjab ? 329.6276f:region==RegionProfile.Goa ? 349.2282f:293.6648f;
             var pitches=new float[melody.Length];
             for(int n=0;n<melody.Length;n++)pitches[n]=tonic*Mathf.Pow(2,melody[n]/12f);
             uint noiseState=0x419fa3u;float previous=0;

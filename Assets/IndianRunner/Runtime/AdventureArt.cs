@@ -19,6 +19,7 @@ namespace IndianRunner
         {
             var root=new GameObject(ride ? "Reusable regional vehicle stretch":"Reusable regional adventure passage").transform;root.SetParent(parent,false);
             var gold=Colour(1,.75f,.12f);var coral=Colour(.96f,.23f,.32f);var teal=Colour(.035f,.58f,.60f);
+            if(ExpandedRegionRules.IsExpanded(region)){teal=PrimitiveArt.Mat(ExpandedRegionArt.Accent(region));coral=PrimitiveArt.Mat(ExpandedRegionArt.Secondary(region));}
             var cream=Colour(.99f,.89f,.65f);var wood=Colour(.39f,.21f,.10f);var leaf=Colour(.13f,.48f,.24f);
             if(region==RegionProfile.Kerala)
             {
@@ -29,7 +30,7 @@ namespace IndianRunner
                     for(int i=0;i<14;i++)PrimitiveArt.Box(root,"Bridge plank seam",new Vector3(0,.019f,i*4),new Vector3(8.7f,.002f,.06f),cream);
                 }
             }
-            else if(region==RegionProfile.Goa)
+            else if(region==RegionProfile.Goa || region==RegionProfile.Shillong)
             {
                 PrimitiveArt.Box(root,"Seaside boardwalk planks",new Vector3(0,.016f,length*.5f),new Vector3(8.7f,.004f,length),cream);
                 for(int i=0;i<14;i++)PrimitiveArt.Box(root,"Boardwalk plank joints",new Vector3(0,.019f,i*4),new Vector3(8.7f,.002f,.055f),wood);
@@ -43,7 +44,7 @@ namespace IndianRunner
                     float z=3+i*14;
                     NaturalMesh.Branch(root,"Colourful roadside adventure post",new Vector3(side*4.8f,0,z),new Vector3(side*4.8f,4.8f,z),.07f,wood);
                     NaturalMesh.Oval(root,"Warm hanging lantern",new Vector3(side*4.6f,3.45f,z),new Vector3(.43f,.65f,.43f),i%2==0 ? gold:coral,10);
-                    if(region==RegionProfile.Kerala || region==RegionProfile.Goa)
+                    if(region==RegionProfile.Kerala || region==RegionProfile.Goa || ExpandedRegionRules.IsExpanded(region))
                         PrimitiveArt.Box(root,"Continuous bridge handrail",new Vector3(side*4.8f,1.25f,z+3.5f),new Vector3(.14f,.14f,14),ride ? cream:leaf);
                 }
             }

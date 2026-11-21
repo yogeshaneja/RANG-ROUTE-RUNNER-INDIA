@@ -335,13 +335,30 @@ namespace IndianRunner.Editor
                 {
                     int next=JourneyRules.NextRegion(current,visited,visit*31337,out visited);
                     Require(next!=current && next>=0 && next<RegionProfile.Count,"Journey repeated current region");
-                    if(visit%4==0)bag=0;
-                    Require((bag&(1<<next))==0,"Journey shuffle bag repeated before all four states");
+                    if(visit%RegionProfile.Count==0)bag=0;
+                    Require((bag&(1<<next))==0,"Journey shuffle bag repeated before all destinations");
                     bag|=1<<next;current=next;
                 }
             }
-            Require(RegionProfile.Count==4 && RegionProfile.Valid(-1)==0 && RegionProfile.Valid(9)==0,"Region selector bounds invalid");
+            Require(RegionProfile.Count==8 && RegionProfile.Valid(-1)==0 && RegionProfile.Valid(9)==0,"Region selector bounds invalid");
             Require(RegionProfile.BestKey(0)=="runner.best" && RegionProfile.BestKey(1)=="runner.best.kerala","Legacy scores lost");
+            for(int destination=RegionProfile.Shillong;destination<RegionProfile.Count;destination++)
+            {
+                Require(ExpandedRegionRules.IsExpanded(destination),"Missing expanded destination");
+                Require(RegionRules.IsSlide(ExpandedRegionRules.Slide(destination)),"Regional slide opening not configured");
+                Require(RegionRules.UsesKind(destination,ExpandedRegionRules.Traffic(destination)),"Regional traffic missing from catalogue");
+                int moving=ExpandedRegionRules.Traffic(destination);
+                Require(RunRules.HazardZ(moving,100,90)>100 && RunRules.HazardZ(moving,100,110)<100,"New vehicle is not approaching");
+                for(int other=0;other<RegionProfile.Count;other++)if(other!=destination)
+                    Require(RegionProfile.BestKey(destination)!=RegionProfile.BestKey(other),"Destination best scores overlap");
+                for(int row=0;row<1200;row++)for(int lane=0;lane<3;lane++)
+                {
+                    int kind=RegionRules.ObstacleFor(row,lane,7301,destination);
+                    Require(kind==0 || RegionRules.UsesKind(destination,kind),"Expanded route uses absent artwork");
+                }
+            }
+            foreach(string preview in new[]{"Shillong","Kolkata","MadhyaPradesh","Himachal"})
+                Require(Resources.Load<Texture2D>("StageSelection/"+preview)!=null,"New destination preview missing");
             Require(CloudGuardian.BaseHeight<2.5f,"Sky guardian was not lowered");
             Require(RunRules.HazardZ(RegionRules.Tractor,100,90)>100 && RunRules.HazardZ(RegionRules.Tractor,100,110)<100,"Tractor must approach the runner");
             Debug.Log($"PASS: {newRegionRows} Punjab/Goa rows and region/guardian contracts.");

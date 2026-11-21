@@ -8,6 +8,7 @@ namespace IndianRunner
         // X/Z are half extents; Y is height above the moving object's base.
         public static Vector3 Shape(int kind)
         {
+            if(kind>=RegionRules.PineappleBasket)return ExpandedRegionArt.Shape(kind);
             if(kind==RegionRules.CanalBuoy) return new Vector3(.50f,1.8f,.50f);
             if(kind==RegionRules.Buffalo) return new Vector3(.85f,1.68f,1.45f);
             if(kind==RegionRules.Goat) return new Vector3(.55f,1.12f,1.0f);
@@ -37,6 +38,7 @@ namespace IndianRunner
         }
         public static string Warning(int kind)
         {
+            if(kind>=RegionRules.PineappleBasket)return ExpandedRegionArt.Warning(kind);
             if(kind==RegionRules.CanalBuoy) return "CANAL MARKER - steer around";
             if(kind==RegionRules.Buffalo) return "BUFFALO ON THE LANE";
             if(kind==RegionRules.Goat) return "GOAT AHEAD";
@@ -68,6 +70,8 @@ namespace IndianRunner
         }
         public static string Contact(int kind)
         {
+            if(kind==RegionRules.Deer || kind==RegionRules.Sheep)return "The animal is safe. Give it room and follow the open lane.";
+            if(kind>=RegionRules.PineappleBasket && RegionRules.IsTraffic(kind))return "Vehicle contact. Follow the warning and take the open lane.";
             if(kind==RegionRules.Tractor) return "Tractor contact. Follow the warning and take the open lane.";
             if(kind==RegionRules.Buffalo || kind==RegionRules.Goat || kind==RegionRules.Crab || kind==RegionRules.Dog || kind==RegionRules.Ducks || kind==RegionRules.Boar || kind==RegionRules.Langur) return "The animal is safe. Give it room and follow the open lane.";
             if(kind>=RegionRules.Coconuts) return "Watch the warning. Jump, slide or follow the token lane.";

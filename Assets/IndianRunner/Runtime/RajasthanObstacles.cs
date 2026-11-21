@@ -7,7 +7,7 @@ namespace IndianRunner
     public sealed class RajasthanObstacles
     {
         public const int Matkas = 1, Fabric = 2, Cart = 3, Awning = 4, Camel = 5, Motorcycle = 6, Spaceship = 7, Wheel = 8, Procession = 9, FallingCloth = 10, Roadworks = 11, Peacock = 12, Scaffold = 13, UmbrellaLady = 14, OncomingElephant = 15;
-        public const int MaxKind=RegionRules.CanalBuoy, ElephantSound=100;
+        public const int MaxKind=RegionRules.Sheep, ElephantSound=100;
         public static float VisualScale(int kind) => kind == Camel ? 1.12f : kind == Motorcycle ? 1.22f : kind == Spaceship ? 1.30f : kind == Awning ? 1.05f : kind == 0 || kind >= Wheel ? 1 : 1.12f;
         private sealed class Part
         {
@@ -43,12 +43,25 @@ namespace IndianRunner
                 elephantLegParts.Add(new Part { Mesh=renderer.GetComponent<MeshFilter>().sharedMesh,Material=renderer.sharedMaterial });
             Object.Destroy(elephantLegRoot.gameObject);
             }
+            var regionalLegParts=new List<Part>();
+            int animalKind=region==RegionProfile.MadhyaPradesh ? RegionRules.Deer:region==RegionProfile.Himachal ? RegionRules.Sheep:0;
+            if(animalKind!=0)
+            {
+                var legRoot=new GameObject("Shared walking regional animal leg").transform;
+                var hide=animalKind==RegionRules.Deer ? ExpandedRegionArt.Colour(.68f,.39f,.19f):ExpandedRegionArt.Colour(.94f,.89f,.72f);
+                NaturalMesh.Branch(legRoot,"Tapered walking leg",Vector3.zero,new Vector3(0,-.54f,.04f),animalKind==RegionRules.Deer ? .045f:.065f,hide);
+                NaturalMesh.Oval(legRoot,"Small walking hoof",new Vector3(0,-.55f,.08f),new Vector3(.14f,.12f,.20f),ExpandedRegionArt.Colour(.11f,.09f,.07f),8);
+                PrimitiveArt.CombineScenery(legRoot,true);
+                foreach(var r in legRoot.GetComponentsInChildren<MeshRenderer>())if(r.enabled)regionalLegParts.Add(new Part {Mesh=r.GetComponent<MeshFilter>().sharedMesh,Material=r.sharedMaterial});
+                Object.Destroy(legRoot.gameObject);
+            }
             for (int kind = 1; kind <= MaxKind; kind++)
             {
                 if(!RegionRules.UsesKind(region,kind))
                 { models[kind]=new Part[0]; continue; }
                 var root = new GameObject("Shared regional obstacle " + kind).transform;
-                if(kind==RegionRules.CanalBuoy)AdventureArt.BuildBuoy(root);
+                if(kind>=RegionRules.PineappleBasket)ExpandedRegionArt.Obstacle(root,kind);
+                else if(kind==RegionRules.CanalBuoy)AdventureArt.BuildBuoy(root);
                 else if(kind>=RegionRules.Buffalo) RegionalArt.Build(root,kind);
                 else if(kind>=RegionRules.Ducks) KeralaArt.Build(root,kind);
                 else if(region==RegionProfile.Kerala && kind==OncomingElephant) RajasthanDecor.BuildElephant(root,false,false);
@@ -63,6 +76,7 @@ namespace IndianRunner
                 }
                 if(kind==OncomingElephant) for(int foot=0;foot<4;foot++) foreach(var legPart in elephantLegParts)
                     parts.Add(new Part { Mesh=legPart.Mesh,Material=legPart.Material,LegIndex=foot });
+                if(kind==animalKind)for(int foot=0;foot<4;foot++)foreach(var part in regionalLegParts)parts.Add(new Part {Mesh=part.Mesh,Material=part.Material,LegIndex=foot});
                 models[kind] = parts.ToArray();
                 MaxParts = Mathf.Max(MaxParts, parts.Count);
                 Object.Destroy(root.gameObject);
@@ -118,10 +132,22 @@ namespace IndianRunner
                     bool active = i < parts.Length; renderers[i].enabled = active;
                     if (!active) continue;
                     filters[i].sharedMesh = parts[i].Mesh; renderers[i].sharedMaterial = parts[i].Material;
-                    filters[i].transform.localPosition = parts[i].LegIndex>=0 ? ElephantLegPosition(parts[i].LegIndex):kind==Wheel ? new Vector3(0,-.62f,0) : Vector3.zero;
+                    filters[i].transform.localPosition = parts[i].LegIndex>=0 ? LegPosition(kind,parts[i].LegIndex):kind==Wheel ? new Vector3(0,-.62f,0) : Vector3.zero;
                     filters[i].transform.localRotation=Quaternion.identity;
                 }
                 Root.name = kind == Matkas ? "Matka pottery stack - jump" : kind == Fabric ? "Fabric bundles - jump" : kind == Cart ? "Wooden bazaar cart - dodge" : kind == Awning ? "Market awning - slide" : kind == Camel ? "Decorated camel crossing - dodge" : kind == Motorcycle ? "Oncoming motorcycle - dodge" : kind==Spaceship ? "Descending spaceship - dodge" : FestivalObstacles.Warning(kind);
+            }
+            private static Vector3 LegPosition(int kind,int foot) => kind==RegionRules.Deer || kind==RegionRules.Sheep ?
+                new Vector3(foot%2==0 ? -.29f:.29f,.62f,foot<2 ? -.48f:.46f):ElephantLegPosition(foot);
+            public void AnimateRegionalAnimal(float distance,bool reduced)
+            {
+                if(configuredKind!=RegionRules.Deer && configuredKind!=RegionRules.Sheep)return;
+                var parts=catalog.models[configuredKind];
+                for(int i=0;i<parts.Length;i++)if(parts[i].LegIndex>=0)
+                {
+                    int foot=parts[i].LegIndex;
+                    filters[i].transform.localRotation=Quaternion.Euler(Mathf.Sin(distance*.8f+(foot==0 || foot==3 ? 0:Mathf.PI))*(reduced ? 5:12),0,0);
+                }
             }
             private static Vector3 ElephantLegPosition(int foot) => new Vector3(foot%2==0 ? -.53f:.53f,1.35f,foot<2 ? .85f:-.8f);
             public void AnimateElephant(float distance,bool reduced)

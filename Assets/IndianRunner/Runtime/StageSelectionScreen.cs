@@ -3,17 +3,18 @@ using UnityEngine;
 
 namespace IndianRunner
 {
-    // Four tiny bundled scenic previews, cached for this screen's lifetime.
+    // Eight small bundled scenic previews, cached for this screen's lifetime.
     public sealed class StageSelectionScreen : IDisposable
     {
         public enum Action { None, Back, Start }
         private readonly Texture2D[] pictures=new Texture2D[RegionProfile.Count];
         private readonly int[] best=new int[RegionProfile.Count];
         private readonly string[] bestText=new string[RegionProfile.Count];
-        private readonly string[] names={"Rajasthan","Kerala","Punjab","Goa"};
-        private readonly string[] descriptions={"Palace roads & golden dunes","Backwaters, bridges & rain","Harvest fields & village lanes","Ocean views & colourful streets"};
-        private readonly string[] highlights={"Camels, pottery & mirror tokens","Forest wildlife & lotus tokens","Tractors, buffalo & Phulkari tokens","Crabs, fishing boats & shell tokens"};
+        private readonly string[] names={"Rajasthan","Kerala","Punjab","Goa","Shillong","Kolkata","MadhyaPradesh","Himachal"};
+        private readonly string[] descriptions={"Palace roads & golden dunes","Backwaters, bridges & rain","Harvest fields & village lanes","Ocean views & colourful streets","Meghalaya: pines, lakes & mist","West Bengal: river & heritage lanes","Sal forests & sandstone villages","Deodar woods & apple orchards"};
+        private readonly string[] highlights={"Camels, pottery & mirror tokens","Forest wildlife & lotus tokens","Tractors, buffalo & Phulkari tokens","Crabs, fishing boats & shell tokens","Hill buses, goats & pine-cone tokens","Yellow taxis, flowers & clay-cup tokens","Deer, forest jeeps & leaf tokens","Sheep, apple crates & apple tokens"};
         private Vector2 scroll;
+        private bool revealSelection;
         public int SelectedRegion { get; private set; }
         public StageSelectionScreen()
         {
@@ -21,7 +22,7 @@ namespace IndianRunner
         }
         public void Open(int current)
         {
-            SelectedRegion=RegionProfile.Valid(current);scroll=Vector2.zero;
+            SelectedRegion=RegionProfile.Valid(current);scroll=Vector2.zero;revealSelection=true;
             for(int i=0;i<best.Length;i++)
             {
                 best[i]=PlayerPrefs.GetInt(RegionProfile.BestKey(i),0);
@@ -35,14 +36,16 @@ namespace IndianRunner
             GUI.color=new Color(.025f,.06f,.075f,.97f);
             GUI.DrawTexture(new Rect(left,top-10,width,bottom-top+22),Texture2D.whiteTexture);GUI.color=previousColour;
             GUI.Label(new Rect(left+20,top+5,width-40,24),"YOUR JOURNEY ACROSS INDIA   /   STEP 2",skin.Caption);
-            GUI.Label(new Rect(left+18,top+30,width-36,43),"CHOOSE YOUR STATE",skin.StageTitle);
-            GUI.Label(new Rect(left+24,top+76,width-48,23),"Pick your first stop. More states follow as you run.",skin.Caption);
+            GUI.Label(new Rect(left+18,top+30,width-36,43),"CHOOSE YOUR DESTINATION",skin.StageTitle);
+            GUI.Label(new Rect(left+24,top+76,width-48,23),"8 destinations. Scroll to explore. Pick your first stop.",skin.Caption);
             float gap=12,footerTop=bottom-164;
             var viewport=new Rect(left+20,top+108,width-40,Mathf.Max(160,footerTop-top-120));
             float cardHeight=Mathf.Clamp((viewport.height-gap)*.5f,224,246);
-            float contentHeight=cardHeight*2+gap;
+            int rows=(RegionProfile.Count+1)/2;
+            float contentHeight=cardHeight*rows+gap*(rows-1);
             float contentWidth=viewport.width-(contentHeight>viewport.height ? 18:0);
             float cardWidth=(contentWidth-gap)*.5f;
+            if(revealSelection){scroll.y=Mathf.Clamp((SelectedRegion/2)*(cardHeight+gap),0,Mathf.Max(0,contentHeight-viewport.height));revealSelection=false;}
             scroll=GUI.BeginScrollView(viewport,scroll,new Rect(0,0,contentWidth,contentHeight));
             for(int i=0;i<RegionProfile.Count;i++)
             {

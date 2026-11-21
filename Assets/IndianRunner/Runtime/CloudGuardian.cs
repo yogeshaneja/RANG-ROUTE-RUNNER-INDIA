@@ -27,6 +27,11 @@ namespace IndianRunner
             var dark=Tint(shader,"Indigo moustache",new Color(.075f,.055f,.13f,1));
             var teal=Tint(shader,"Turquoise guardian coat",region==RegionProfile.Punjab ? new Color(.08f,.27f,.78f,.93f):region==RegionProfile.Kerala ? new Color(.06f,.48f,.25f,.93f):region==RegionProfile.Goa ? new Color(.95f,.29f,.19f,.93f):new Color(.04f,.56f,.58f,.93f));
             var pink=Tint(shader,"Bright rose turban",region==RegionProfile.Punjab ? new Color(1,.55f,.07f,1):region==RegionProfile.Kerala ? new Color(.98f,.91f,.68f,1):region==RegionProfile.Goa ? new Color(.95f,.78f,.38f,1):new Color(.96f,.16f,.44f,1));
+            if(ExpandedRegionRules.IsExpanded(region))
+            {
+                teal.SetColor("_Color",ExpandedRegionArt.Accent(region));
+                pink.SetColor("_Color",ExpandedRegionArt.Secondary(region));
+            }
             var gold=Tint(shader,"Warm golden embroidery",new Color(1,.76f,.25f,1));
             var eyeGlow=Tint(shader,"Soft glowing eyes",new Color(.87f,.98f,1,.95f));
             var cloudWhite=Tint(shader,"Pearl cloud",new Color(.91f,.95f,1,.66f));
@@ -65,7 +70,8 @@ namespace IndianRunner
             }
             NaturalMesh.Oval(head,"Sculpted nose",new Vector3(0,-.1f,-2.65f),new Vector3(.85f,1.4f,1.1f),skin,12);
             NaturalMesh.Branch(head,"Small warm smile",new Vector3(-.8f,-1.75f,-2.37f),new Vector3(.8f,-1.75f,-2.37f),.12f,dark);
-            if(region==RegionProfile.Goa)
+            if(ExpandedRegionRules.IsExpanded(region))ExpandedRegionArt.GuardianHead(head,region,teal,pink,gold);
+            else if(region==RegionProfile.Goa)
             {
                 NaturalMesh.Oval(head,"Sea-breeze captain straw hat brim",new Vector3(0,3.6f,0),new Vector3(12,.75f,7.4f),pink,18);
                 NaturalMesh.Oval(head,"Rounded straw hat crown",new Vector3(0,4.5f,.1f),new Vector3(7.6f,3.1f,5.3f),pink,16);

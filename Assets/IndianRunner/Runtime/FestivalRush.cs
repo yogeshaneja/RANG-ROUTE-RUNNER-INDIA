@@ -17,6 +17,7 @@ namespace IndianRunner
         }
         private static Material Palette(int region,int index)
         {
+            if(ExpandedRegionRules.IsExpanded(region))return PrimitiveArt.Mat(index==1 ? ExpandedRegionArt.Secondary(region):index==2 ? ExpandedRegionArt.Accent(region):new Color(1,.73f,.15f));
             if(index==0)return AdventureArt.Colour(1,.68f,.08f);
             if(index==1)return region==RegionProfile.Kerala ? AdventureArt.Colour(.99f,.94f,.73f):AdventureArt.Colour(.98f,.16f,.47f);
             return region==RegionProfile.Punjab ? AdventureArt.Colour(.66f,.16f,.79f):AdventureArt.Colour(.04f,.72f,.76f);
@@ -56,7 +57,12 @@ namespace IndianRunner
                     NaturalMesh.Oval(root,"Festival roadside flower rosette",new Vector3(side*5.2f+Mathf.Cos(a)*.30f,2.35f+Mathf.Sin(a)*.30f,z-.12f),new Vector3(.39f,.39f,.10f),pink,8);
                 }
                 NaturalMesh.Oval(root,"Flower golden centre",new Vector3(side*5.2f,2.35f,z-.21f),new Vector3(.30f,.30f,.14f),gold,8);
-                if(region==RegionProfile.Rajasthan)
+                if(ExpandedRegionRules.IsExpanded(region))
+                {
+                    ExpandedRegionArt.FestivalEmblem(root,region,new Vector3(side*6.6f,3.7f,z+5),aqua,gold);
+                    PrimitiveArt.Box(root,"Regional festival colour ribbon",new Vector3(side*6.6f,2.3f,z+5),new Vector3(.8f,1.7f,.05f),pink);
+                }
+                else if(region==RegionProfile.Rajasthan)
                 {
                     var kite=PrimitiveArt.Box(root,"Bright desert diamond kite",new Vector3(side*7,6.7f,z+5),new Vector3(1.1f,1.1f,.055f),aqua);
                     kite.localRotation=Quaternion.Euler(0,side*20,45);
